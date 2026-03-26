@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Face Enrollment | Biometric Secure</title>
+<style>
+    :root {
+        --primary: #6366f1;
+        --primary-glow: rgba(99, 102, 241, 0.4);
+        --bg: #0f172a;
+        --card-bg: #1e293b;
+        --text-muted: #94a3b8;
+    }
+
+    body {
+        margin:0;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        background: white;
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    /* Ambient background glow */
+    body::before {
+        content: "";
+        position: absolute;
+        width: 300px; height: 300px;
+        background: white;
+        filter: blur(150px);
+        opacity: 0.15;
+        z-index: -1;
+    }
+
+    .card {
+        width: 440px;
+        background: grey;
+        padding: 30px;
+        border-radius: 24px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+        border: 1px solid rgba(255,255,255,0.05);
+        position: relative;
+    }
+
+    .header {
+        text-align: center;
+        margin-bottom: 24px;
+    }
+
+    .title {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        margin: 0;
+        background: linear-gradient(to right, #fff, #94a3b8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+        font-size: 12px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        margin-top: 4px;
+    }
+
+    /* Video Container & Biometric Overlay */
+    .viewfinder {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 4/3;
+        border-radius: 16px;
+        overflow: hidden;
+        background: #000;
+        border: 2px solid rgba(255,255,255,0.1);
+    }
+
+    video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transform: scaleX(-1);
+    }
+
+    .overlay {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        pointer-events: none;
+        box-sizing: border-box;
+        border: 40px solid rgba(15, 23, 42, 0.4);
+    }
+
+    /* Scanning Corners */
+    .corner {
+        position: absolute;
+        width: 30px; height: 30px;
+        border: 3px solid var(--primary);
+    }
+    .top-l { top: 20px; left: 20px; border-right: 0; border-bottom: 0; }
+    .top-r { top: 20px; right: 20px; border-left: 0; border-bottom: 0; }
+    .bot-l { bottom: 20px; left: 20px; border-right: 0; border-top: 0; }
+    .bot-r { bottom: 20px; right: 20px; border-left: 0; border-top: 0; }
+
+    /* Scanning Line Animation */
+    .scan-line {
+        position: absolute;
+        width: 100%;
+        height: 2px;
+        background: linear-gradient(to right, transparent, var(--primary), transparent);
+        box-shadow: 0 0 15px var(--primary);
+        top: 0;
+        animation: scan 3s ease-in-out infinite;
+        opacity: 0.5;
+    }
+
+    @keyframes scan {
+        0%, 100% { top: 5%; }
+        50% { top: 95%; }
+    }
+
+    .status-container {
+        margin-top: 20px;
+        text-align: center;
+    }
+
+    .status {
+        font-size: 16px;
+        font-weight: 500;
+        color: #fff;
+    }
+
+    .progress-container {
+        height: 4px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 10px;
+        margin-top: 15px;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        height: 100%;
+        width: 0%;
+        background: var(--primary);
+        box-shadow: 0 0 10px var(--primary-glow);
+        transition: width 0.2s ease;
+    }
+
+    .message {
+        margin-top: 12px;
+        text-align: center;
+        font-size: 14px;
+        color: var(--text-muted);
+        min-height: 20px;
+    }
+
+    /* Badge for "Live" status */
+    .live-badge {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: rgba(239, 68, 68, 0.8);
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .dot { width: 6px; height: 6px; background: white; border-radius: 50%; animation: pulse 1s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+
+</style>
+</head>
+<body>
+
+<div class="card">
+    <div style="position: absolute; top: 20px; right: 20px;">
+        <button onclick="window.location.href='http://' + window.location.hostname + ':3000/biometricenrollmentview'" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; padding: 8px 16px; border-radius: 12px; font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.color='#fff';" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.color='#94a3b8';">
+            Return to Dashboard
+        </button>
+    </div>
+    <div class="header">
+        <h1 class="title">Face Enrollment</h1>
+        <div class="subtitle">Secure Biometric Identity</div>
+    </div>
+
+    <div class="viewfinder">
+        <video id="video" autoplay playsinline></video>
+        <div class="overlay"></div>
+        <div class="scan-line"></div>
+        <div class="corner top-l"></div>
+        <div class="corner top-r"></div>
+        <div class="corner bot-l"></div>
+        <div class="corner bot-r"></div>
+        <div class="live-badge"><div class="dot"></div> LIVE</div>
+    </div>
+
+    <div class="status-container">
+        <div class="status" id="status">Initializing camera...</div>
+        <div class="progress-container">
+            <div class="progress-bar" id="bar"></div>
+        </div>
+        <div class="message" id="msg"></div>
+    </div>
+</div>
+
+<canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+
+<script>
+    // Logic remains exactly the same as provided
+    const csrfToken = "{{ csrf_token }}";
+    const challenges = {{ challenges|safe }};
+
+    let video = document.getElementById("video");
+    let canvas = document.getElementById("canvas");
+    let ctx = canvas.getContext("2d");
+    let statusText = document.getElementById("status");
+    let bar = document.getElementById("bar");
+    let msg = document.getElementById("msg");
+
+    let step = 0;
+    let capturing = false;
+    let stableCount = 0;
+    let lastCheck = 0;
+
+    navigator.mediaDevices.getUserMedia({
+        video:{ width:480, height:360, facingMode:"user" }
+    }).then(stream=>{
+        video.srcObject = stream;
+        statusText.innerText = "Align your face";
+        startAutoCheck();
+    }).catch(()=>{ statusText.innerText = "Camera denied"; });
+
+    function startAutoCheck(){
+        setInterval(()=>{
+            if(capturing || (Date.now() - lastCheck < 600)) return;
+            lastCheck = Date.now();
+            ctx.drawImage(video, 0, 0, 320, 240);
+            let frame = canvas.toDataURL("image/jpeg", 0.4);
+
+            fetch("/accounts/face/check/", {
+                method:"POST",
+                headers:{"Content-Type":"application/json","X-CSRFToken":csrfToken},
+                body:JSON.stringify({frame:frame})
+            })
+            .then(r=>r.json())
+            .then(d=>{
+                if(d.face){
+                    stableCount++;
+                    statusText.innerText = "Face detected";
+                    if(stableCount > 2) startCapture();
+                }else{
+                    stableCount = 0;
+                    statusText.innerText = "Show your face";
+                }
+            });
+        }, 900);
+    }
+
+    async function startCapture(){
+        if(capturing) return;
+        capturing = true;
+        let challenge = challenges[step];
+        statusText.innerText = challenge.text;
+        msg.innerText = challenge.instruction;
+
+        let frames = [];
+        let totalFrames = 8;
+
+        for(let i=0; i<totalFrames; i++){
+            bar.style.width = ((i+1)/totalFrames)*100 + "%";
+            ctx.drawImage(video, 0, 0, 320, 240);
+            frames.push(canvas.toDataURL("image/jpeg", 0.6));
+            await new Promise(r=>setTimeout(r, 200));
+        }
+        sendFrames(frames, challenge.type);
+    }
+
+    function sendFrames(frames, type){
+        statusText.innerText = "Analyzing Biometrics...";
+        fetch(window.location.href, {
+            method:"POST",
+            headers:{"Content-Type":"application/json","X-CSRFToken":csrfToken},
+            body:JSON.stringify({ frames:frames, challenge:type, step:step })
+        })
+        .then(r=>r.json())
+        .then(d=>{
+            capturing = false;
+            bar.style.width = "0%";
+            if(d.success){
+                if(d.can_verify){
+                    statusText.innerText = "Verifying Profile...";
+                    // Call the dedicated verify endpoint
+                    fetch(window.location.pathname.replace('/capture/', '/verify/'), {
+                        method: "POST",
+                        headers: {"X-CSRFToken": csrfToken}
+                    })
+                    .then(r=>r.json())
+                    .then(vd => {
+                        if(vd.success && vd.completed){
+                            statusText.innerText = "Identity Verified";
+                            msg.innerText = "Enrollment complete";
+                            setTimeout(()=>{ window.location.href = vd.redirect; }, 1000);
+                        } else {
+                            msg.innerText = vd.error || "Verification failed";
+                            stableCount = 0;
+                            capturing = false;
+                        }
+                    })
+                    .catch(() => {
+                        msg.innerText = "Verification connection error";
+                        capturing = false;
+                    });
+                }else{
+                    step = d.next_step;
+                    statusText.innerText = d.next_challenge.text;
+                    msg.innerText = d.next_challenge.instruction;
+                }
+            }else{
+                msg.innerText = d.error;
+                stableCount = 0;
+            }
+        })
+        .catch(()=>{
+            capturing = false;
+            msg.innerText = "Connection error";
+        });
+    }
+</script>
+</body>
+</html>

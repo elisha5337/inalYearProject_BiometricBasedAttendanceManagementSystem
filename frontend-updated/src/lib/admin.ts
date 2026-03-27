@@ -568,7 +568,7 @@ export function syncBiometrics() {
   });
 }
 
-export async function fetchDevices() {
+export async function fetchDevices(): Promise<DeviceRecord[]> {
   const response = await apiRequest<{
     success: boolean;
     devices: Array<{
@@ -590,12 +590,11 @@ export async function fetchDevices() {
     name: device.name,
     type: (device.type === 'Handheld' || device.type === 'Desktop' ? device.type : 'Kiosk') as DeviceRecord['type'],
     location: device.location || 'Unassigned',
-    status:
-      device.status === 'maintenance'
-        ? 'maintenance'
-        : device.status === 'online'
-          ? 'online'
-          : 'offline',
+    status: (device.status === 'maintenance'
+      ? 'maintenance'
+      : device.status === 'online'
+        ? 'online'
+        : 'offline') as DeviceRecord['status'],
     lastSync: device.last_sync || null,
     ip: device.ip_address,
     port: Number(device.port ?? 8000),

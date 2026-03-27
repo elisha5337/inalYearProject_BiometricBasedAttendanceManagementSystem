@@ -1,9 +1,5 @@
 {
-<<<<<<< HEAD
     "session_timeout_minutes": 60,
-=======
-    "session_timeout_minutes": 23,
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
     "strict_mode": false,
     "max_login_attempts": 3,
     "biometric_lock_active": true,

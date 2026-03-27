@@ -93,10 +93,7 @@ SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SECURE = False   # Set to True in production with HTTPS
 SESSION_COOKIE_SECURE = False # Set to True in production with HTTPS
-<<<<<<< HEAD
 SESSION_SAVE_EVERY_REQUEST = True
-=======
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 
 
 ROOT_URLCONF = 'hu_attendance_system.urls'
@@ -334,8 +331,4 @@ JAZZMIN_UI_TWEAKS = {
         "success": "btn-success"
     },
     "actions_sticky_top": False
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e

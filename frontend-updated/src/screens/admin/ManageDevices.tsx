@@ -1,8 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-<<<<<<< HEAD
 import { useSearchParams } from 'react-router-dom';
-=======
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 import {
   Cpu,
   Plus,
@@ -31,10 +28,7 @@ import {
 } from '../../lib/admin';
 
 export default function ManageDevices() {
-<<<<<<< HEAD
   const [searchParams] = useSearchParams();
-=======
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
   const [devices, setDevices] = useState<DeviceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -43,10 +37,7 @@ export default function ManageDevices() {
   const [typeFilter, setTypeFilter] = useState('All Types');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDevice, setEditingDevice] = useState<DeviceRecord | null>(null);
-<<<<<<< HEAD
   const routeSearchQuery = searchParams.get('search') ?? '';
-=======
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 
   const [formData, setFormData] = useState<DeviceFormPayload>({
     name: '',
@@ -78,13 +69,10 @@ export default function ManageDevices() {
     loadDevices();
   }, []);
 
-<<<<<<< HEAD
   useEffect(() => {
     setSearchQuery(routeSearchQuery);
   }, [routeSearchQuery]);
 
-=======
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
   const filteredDevices = useMemo(() => {
     return devices.filter((device) => {
       const matchesType = typeFilter === 'All Types' || device.type === typeFilter;

@@ -1,10 +1,5 @@
-<<<<<<< HEAD
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-=======
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 import {
   Fingerprint,
   User,
@@ -16,7 +11,7 @@ import {
   ShieldCheck,
   ArrowLeft,
   UserCheck,
-<<<<<<< HEAD
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { ApiError, API_BASE } from "../../lib/api";
@@ -44,30 +39,6 @@ export default function EnrollBiometrics() {
   const [captureMessage, setCaptureMessage] = useState(
     "Ready to begin capture process.",
   );
-=======
-  ExternalLink,
-} from 'lucide-react';
-import { cn } from '../../lib/utils';
-import { ApiError, API_BASE } from '../../lib/api';
-import { fetchEnrollmentUsers, type EnrollmentUserRecord } from '../../lib/admin';
-
-type EnrollmentStep = 'select' | 'capture' | 'success';
-type EnrollmentMode = 'fingerprint' | 'face' | 'both';
-
-export default function EnrollBiometrics() {
-  const navigate = useNavigate();
-  const [step, setStep] = useState<EnrollmentStep>('select');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [employees, setEmployees] = useState<EnrollmentUserRecord[]>([]);
-  const [selectedEmployee, setSelectedEmployee] = useState<EnrollmentUserRecord | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [enrollmentMode, setEnrollmentMode] = useState<EnrollmentMode>('face');
-  const [captureWindowOpened, setCaptureWindowOpened] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [captureMessage, setCaptureMessage] = useState('Ready to begin capture process.');
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 
   const filteredEmployees = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -85,25 +56,17 @@ export default function EnrollBiometrics() {
           employee.department,
           employee.role,
         ]
-<<<<<<< HEAD
           .join(" ")
-=======
-          .join(' ')
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
           .toLowerCase()
           .includes(normalizedQuery);
       })
       .sort((left, right) => left.name.localeCompare(right.name));
   }, [employees, searchQuery]);
 
-<<<<<<< HEAD
   async function loadEmployees(options?: {
     silent?: boolean;
     targetEmployeeId?: string;
   }) {
-=======
-  async function loadEmployees(options?: { silent?: boolean; targetEmployeeId?: string }) {
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
     const silent = Boolean(options?.silent);
 
     try {
@@ -116,17 +79,12 @@ export default function EnrollBiometrics() {
 
       if (options?.targetEmployeeId) {
         const refreshedEmployee =
-<<<<<<< HEAD
           data.find((employee) => employee.id === options.targetEmployeeId) ||
           null;
-=======
-          data.find((employee) => employee.id === options.targetEmployeeId) || null;
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 
         if (refreshedEmployee) {
           setSelectedEmployee(refreshedEmployee);
 
-<<<<<<< HEAD
           if (
             captureWindowOpened &&
             step === "capture" &&
@@ -137,14 +95,6 @@ export default function EnrollBiometrics() {
             setError(null);
             setCaptureMessage("Enrollment confirmed from the backend.");
             setStep("success");
-=======
-          if (captureWindowOpened && step === 'capture' && refreshedEmployee.enrolled) {
-            setProgress(100);
-            setCaptureWindowOpened(false);
-            setError(null);
-            setCaptureMessage('Enrollment confirmed from the backend.');
-            setStep('success');
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
           }
         }
       }
@@ -154,11 +104,7 @@ export default function EnrollBiometrics() {
       const message =
         loadError instanceof ApiError
           ? loadError.message
-<<<<<<< HEAD
           : "Unable to load users for biometric enrollment.";
-=======
-          : 'Unable to load users for biometric enrollment.';
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
       setError(message);
       return [];
     } finally {
@@ -173,11 +119,32 @@ export default function EnrollBiometrics() {
   }, []);
 
   useEffect(() => {
-<<<<<<< HEAD
+    const handleMessage = (event: MessageEvent) => {
+      // Security: Validate origin if needed, but for local dev it's fine
+      if (event.data?.type === "ENROLLMENT_COMPLETE" && selectedEmployee) {
+        if (event.data.success) {
+          void loadEmployees({
+            silent: true,
+            targetEmployeeId: selectedEmployee.id,
+          });
+          setProgress(100);
+          setCaptureWindowOpened(false);
+          setError(null);
+          setCaptureMessage("Enrollment confirmed!");
+          setStep("success");
+        } else {
+          setError(event.data.error || "Enrollment failed.");
+          setCaptureWindowOpened(false);
+        }
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [selectedEmployee]);
+
+  useEffect(() => {
     if (step !== "capture" || !selectedEmployee || !captureWindowOpened) {
-=======
-    if (step !== 'capture' || !selectedEmployee || !captureWindowOpened) {
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
       return undefined;
     }
 
@@ -192,7 +159,6 @@ export default function EnrollBiometrics() {
   }, [captureWindowOpened, selectedEmployee, step]);
 
   const resetEnrollment = () => {
-<<<<<<< HEAD
     setStep("select");
     setSelectedEmployee(null);
     setProgress(0);
@@ -201,41 +167,20 @@ export default function EnrollBiometrics() {
     setRefreshing(false);
     setError(null);
     setCaptureMessage("Ready to begin capture process.");
-=======
-    setStep('select');
-    setSelectedEmployee(null);
-    setProgress(0);
-    setEnrollmentMode('face');
-    setCaptureWindowOpened(false);
-    setRefreshing(false);
-    setError(null);
-    setCaptureMessage('Ready to begin capture process.');
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
     void loadEmployees({ silent: true });
   };
 
   const selectEmployee = (employee: EnrollmentUserRecord) => {
     setSelectedEmployee(employee);
-<<<<<<< HEAD
     setStep("capture");
     setProgress(0);
     setEnrollmentMode("face");
-=======
-    setStep('capture');
-    setProgress(0);
-    setEnrollmentMode('face');
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
     setCaptureWindowOpened(false);
     setError(null);
     setCaptureMessage(
       employee.enrolled
-<<<<<<< HEAD
         ? "This user already has biometric data enrolled. Launch capture again to refresh the saved face template."
         : "Ready to begin capture process.",
-=======
-        ? 'This user already has biometric data enrolled. Launch capture again to refresh the saved face template.'
-        : 'Ready to begin capture process.',
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
     );
   };
 
@@ -244,7 +189,6 @@ export default function EnrollBiometrics() {
       return;
     }
 
-<<<<<<< HEAD
     if (selectedEmployee.status !== "ACTIVE") {
       setError(
         "Only active users can be enrolled for biometric authentication.",
@@ -256,42 +200,35 @@ export default function EnrollBiometrics() {
       setError(
         "The live backend enrollment flow currently supports face capture only.",
       );
-=======
-    if (selectedEmployee.status !== 'ACTIVE') {
-      setError('Only active users can be enrolled for biometric authentication.');
-      return;
-    }
-
-    if (enrollmentMode !== 'face') {
-      setError('The live backend enrollment flow currently supports face capture only.');
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
       return;
     }
 
     const captureUrl = `${API_BASE}/accounts/user/${selectedEmployee.id}/capture/`;
-<<<<<<< HEAD
 
-    // Navigate to capture page in the same window
-    window.location.href = captureUrl;
-=======
-    const captureWindow = window.open(captureUrl, '_blank');
+    const width = 600;
+    const height = 800;
+    const left = window.screen.width / 2 - width / 2;
+    const top = window.screen.height / 2 - height / 2;
+
+    const captureWindow = window.open(
+      captureUrl,
+      "BiometricCapture",
+      `width=${width},height=${height},left=${left},top=${top},menubar=no,status=no,toolbar=no,location=no`,
+    );
 
     if (!captureWindow) {
-      setError('The secure capture window was blocked. Please allow pop-ups and try again.');
+      setError(
+        "The secure capture window was blocked. Please allow pop-ups and try again.",
+      );
       return;
     }
 
     captureWindow.focus();
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
     setCaptureWindowOpened(true);
     setError(null);
     setProgress(45);
     setCaptureMessage(
-<<<<<<< HEAD
-      "Navigating to secure face capture. Complete the enrollment process and you will be redirected back.",
-=======
-      'Complete the secure guided capture in the new tab, then return here. This page will keep checking the backend enrollment status.',
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
+      "Complete the secure guided capture in the new tab, then return here. This page will keep checking the backend enrollment status.",
     );
   };
 
@@ -304,11 +241,7 @@ export default function EnrollBiometrics() {
       setRefreshing(true);
       setError(null);
       setProgress((current) => Math.max(current, 70));
-<<<<<<< HEAD
       setCaptureMessage("Checking backend enrollment status...");
-=======
-      setCaptureMessage('Checking backend enrollment status...');
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 
       const data = await loadEmployees({
         silent: true,
@@ -316,20 +249,12 @@ export default function EnrollBiometrics() {
       });
 
       const refreshedEmployee =
-<<<<<<< HEAD
         data.find((employee) => employee.id === selectedEmployee.id) ||
         selectedEmployee;
 
       if (!refreshedEmployee.enrolled) {
         setCaptureMessage(
           "Enrollment is not confirmed yet. Finish the capture in the secure tab, then check status again.",
-=======
-        data.find((employee) => employee.id === selectedEmployee.id) || selectedEmployee;
-
-      if (!refreshedEmployee.enrolled) {
-        setCaptureMessage(
-          'Enrollment is not confirmed yet. Finish the capture in the secure tab, then check status again.',
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
         );
       }
     } finally {
@@ -340,13 +265,9 @@ export default function EnrollBiometrics() {
   return (
     <div className="max-w-3xl mx-auto pb-20">
       <div className="mb-8">
-<<<<<<< HEAD
         <h1 className="text-2xl font-bold text-slate-900">
           Biometric Enrollment
         </h1>
-=======
-        <h1 className="text-2xl font-bold text-slate-900">Biometric Enrollment</h1>
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
         <p className="text-slate-500">
           Securely register employee biometric data for authentication
         </p>
@@ -355,7 +276,6 @@ export default function EnrollBiometrics() {
       <div className="flex items-center justify-between mb-10 relative">
         <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-100 -translate-y-1/2 -z-10"></div>
         {[
-<<<<<<< HEAD
           { id: "select", label: "Select User", icon: User },
           { id: "capture", label: "Capture Data", icon: Fingerprint },
           { id: "success", label: "Complete", icon: CheckCircle2 },
@@ -394,34 +314,6 @@ export default function EnrollBiometrics() {
                     : isPast
                       ? "text-green-600"
                       : "text-slate-400",
-=======
-          { id: 'select', label: 'Select User', icon: User },
-          { id: 'capture', label: 'Capture Data', icon: Fingerprint },
-          { id: 'success', label: 'Complete', icon: CheckCircle2 },
-        ].map((item) => {
-          const Icon = item.icon;
-          const isActive = step === item.id;
-          const isPast = (step === 'capture' && item.id === 'select') || step === 'success';
-
-          return (
-            <div key={item.id} className="flex flex-col items-center gap-2 bg-slate-50 px-4">
-              <div
-                className={cn(
-                  'w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300',
-                  isActive
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-110'
-                    : isPast
-                      ? 'bg-green-500 text-white'
-                      : 'bg-white border-2 border-slate-200 text-slate-400',
-                )}
-              >
-                {isPast ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
-              </div>
-              <span
-                className={cn(
-                  'text-[10px] font-bold uppercase tracking-wider',
-                  isActive ? 'text-blue-600' : isPast ? 'text-green-600' : 'text-slate-400',
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                 )}
               >
                 {item.label}
@@ -431,11 +323,7 @@ export default function EnrollBiometrics() {
         })}
       </div>
 
-<<<<<<< HEAD
       {step === "select" && (
-=======
-      {step === 'select' && (
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
         <div className="professional-card p-6 space-y-6 animate-in fade-in slide-in-from-bottom-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -471,13 +359,9 @@ export default function EnrollBiometrics() {
                       {employee.name.charAt(0)}
                     </div>
                     <div>
-<<<<<<< HEAD
                       <p className="text-sm font-bold text-slate-900">
                         {employee.name}
                       </p>
-=======
-                      <p className="text-sm font-bold text-slate-900">{employee.name}</p>
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                       <p className="text-xs text-slate-500">
                         {employee.department} | {employee.email}
                       </p>
@@ -507,7 +391,6 @@ export default function EnrollBiometrics() {
         </div>
       )}
 
-<<<<<<< HEAD
       {step === "capture" && selectedEmployee && (
         <div className="professional-card p-8 text-center space-y-8 animate-in fade-in zoom-in-95">
           <div className="space-y-2">
@@ -519,38 +402,20 @@ export default function EnrollBiometrics() {
               <span className="font-bold text-slate-900">
                 {selectedEmployee.name}
               </span>
-=======
-      {step === 'capture' && selectedEmployee && (
-        <div className="professional-card p-8 text-center space-y-8 animate-in fade-in zoom-in-95">
-          <div className="space-y-2">
-            <h3 className="text-xl font-bold text-slate-900">Capturing Face Scan</h3>
-            <p className="text-sm text-slate-500">
-              Employee: <span className="font-bold text-slate-900">{selectedEmployee.name}</span>
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
             </p>
           </div>
 
           <div className="relative w-48 h-48 mx-auto">
             <div
               className={cn(
-<<<<<<< HEAD
                 "absolute inset-0 rounded-full border-4 border-slate-100 transition-all duration-500",
                 (captureWindowOpened || refreshing) && "border-blue-100",
-=======
-                'absolute inset-0 rounded-full border-4 border-slate-100 transition-all duration-500',
-                (captureWindowOpened || refreshing) && 'border-blue-100',
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
               )}
             ></div>
             <div
               className={cn(
-<<<<<<< HEAD
                 "absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 transition-all duration-300",
                 refreshing && "animate-spin",
-=======
-                'absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 transition-all duration-300',
-                refreshing && 'animate-spin',
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
               )}
               style={{ opacity: refreshing ? 1 : 0 }}
             ></div>
@@ -558,17 +423,10 @@ export default function EnrollBiometrics() {
             <div className="absolute inset-4 rounded-full bg-slate-50 flex items-center justify-center overflow-hidden">
               <Camera
                 className={cn(
-<<<<<<< HEAD
                   "w-20 h-20 transition-all duration-500",
                   captureWindowOpened || refreshing
                     ? "text-blue-600 scale-110"
                     : "text-slate-300",
-=======
-                  'w-20 h-20 transition-all duration-500',
-                  captureWindowOpened || refreshing
-                    ? 'text-blue-600 scale-110'
-                    : 'text-slate-300',
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                 )}
               />
 
@@ -592,7 +450,6 @@ export default function EnrollBiometrics() {
                 </p>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-<<<<<<< HEAD
                     {
                       id: "fingerprint",
                       label: "Finger",
@@ -611,11 +468,6 @@ export default function EnrollBiometrics() {
                       icon: ShieldCheck,
                       supported: false,
                     },
-=======
-                    { id: 'fingerprint', label: 'Finger', icon: Fingerprint, supported: false },
-                    { id: 'face', label: 'Face', icon: Camera, supported: true },
-                    { id: 'both', label: 'Both', icon: ShieldCheck, supported: false },
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                   ].map((mode) => (
                     <button
                       key={mode.id}
@@ -626,7 +478,6 @@ export default function EnrollBiometrics() {
                         setError(null);
                       }}
                       className={cn(
-<<<<<<< HEAD
                         "flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all",
                         enrollmentMode === mode.id
                           ? "border-blue-600 bg-blue-50 text-blue-600 shadow-sm"
@@ -638,27 +489,12 @@ export default function EnrollBiometrics() {
                       <span className="text-[10px] font-bold uppercase">
                         {mode.label}
                       </span>
-=======
-                        'flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all',
-                        enrollmentMode === mode.id
-                          ? 'border-blue-600 bg-blue-50 text-blue-600 shadow-sm'
-                          : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200',
-                        !mode.supported && 'cursor-not-allowed opacity-60',
-                      )}
-                    >
-                      <mode.icon className="w-5 h-5" />
-                      <span className="text-[10px] font-bold uppercase">{mode.label}</span>
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                     </button>
                   ))}
                 </div>
                 <p className="text-[11px] text-slate-500">
-<<<<<<< HEAD
                   Face capture is the live backend-connected enrollment flow in
                   this build.
-=======
-                  Face capture is the live backend-connected enrollment flow in this build.
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                 </p>
               </div>
             )}
@@ -670,13 +506,9 @@ export default function EnrollBiometrics() {
                   style={{ width: `${progress}%` }}
                 ></div>
               </div>
-<<<<<<< HEAD
               <p className="text-xs text-slate-400 font-medium">
                 {captureMessage}
               </p>
-=======
-              <p className="text-xs text-slate-400 font-medium">{captureMessage}</p>
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
             </div>
 
             {error && (
@@ -689,7 +521,6 @@ export default function EnrollBiometrics() {
               <div className="flex flex-col gap-3">
                 <button
                   type="button"
-<<<<<<< HEAD
                   onClick={
                     captureWindowOpened ? checkEnrollmentStatus : startCapture
                   }
@@ -697,13 +528,7 @@ export default function EnrollBiometrics() {
                 >
                   {captureWindowOpened
                     ? "Check Enrollment Status"
-                    : "Start Face Capture"}
-                </button>
-=======
-                  onClick={captureWindowOpened ? checkEnrollmentStatus : startCapture}
-                  className="primary-button w-full py-4 text-base shadow-xl shadow-blue-200"
-                >
-                  {captureWindowOpened ? 'Check Enrollment Status' : 'Open Secure Face Capture'}
+                    : "Open Secure Face Capture"}
                 </button>
                 {captureWindowOpened && (
                   <button
@@ -715,7 +540,6 @@ export default function EnrollBiometrics() {
                     Reopen Capture Window
                   </button>
                 )}
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                 <button
                   type="button"
                   onClick={resetEnrollment}
@@ -733,34 +557,23 @@ export default function EnrollBiometrics() {
             <div className="space-y-1">
               <p className="text-xs font-bold text-amber-900">Important Note</p>
               <p className="text-[10px] text-amber-700 leading-relaxed">
-<<<<<<< HEAD
                 Ensure the employee has provided written consent for biometric
                 data collection. Face enrollment is stored through the live
                 backend flow; fingerprint enrollment should only be enabled
                 after device integration is connected.
-=======
-                Ensure the employee has provided written consent for biometric data collection.
-                Face enrollment is stored through the live backend flow; fingerprint enrollment
-                should only be enabled after device integration is connected.
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
               </p>
             </div>
           </div>
         </div>
       )}
 
-<<<<<<< HEAD
       {step === "success" && selectedEmployee && (
-=======
-      {step === 'success' && selectedEmployee && (
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
         <div className="professional-card p-10 text-center space-y-8 animate-in fade-in zoom-in-95">
           <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle2 className="w-10 h-10" />
           </div>
 
           <div className="space-y-2">
-<<<<<<< HEAD
             <h2 className="text-2xl font-bold text-slate-900">
               Enrollment Successful!
             </h2>
@@ -770,60 +583,37 @@ export default function EnrollBiometrics() {
                 {selectedEmployee.name}
               </span>{" "}
               has been securely stored and confirmed from the backend.
-=======
-            <h2 className="text-2xl font-bold text-slate-900">Enrollment Successful!</h2>
-            <p className="text-slate-500 leading-relaxed">
-              The face biometric template for{' '}
-              <span className="font-bold text-slate-900">{selectedEmployee.name}</span> has been
-              securely stored and confirmed from the backend.
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto p-4 bg-slate-50 rounded-2xl border border-slate-100">
             <div className="flex flex-col items-center gap-1">
               <Fingerprint className="w-5 h-5 text-amber-600" />
-<<<<<<< HEAD
               <span className="text-[10px] font-bold text-slate-400 uppercase">
                 Fingerprint
               </span>
-=======
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Fingerprint</span>
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
               <span className="text-xs font-bold text-slate-900">Pending</span>
             </div>
             <div className="flex flex-col items-center gap-1 border-l border-slate-200">
               <UserCheck className="w-5 h-5 text-green-600" />
-<<<<<<< HEAD
               <span className="text-[10px] font-bold text-slate-400 uppercase">
                 Face ID
               </span>
-=======
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Face ID</span>
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
               <span className="text-xs font-bold text-slate-900">Verified</span>
             </div>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-<<<<<<< HEAD
             <button
               type="button"
               onClick={resetEnrollment}
               className="primary-button w-full sm:w-auto px-8"
             >
-=======
-            <button type="button" onClick={resetEnrollment} className="primary-button w-full sm:w-auto px-8">
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
               Enroll Another Employee
             </button>
             <button
               type="button"
-<<<<<<< HEAD
               onClick={() => navigate("/admin/users")}
-=======
-              onClick={() => navigate('/admin/users')}
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
               className="secondary-button w-full sm:w-auto px-8"
             >
               View User Profile

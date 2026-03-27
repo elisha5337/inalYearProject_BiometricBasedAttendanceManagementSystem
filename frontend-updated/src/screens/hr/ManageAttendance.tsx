@@ -1,8 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-<<<<<<< HEAD
 import { useSearchParams } from 'react-router-dom';
-=======
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 
 import { ApiError } from '../../lib/api';
 import { fetchAttendanceRecords, type HrAttendanceRecord } from '../../lib/hrAttendance';
@@ -133,20 +130,14 @@ function downloadCsv(rows: HrAttendanceRecord[]) {
 }
 
 export default function ManageAttendance() {
-<<<<<<< HEAD
   const [searchParams] = useSearchParams();
-=======
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
   const [records, setRecords] = useState<HrAttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('');
-<<<<<<< HEAD
   const routeSearchTerm = searchParams.get('search') ?? '';
-=======
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 
   useEffect(() => {
     let cancelled = false;
@@ -184,13 +175,10 @@ export default function ManageAttendance() {
     };
   }, []);
 
-<<<<<<< HEAD
   useEffect(() => {
     setSearchTerm(routeSearchTerm);
   }, [routeSearchTerm]);
 
-=======
->>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
   const filteredRecords = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
 

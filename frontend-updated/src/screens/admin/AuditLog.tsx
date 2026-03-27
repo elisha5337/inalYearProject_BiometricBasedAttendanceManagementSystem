@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import {
   Search,
   Download,
@@ -16,14 +15,12 @@ import { ApiError } from '../../lib/api';
 import { fetchAuditLogs, type AuditLogEntry } from '../../lib/admin';
 
 export default function AuditLog() {
-  const [searchParams] = useSearchParams();
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [severityFilter, setSeverityFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState('');
-  const routeSearchQuery = searchParams.get('search') ?? '';
 
   useEffect(() => {
     let cancelled = false;
@@ -58,10 +55,6 @@ export default function AuditLog() {
       cancelled = true;
     };
   }, []);
-
-  useEffect(() => {
-    setSearchQuery(routeSearchQuery);
-  }, [routeSearchQuery]);
 
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {

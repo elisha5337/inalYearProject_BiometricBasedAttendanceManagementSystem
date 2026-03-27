@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { LogOut, Bell, Search, Menu, History, Settings, RefreshCw } from 'lucide-react';
 import { User } from '../types';
@@ -9,6 +10,11 @@ import {
   searchHeaderResults,
   type HeaderSearchResult,
 } from '../lib/headerSearch';
+=======
+import { LogOut, Bell, Search, Menu, History, Settings } from 'lucide-react';
+import { User } from '../types';
+import { Link } from 'react-router-dom';
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 
 interface HeaderProps {
   user: User;
@@ -17,6 +23,7 @@ interface HeaderProps {
 }
 
 export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
+<<<<<<< HEAD
   const userRole = user.role ?? 'employee';
   const isAdmin = userRole === 'admin';
   const navigate = useNavigate();
@@ -143,6 +150,8 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
     }
   }
 
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
   return (
     <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 shrink-0 z-30">
       <div className="flex items-center gap-4 flex-1">
@@ -153,6 +162,7 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
           <Menu className="w-6 h-6" />
         </button>
 
+<<<<<<< HEAD
         <div ref={searchRef} className="relative w-full max-w-md hidden sm:block">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
@@ -221,11 +231,21 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
               )}
             </div>
           ) : null}
+=======
+        <div className="relative w-full max-w-md hidden sm:block">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input 
+            type="text" 
+            placeholder="Search records..." 
+            className="w-full pl-10 pr-4 py-2 bg-slate-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          />
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
         </div>
       </div>
 
       <div className="flex items-center gap-2 md:gap-4">
         <div className="hidden md:flex items-center gap-2">
+<<<<<<< HEAD
           {isAdmin ? (
             <button
               type="button"
@@ -246,6 +266,17 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
           )}
           <Link 
             to={userRole === 'admin' ? "/admin/policies" : "/hr/dashboard"}
+=======
+          <Link 
+            to={user.role === 'admin' ? "/admin/audit" : "/hr/reports"}
+            title="System Logs"
+            className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors"
+          >
+            <History className="w-5 h-5" />
+          </Link>
+          <Link 
+            to={user.role === 'admin' ? "/admin/policies" : "/hr/dashboard"}
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
             title="Global Settings"
             className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors"
           >
@@ -256,7 +287,11 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
         <div className="hidden md:block h-8 w-px bg-slate-200 mx-1"></div>
 
         <Link 
+<<<<<<< HEAD
           to={`/${userRole}/notifications`}
+=======
+          to={`/${user.role}/notifications`}
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
           className="p-2 text-slate-500 hover:bg-slate-100 rounded-full relative"
         >
           <Bell className="w-5 h-5" />
@@ -266,7 +301,11 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
         <div className="h-8 w-px bg-slate-200 mx-1 md:mx-2"></div>
 
         <Link 
+<<<<<<< HEAD
           to={`/${userRole}/profile`}
+=======
+          to={`/${user.role}/profile`}
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
           className="flex items-center gap-3 p-1 pr-3 hover:bg-slate-100 rounded-full transition-colors"
         >
           <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
@@ -274,7 +313,11 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
           </div>
           <div className="hidden lg:block text-left">
             <p className="text-xs font-bold text-slate-900 leading-tight">{user.name}</p>
+<<<<<<< HEAD
             <p className="text-[10px] text-slate-500 font-medium leading-tight capitalize">{userRole}</p>
+=======
+            <p className="text-[10px] text-slate-500 font-medium leading-tight capitalize">{user.role}</p>
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
           </div>
         </Link>
 

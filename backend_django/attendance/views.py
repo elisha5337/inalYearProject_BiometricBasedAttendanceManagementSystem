@@ -25,7 +25,10 @@ from .models import AttendanceRecord, Device
 from leave.models import LeaveRequest, Policy
 from leave.utils import PolicyResolver
 from scheduling.models import Shift
+<<<<<<< HEAD
 from reporting.utils import log_audit_event
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 
 # --- Logging Configuration ---
 # Standard logger for this module
@@ -209,6 +212,7 @@ def find_best_match(query_embedding, threshold=0.6): # Lowered threshold
 
 from .config_utils import read_global_config
 
+<<<<<<< HEAD
 
 def clamp(value, minimum, maximum):
     return max(minimum, min(maximum, value))
@@ -241,6 +245,8 @@ def resolve_verification_threshold(department_id=None, strict_mode=False):
 
     return clamp(threshold, 0.5, 0.9), sensitivity, sensitivity_policy
 
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 # --- Main Attendance API View ---
 @csrf_exempt
 def mark_attendance(request):
@@ -249,8 +255,12 @@ def mark_attendance(request):
 
     try:
         config = read_global_config()
+<<<<<<< HEAD
         is_strict = bool(config.get('strict_mode', False))
         biometric_lock_active = bool(config.get('biometric_lock_active', True))
+=======
+        is_strict = config.get('biometric_lock_active', True)
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
         is_realtime = config.get('real_time_validation', True)
 
         data = json.loads(request.body)
@@ -290,7 +300,11 @@ def mark_attendance(request):
 
         # 1. Liveness Check (Heuristic)
         is_live, liveness_msg = is_live_face(face_img)
+<<<<<<< HEAD
         if not is_live and biometric_lock_active:
+=======
+        if not is_live and is_strict:
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
             logger.error(f"Security Alert: Heuristic Spoof Detection. {liveness_msg}")
             return JsonResponse({'error': 'Biometric verification failed (Liveness).'}, status=403)
 
@@ -307,7 +321,12 @@ def mark_attendance(request):
             if live_embedding is None:
                 return JsonResponse({'error': 'Biometric processing failed. Try better lighting.'}, status=500)
 
+<<<<<<< HEAD
             threshold, sensitivity, _ = resolve_verification_threshold(strict_mode=is_strict)
+=======
+            # Adjust threshold for match based on strictness
+            threshold = 0.6 if is_strict else 0.85
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
             match, distance = find_best_match(np.array(live_embedding), threshold=threshold)
             
             if not match:
@@ -324,7 +343,12 @@ def mark_attendance(request):
                             pass
             else:
                 user = User.objects.get(id=match['user_id'])
+<<<<<<< HEAD
                 current_status_flag = AttendanceRecord.VerificationStatus.VERIFIED
+=======
+                if not is_strict:
+                    current_status_flag = AttendanceRecord.VerificationStatus.UNVERIFIED
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
         else:
             # Deferred Processing Mode
             current_status_flag = AttendanceRecord.VerificationStatus.PENDING
@@ -378,10 +402,13 @@ def mark_attendance(request):
         # 3. Status Calculation (Late / Early)
         status = AttendanceRecord.RecordStatus.ON_TIME
         current_time = now.time()
+<<<<<<< HEAD
         employee_detail = get_employee_detail(user)
         department_id = employee_detail.department_id if employee_detail else None
         late_threshold_exceeded = False
         policy_message_suffix = ''
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
         
         assignment = Assignment.objects.filter(
             user=user,
@@ -399,6 +426,7 @@ def mark_attendance(request):
 
             if record_type == AttendanceRecord.RecordType.CHECK_IN:
                 # Resolve Grace Period Policy
+<<<<<<< HEAD
                 grace_policy = PolicyResolver.get_active_policy(
                     'Grace Period',
                     department_id
@@ -418,6 +446,15 @@ def mark_attendance(request):
                         f'policy limit {int(round(late_threshold_minutes))} min).'
                     )
                 elif PolicyResolver.is_late(now, shift_start_dt, grace_policy):
+=======
+                employee_detail = get_employee_detail(user)
+                grace_policy = PolicyResolver.get_active_policy(
+                    'Grace Period',
+                    employee_detail.department_id if employee_detail else None
+                )
+                
+                if PolicyResolver.is_late(now, shift_start_dt, grace_policy):
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                     status = AttendanceRecord.RecordStatus.LATE
                 else:
                     status = AttendanceRecord.RecordStatus.ON_TIME
@@ -437,6 +474,7 @@ def mark_attendance(request):
             verification_status=current_status_flag if current_status_flag else AttendanceRecord.VerificationStatus.VERIFIED
         )
 
+<<<<<<< HEAD
         if current_status_flag == AttendanceRecord.VerificationStatus.UNVERIFIED:
             log_audit_event(
                 'ATTENDANCE_UNVERIFIED',
@@ -460,6 +498,8 @@ def mark_attendance(request):
                 request=request,
             )
 
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
         logger.info(f"Attendance Success: {user.username} | {record_type} | Status: {status} | Verif: {new_record.verification_status} | Dist: {distance:.4f}")
 
         return JsonResponse({
@@ -468,10 +508,14 @@ def mark_attendance(request):
             'username': user.username,
             'status': status,
             'verification_status': new_record.verification_status,
+<<<<<<< HEAD
             'message': (
                 f"Successfully {record_type.label.lower()} "
                 f"(Mode: {new_record.verification_status.label}).{policy_message_suffix}"
             ),
+=======
+            'message': f"Successfully {record_type.label.lower()} (Mode: {new_record.verification_status.label}).",
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
             'timestamp': new_record.timestamp.isoformat()
         })
 

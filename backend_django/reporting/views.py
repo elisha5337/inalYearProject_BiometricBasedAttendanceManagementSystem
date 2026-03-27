@@ -13,7 +13,10 @@ import os
 import json
 
 from attendance.config_utils import read_global_config, update_global_config as save_global_config
+<<<<<<< HEAD
 from .utils import log_audit_event
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 
 # --- Telemetry Tracker ---
 SERVER_START_TIME = timezone.now()
@@ -484,7 +487,10 @@ def update_global_config(request):
         return JsonResponse({'error': 'POST required'}, status=405)
         
     try:
+<<<<<<< HEAD
         current_config = read_global_config()
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
         data = json.loads(request.body)
         updates = {}
         for key in ['session_timeout_minutes', 'strict_mode', 'max_login_attempts', 'biometric_lock_active', 'real_time_validation']:
@@ -495,6 +501,7 @@ def update_global_config(request):
                     updates[key] = bool(data[key])
             
         if save_global_config(updates):
+<<<<<<< HEAD
             latest_config = read_global_config()
             changed_fields = []
             for key, new_value in updates.items():
@@ -513,6 +520,8 @@ def update_global_config(request):
                 user=user,
                 request=request,
             )
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
             return JsonResponse({'success': True, 'message': 'Global configuration applied successfully.'})
         else:
             return JsonResponse({'success': False, 'error': 'Failed to save configuration.'}, status=500)

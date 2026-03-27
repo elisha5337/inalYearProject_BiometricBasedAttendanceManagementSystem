@@ -2,7 +2,10 @@ import base64
 import io
 import json
 import logging
+<<<<<<< HEAD
 from datetime import timedelta
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 import numpy as np
 import cv2
 
@@ -17,11 +20,15 @@ from django.http import JsonResponse
 from django.contrib.auth import get_user_model, authenticate, login, logout
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.contrib.auth.decorators import login_required
+<<<<<<< HEAD
 from django.core.cache import cache
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 
 from django.utils import timezone
 from .models import EmployeeDetail, BiometricTemplate, Department, Role, UserRole, Workflow, ExternalIntegration
 from .utils import PayrollSyncService
+<<<<<<< HEAD
 from attendance.config_utils import read_global_config
 from leave.utils import PolicyResolver
 from reporting.models import AuditLog
@@ -30,6 +37,11 @@ from reporting.utils import log_audit_event
 User = get_user_model()
 logger = logging.getLogger(__name__)
 FAILED_LOGIN_WINDOW_SECONDS = 15 * 60
+=======
+
+User = get_user_model()
+logger = logging.getLogger(__name__)
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 
 ROLE_INPUT_MAP = {
     'admin': Role.ADMINISTRATOR,
@@ -54,6 +66,7 @@ def normalize_role_input(role_value):
     return ROLE_INPUT_MAP.get(normalized, ROLE_INPUT_MAP.get(normalized.lower(), normalized))
 
 
+<<<<<<< HEAD
 def login_attempt_cache_keys(identifier=None, username=None, email=None):
     keys = set()
     for candidate in [identifier, username, email]:
@@ -144,6 +157,8 @@ def enforce_password_expiry(user):
     return False
 
 
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 def get_frontend_role_slug(user):
     if user.is_administrator:
         return 'admin'
@@ -195,8 +210,11 @@ def api_me(request):
     if not request.user.is_authenticated:
         return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
 
+<<<<<<< HEAD
     enforce_password_expiry(request.user)
 
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
     return JsonResponse({
         'success': True,
         'user': serialize_user_for_frontend(request.user)
@@ -205,7 +223,10 @@ def api_me(request):
 
 @login_required
 def api_profile(request):
+<<<<<<< HEAD
     enforce_password_expiry(request.user)
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
     return JsonResponse({
         'success': True,
         'profile': serialize_profile_for_frontend(request.user),
@@ -253,8 +274,11 @@ def api_update_profile(request):
 def api_login(request):
     if request.method == 'POST':
         try:
+<<<<<<< HEAD
             config = read_global_config()
             max_login_attempts = get_max_login_attempts(config)
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
             data = json.loads(request.body)
             identifier = (data.get('identifier') or data.get('username') or data.get('email') or '').strip()
             password = data.get('password')
@@ -264,12 +288,16 @@ def api_login(request):
                 return JsonResponse({'success': False, 'error': 'Username/email and password are required.'}, status=400)
 
             username = identifier
+<<<<<<< HEAD
             matched_user = None
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
             if '@' in identifier:
                 matched_user = User.objects.filter(email__iexact=identifier).first()
                 if matched_user:
                     username = matched_user.username
 
+<<<<<<< HEAD
             current_attempts = get_failed_login_attempts(
                 identifier=identifier,
                 username=username if username != identifier else None,
@@ -299,6 +327,12 @@ def api_login(request):
                         user=user,
                         request=request,
                     )
+=======
+            user = authenticate(request, username=username, password=password)
+            if user is not None:
+                # Security Check: Reject suspended accounts
+                if user.status == User.Status.SUSPENDED:
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                     return JsonResponse({
                         'success': False, 
                         'error': 'This account has been suspended. Please contact the administrator.'
@@ -306,6 +340,7 @@ def api_login(request):
 
                 # Validate selected role against actual user roles
                 if requested_role == Role.ADMINISTRATOR and not user.is_administrator:
+<<<<<<< HEAD
                     log_audit_event(
                         'LOGIN_ROLE_DENIED',
                         f'User "{user.username}" attempted Administrator login without the required role.',
@@ -328,6 +363,12 @@ def api_login(request):
                         user=user,
                         request=request,
                     )
+=======
+                    return JsonResponse({'success': False, 'error': 'Account does not have Administrator privileges'}, status=403)
+                if requested_role == Role.HR_OFFICER and not user.is_hr_officer:
+                    return JsonResponse({'success': False, 'error': 'Account does not have HR Officer privileges'}, status=403)
+                if requested_role == Role.EMPLOYEE and not user.is_employee:
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                     return JsonResponse({'success': False, 'error': 'Account does not have Employee privileges'}, status=403)
 
                 # Ensure is_staff is set for admins
@@ -336,6 +377,7 @@ def api_login(request):
                     user.save()
 
                 login(request, user)
+<<<<<<< HEAD
                 apply_session_timeout(request, config)
                 log_audit_event(
                     'LOGIN_SUCCESS',
@@ -343,12 +385,15 @@ def api_login(request):
                     user=user,
                     request=request,
                 )
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 
                 return JsonResponse({
                     'success': True,
                     'user': serialize_user_for_frontend(user)
                 })
             else:
+<<<<<<< HEAD
                 attempts = register_failed_login(
                     identifier=identifier,
                     username=username if username != identifier else None,
@@ -371,6 +416,9 @@ def api_login(request):
                         if locked else f'Invalid credentials. {remaining} attempt(s) remaining.'
                     ),
                 }, status=429 if locked else 401)
+=======
+                return JsonResponse({'success': False, 'error': 'Invalid credentials'}, status=401)
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)}, status=400)
     return JsonResponse({'error': 'POST required'}, status=405)
@@ -394,6 +442,7 @@ def api_change_password(request):
             
             # Re-authenticate the user with the new password to keep them logged in
             login(request, user)
+<<<<<<< HEAD
             apply_session_timeout(request)
             clear_failed_login_attempts(username=user.username, email=user.email)
             log_audit_event(
@@ -402,6 +451,8 @@ def api_change_password(request):
                 user=user,
                 request=request,
             )
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 
             return JsonResponse({'success': True, 'message': 'Password changed successfully.'})
         except Exception as e:
@@ -411,6 +462,7 @@ def api_change_password(request):
 
 @csrf_exempt
 def api_logout(request):
+<<<<<<< HEAD
     user = request.user if request.user.is_authenticated else None
     if user:
         log_audit_event(
@@ -419,6 +471,8 @@ def api_logout(request):
             user=user,
             request=request,
         )
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
     logout(request)
     return JsonResponse({'success': True})
 

@@ -3,7 +3,10 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from .models import LeaveRequest, Policy
 from accounts.models import User, Role
+<<<<<<< HEAD
 from reporting.utils import log_audit_event
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 import json
 from datetime import datetime
 
@@ -20,7 +23,11 @@ def is_admin(user):
     if user.is_superuser:
         return True
     try:
+<<<<<<< HEAD
         admin_role = Role.objects.get(name=Role.ADMINISTRATOR)
+=======
+        admin_role = Role.objects.get(name='Administrator')
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
         return user.roles.filter(id=admin_role.id).exists()
     except Role.DoesNotExist:
         return False
@@ -250,12 +257,15 @@ def policy_list_create(request):
                 rules=data.get('rules', {}),
                 department_id=data.get('departmentId')
             )
+<<<<<<< HEAD
             log_audit_event(
                 'POLICY_CREATED',
                 f'Created policy "{policy.name}" ({policy.category}) with value "{policy.value}".',
                 user=user,
                 request=request,
             )
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
             return JsonResponse({'success': True, 'message': 'Policy created', 'id': policy.id}, status=201)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
@@ -291,6 +301,7 @@ def policy_detail(request, policy_id):
     if request.method == 'PUT':
         try:
             data = json.loads(request.body)
+<<<<<<< HEAD
             previous_snapshot = {
                 'name': policy.name,
                 'category': policy.category,
@@ -298,6 +309,8 @@ def policy_detail(request, policy_id):
                 'value': policy.value,
                 'is_active': policy.is_active,
             }
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
             policy.name = data.get('name', policy.name)
             policy.category = data.get('category', policy.category)
             policy.urgency = data.get('urgency', policy.urgency)
@@ -309,6 +322,7 @@ def policy_detail(request, policy_id):
             if 'departmentId' in data:
                 policy.department_id = data['departmentId']
             policy.save()
+<<<<<<< HEAD
             log_audit_event(
                 'POLICY_UPDATED',
                 (
@@ -322,11 +336,14 @@ def policy_detail(request, policy_id):
                 user=user,
                 request=request,
             )
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
             return JsonResponse({'success': True, 'message': 'Policy updated'})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
 
     if request.method == 'DELETE':
+<<<<<<< HEAD
         policy_name = policy.name
         policy_category = policy.category
         policy_value = policy.value
@@ -337,6 +354,9 @@ def policy_detail(request, policy_id):
             user=user,
             request=request,
         )
+=======
+        policy.delete()
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
         return JsonResponse({'success': True, 'message': 'Policy deleted'}, status=200)
 
     return JsonResponse({'error': 'Method not allowed'}, status=405)

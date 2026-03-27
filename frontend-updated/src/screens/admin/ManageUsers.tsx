@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+<<<<<<< HEAD
 import { useSearchParams } from 'react-router-dom';
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 
 import { ApiError } from '../../lib/api';
 import {
@@ -71,7 +74,10 @@ function applyUserChanges(
 }
 
 export default function ManageUsers() {
+<<<<<<< HEAD
   const [searchParams] = useSearchParams();
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
   const [users, setUsers] = useState<ManagedUserRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -83,7 +89,10 @@ export default function ManageUsers() {
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [formState, setFormState] = useState<SaveUserPayload>(emptyFormState);
   const willSuspendOnUpdate = Boolean(editingUserId && !formState.isActive);
+<<<<<<< HEAD
   const routeSearchTerm = searchParams.get('search') ?? '';
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 
   useEffect(() => {
     let cancelled = false;
@@ -119,10 +128,13 @@ export default function ManageUsers() {
     };
   }, []);
 
+<<<<<<< HEAD
   useEffect(() => {
     setSearchTerm(routeSearchTerm);
   }, [routeSearchTerm]);
 
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
   const filteredUsers = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
 

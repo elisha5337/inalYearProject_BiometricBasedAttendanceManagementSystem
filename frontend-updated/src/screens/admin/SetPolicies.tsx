@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { useEffect, useMemo, useState } from "react";
+=======
+import { useEffect, useMemo, useState } from 'react';
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 import {
   Clock,
   Lock,
@@ -11,10 +15,16 @@ import {
   X,
   Settings,
   Trash2,
+<<<<<<< HEAD
   Pencil,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { ApiError } from "../../lib/api";
+=======
+} from 'lucide-react';
+import { cn } from '../../lib/utils';
+import { ApiError } from '../../lib/api';
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 import {
   createPolicy,
   deletePolicy,
@@ -24,12 +34,20 @@ import {
   updatePolicy,
   type GlobalConfigRecord,
   type LeavePolicyRecord,
+<<<<<<< HEAD
 } from "../../lib/admin";
+=======
+} from '../../lib/admin';
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 
 interface CustomPolicy {
   id: string;
   name: string;
+<<<<<<< HEAD
   category: "attendance" | "security" | "access";
+=======
+  category: 'attendance' | 'security' | 'access';
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
   value: string;
   description: string;
 }
@@ -50,8 +68,13 @@ const defaultPolicyState: PolicyState = {
   mfaEnabled: false,
   livenessDetection: true,
   sensitivity: 75,
+<<<<<<< HEAD
   sessionTimeout: "1 Hour",
   passwordExpiry: "90 Days",
+=======
+  sessionTimeout: '8 Hours',
+  passwordExpiry: '90 Days',
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 };
 
 function extractNumber(value: string, fallback: number) {
@@ -59,6 +82,7 @@ function extractNumber(value: string, fallback: number) {
   return match ? Number(match[0]) : fallback;
 }
 
+<<<<<<< HEAD
 function categoryFromBackend(value: string): CustomPolicy["category"] {
   if (value === "ATTENDANCE") {
     return "attendance";
@@ -112,15 +136,62 @@ function minutesFromTimeout(label: string) {
     return 480;
   }
   if (label.startsWith("12")) {
+=======
+function categoryFromBackend(value: string): CustomPolicy['category'] {
+  if (value === 'ATTENDANCE') {
+    return 'attendance';
+  }
+  if (value === 'BIOMETRIC' || value === 'NOTIFICATION') {
+    return 'security';
+  }
+  return 'access';
+}
+
+function categoryToBackend(value: CustomPolicy['category']) {
+  if (value === 'attendance') {
+    return 'ATTENDANCE';
+  }
+  if (value === 'security') {
+    return 'BIOMETRIC';
+  }
+  return 'HR_ADMIN';
+}
+
+function timeoutFromMinutes(minutes: number) {
+  if (minutes <= 240) {
+    return '4 Hours';
+  }
+  if (minutes <= 480) {
+    return '8 Hours';
+  }
+  if (minutes <= 720) {
+    return '12 Hours';
+  }
+  return '24 Hours';
+}
+
+function minutesFromTimeout(label: string) {
+  if (label.startsWith('4')) {
+    return 240;
+  }
+  if (label.startsWith('8')) {
+    return 480;
+  }
+  if (label.startsWith('12')) {
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
     return 720;
   }
   return 1440;
 }
 
+<<<<<<< HEAD
 function findPolicy(
   policies: LeavePolicyRecord[],
   matcher: (policy: LeavePolicyRecord) => boolean,
 ) {
+=======
+function findPolicy(policies: LeavePolicyRecord[], matcher: (policy: LeavePolicyRecord) => boolean) {
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
   return policies.find(matcher) || null;
 }
 
@@ -132,6 +203,7 @@ export default function SetPolicies() {
   const [error, setError] = useState<string | null>(null);
   const [policies, setPolicies] = useState<PolicyState>(defaultPolicyState);
   const [policyRecords, setPolicyRecords] = useState<LeavePolicyRecord[]>([]);
+<<<<<<< HEAD
   const [globalConfig, setGlobalConfig] = useState<GlobalConfigRecord | null>(
     null,
   );
@@ -142,6 +214,15 @@ export default function SetPolicies() {
     category: "attendance" as const,
     value: "",
     description: "",
+=======
+  const [globalConfig, setGlobalConfig] = useState<GlobalConfigRecord | null>(null);
+
+  const [newPolicy, setNewPolicy] = useState({
+    name: '',
+    category: 'attendance' as const,
+    value: '',
+    description: '',
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
   });
 
   async function loadPolicies() {
@@ -149,6 +230,7 @@ export default function SetPolicies() {
       setLoading(true);
       setError(null);
 
+<<<<<<< HEAD
       const [loadedPolicies, loadedConfig] = await Promise.all([
         fetchPolicies(),
         fetchGlobalConfig(),
@@ -194,6 +276,45 @@ export default function SetPolicies() {
           ? loadError.message
           : "Unable to load policy configuration.",
       );
+=======
+      const [loadedPolicies, loadedConfig] = await Promise.all([fetchPolicies(), fetchGlobalConfig()]);
+      setPolicyRecords(loadedPolicies);
+      setGlobalConfig(loadedConfig);
+
+      const gracePolicy = findPolicy(loadedPolicies, (policy) => policy.name.toLowerCase().includes('grace'));
+      const latePolicy = findPolicy(loadedPolicies, (policy) => policy.name.toLowerCase().includes('late threshold'));
+      const sensitivityPolicy = findPolicy(
+        loadedPolicies,
+        (policy) => policy.name.toLowerCase().includes('sensitivity'),
+      );
+      const passwordExpiryPolicy = findPolicy(
+        loadedPolicies,
+        (policy) => policy.name.toLowerCase().includes('password expiry'),
+      );
+      const mfaPolicy = findPolicy(
+        loadedPolicies,
+        (policy) => policy.name.toLowerCase().includes('multi-factor'),
+      );
+      const livenessPolicy = findPolicy(
+        loadedPolicies,
+        (policy) => policy.name.toLowerCase().includes('liveness'),
+      );
+
+      setPolicies({
+        gracePeriod: extractNumber(gracePolicy?.value || '15', 15),
+        lateThreshold: extractNumber(latePolicy?.value || '60', 60),
+        mfaEnabled:
+          (mfaPolicy?.value || '').toLowerCase() === 'enabled' || Boolean(loadedConfig.strictMode),
+        livenessDetection:
+          (livenessPolicy?.value || '').toLowerCase() !== 'disabled' &&
+          Boolean(loadedConfig.realTimeValidation),
+        sensitivity: extractNumber(sensitivityPolicy?.value || '75', 75),
+        sessionTimeout: timeoutFromMinutes(loadedConfig.sessionTimeoutMinutes),
+        passwordExpiry: passwordExpiryPolicy?.value || '90 Days',
+      });
+    } catch (loadError) {
+      setError(loadError instanceof ApiError ? loadError.message : 'Unable to load policy configuration.');
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
     } finally {
       setLoading(false);
     }
@@ -208,12 +329,21 @@ export default function SetPolicies() {
       .filter((policy) => {
         const normalizedName = policy.name.toLowerCase();
         return ![
+<<<<<<< HEAD
           "grace period",
           "late threshold",
           "verification sensitivity",
           "password expiry",
           "multi-factor authentication",
           "liveness detection",
+=======
+          'grace period',
+          'late threshold',
+          'verification sensitivity',
+          'password expiry',
+          'multi-factor authentication',
+          'liveness detection',
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
         ].some((reserved) => normalizedName.includes(reserved));
       })
       .map((policy) => ({
@@ -230,12 +360,18 @@ export default function SetPolicies() {
     category: string,
     value: string,
     description: string,
+<<<<<<< HEAD
     urgency = "MEDIUM",
   ) {
     const existing = findPolicy(
       policyRecords,
       (policy) => policy.name === name,
     );
+=======
+    urgency = 'MEDIUM',
+  ) {
+    const existing = findPolicy(policyRecords, (policy) => policy.name === name);
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 
     if (existing) {
       await updatePolicy(existing.id, {
@@ -259,6 +395,7 @@ export default function SetPolicies() {
     });
   }
 
+<<<<<<< HEAD
   function closePolicyModal() {
     setShowAddModal(false);
     setEditingPolicyId(null);
@@ -271,10 +408,14 @@ export default function SetPolicies() {
   }
 
   async function persistPolicyConfiguration(nextPolicies: PolicyState) {
+=======
+  const handleSave = async () => {
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
     if (!globalConfig) {
       return;
     }
 
+<<<<<<< HEAD
     await Promise.all([
       updateGlobalConfig({
         ...globalConfig,
@@ -324,26 +465,81 @@ export default function SetPolicies() {
   }
 
   const handleSave = async () => {
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
     try {
       setIsSaving(true);
       setError(null);
 
+<<<<<<< HEAD
       await persistPolicyConfiguration(policies);
+=======
+      await Promise.all([
+        updateGlobalConfig({
+          ...globalConfig,
+          sessionTimeoutMinutes: minutesFromTimeout(policies.sessionTimeout),
+          strictMode: policies.mfaEnabled,
+          biometricLockActive: policies.livenessDetection,
+          realTimeValidation: policies.livenessDetection,
+        }),
+        upsertNamedPolicy(
+          'Grace Period',
+          'ATTENDANCE',
+          `${policies.gracePeriod} Minutes`,
+          'Time allowed after shift start before marking as late.',
+        ),
+        upsertNamedPolicy(
+          'Late Threshold',
+          'ATTENDANCE',
+          `${policies.lateThreshold} Minutes`,
+          'Time after which late arrival becomes a half-day absence.',
+        ),
+        upsertNamedPolicy(
+          'Verification Sensitivity',
+          'BIOMETRIC',
+          `${policies.sensitivity}%`,
+          'Biometric verification matching sensitivity.',
+        ),
+        upsertNamedPolicy(
+          'Password Expiry',
+          'HR_ADMIN',
+          policies.passwordExpiry,
+          'System-wide password expiry period.',
+        ),
+        upsertNamedPolicy(
+          'Multi-factor Authentication',
+          'BIOMETRIC',
+          policies.mfaEnabled ? 'Enabled' : 'Disabled',
+          'Require multiple biometric factors when enabled.',
+        ),
+        upsertNamedPolicy(
+          'Liveness Detection',
+          'BIOMETRIC',
+          policies.livenessDetection ? 'Enabled' : 'Disabled',
+          'Enable anti-spoofing liveness checks.',
+        ),
+      ]);
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
 
       await loadPolicies();
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (saveError) {
+<<<<<<< HEAD
       setError(
         saveError instanceof ApiError
           ? saveError.message
           : "Unable to save policy changes.",
       );
+=======
+      setError(saveError instanceof ApiError ? saveError.message : 'Unable to save policy changes.');
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
     } finally {
       setIsSaving(false);
     }
   };
 
+<<<<<<< HEAD
   const handleReset = async () => {
     if (
       !window.confirm(
@@ -369,6 +565,11 @@ export default function SetPolicies() {
       );
     } finally {
       setIsSaving(false);
+=======
+  const handleReset = () => {
+    if (window.confirm('Are you sure you want to reset all policies to system defaults?')) {
+      setPolicies(defaultPolicyState);
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
     }
   };
 
@@ -377,6 +578,7 @@ export default function SetPolicies() {
 
     try {
       setError(null);
+<<<<<<< HEAD
       if (editingPolicyId) {
         await updatePolicy(editingPolicyId, {
           name: newPolicy.name,
@@ -406,25 +608,50 @@ export default function SetPolicies() {
           ? createError.message
           : `Unable to ${editingPolicyId ? "update" : "register"} policy.`,
       );
+=======
+      await createPolicy({
+        name: newPolicy.name,
+        category: categoryToBackend(newPolicy.category),
+        value: newPolicy.value,
+        description: newPolicy.description,
+        urgency: 'MEDIUM',
+        isActive: true,
+        rules: {},
+      });
+      setShowAddModal(false);
+      setNewPolicy({ name: '', category: 'attendance', value: '', description: '' });
+      await loadPolicies();
+    } catch (createError) {
+      setError(createError instanceof ApiError ? createError.message : 'Unable to register policy.');
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
     }
   };
 
   const handleDeleteCustomPolicy = async (id: string) => {
+<<<<<<< HEAD
     if (window.confirm("Are you sure you want to delete this custom policy?")) {
+=======
+    if (window.confirm('Are you sure you want to delete this custom policy?')) {
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
       try {
         setError(null);
         await deletePolicy(id);
         await loadPolicies();
       } catch (deleteError) {
+<<<<<<< HEAD
         setError(
           deleteError instanceof ApiError
             ? deleteError.message
             : "Unable to delete policy.",
         );
+=======
+        setError(deleteError instanceof ApiError ? deleteError.message : 'Unable to delete policy.');
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
       }
     }
   };
 
+<<<<<<< HEAD
   const handleEditCustomPolicy = (policy: CustomPolicy) => {
     setEditingPolicyId(policy.id);
     setNewPolicy({
@@ -436,11 +663,14 @@ export default function SetPolicies() {
     setShowAddModal(true);
   };
 
+=======
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">System Policies</h1>
+<<<<<<< HEAD
           <p className="text-slate-500">
             Configure global attendance rules and security protocols
           </p>
@@ -450,6 +680,12 @@ export default function SetPolicies() {
             onClick={() => setShowAddModal(true)}
             className="primary-button gap-2"
           >
+=======
+          <p className="text-slate-500">Configure global attendance rules and security protocols</p>
+        </div>
+        <div className="flex gap-3">
+          <button onClick={() => setShowAddModal(true)} className="secondary-button gap-2">
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
             <Plus className="w-4 h-4" />
             Register New Policy
           </button>
@@ -457,9 +693,13 @@ export default function SetPolicies() {
         {showSuccess && (
           <div className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg border border-green-100 animate-in fade-in slide-in-from-top-2">
             <CheckCircle2 className="w-4 h-4" />
+<<<<<<< HEAD
             <span className="text-sm font-bold">
               Policies updated successfully!
             </span>
+=======
+            <span className="text-sm font-bold">Policies updated successfully!</span>
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
           </div>
         )}
       </div>
@@ -478,14 +718,19 @@ export default function SetPolicies() {
             </div>
             <div>
               <h3 className="font-bold text-slate-900">Attendance Rules</h3>
+<<<<<<< HEAD
               <p className="text-xs text-slate-500">
                 Define grace periods and late arrival thresholds
               </p>
+=======
+              <p className="text-xs text-slate-500">Define grace periods and late arrival thresholds</p>
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
             </div>
           </div>
           <div className="p-6 md:p-8 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
               <div className="space-y-2">
+<<<<<<< HEAD
                 <label className="text-sm font-bold text-slate-700">
                   Standard Grace Period (Minutes)
                 </label>
@@ -522,13 +767,37 @@ export default function SetPolicies() {
                 <p className="text-[10px] text-slate-400">
                   Time after which late arrival becomes a half-day absence.
                 </p>
+=======
+                <label className="text-sm font-bold text-slate-700">Standard Grace Period (Minutes)</label>
+                <input
+                  type="number"
+                  value={policies.gracePeriod}
+                  onChange={(e) => setPolicies((current) => ({ ...current, gracePeriod: parseInt(e.target.value || '0', 10) }))}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-[10px] text-slate-400">Time allowed after shift start before marking as late.</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Late Threshold (Minutes)</label>
+                <input
+                  type="number"
+                  value={policies.lateThreshold}
+                  onChange={(e) => setPolicies((current) => ({ ...current, lateThreshold: parseInt(e.target.value || '0', 10) }))}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-[10px] text-slate-400">Time after which late arrival becomes a half-day absence.</p>
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
               </div>
             </div>
             <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-100">
               <Info className="w-5 h-5 text-blue-600 shrink-0" />
               <p className="text-xs text-blue-700 leading-relaxed">
+<<<<<<< HEAD
                 Changes to attendance rules will be applied to all future
                 check-ins. Existing records will not be recalculated.
+=======
+                Changes to attendance rules will be applied to all future check-ins. Existing records will not be recalculated.
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
               </p>
             </div>
           </div>
@@ -541,14 +810,19 @@ export default function SetPolicies() {
             </div>
             <div>
               <h3 className="font-bold text-slate-900">Biometric Security</h3>
+<<<<<<< HEAD
               <p className="text-xs text-slate-500">
                 Configure verification sensitivity and methods
               </p>
+=======
+              <p className="text-xs text-slate-500">Configure verification sensitivity and methods</p>
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
             </div>
           </div>
           <div className="p-6 md:p-8 space-y-6">
             <div className="space-y-4">
               <div
+<<<<<<< HEAD
                 onClick={() =>
                   setPolicies((current) => ({
                     ...current,
@@ -608,24 +882,55 @@ export default function SetPolicies() {
                       policies.livenessDetection ? "right-1" : "left-1",
                     )}
                   ></div>
+=======
+                onClick={() => setPolicies((current) => ({ ...current, mfaEnabled: !current.mfaEnabled }))}
+                className="flex items-center justify-between p-4 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                <div>
+                  <p className="text-sm font-bold text-slate-900">Multi-factor Authentication</p>
+                  <p className="text-xs text-slate-500">Require both face and fingerprint for high-security areas.</p>
+                </div>
+                <div className={cn('w-12 h-6 rounded-full relative transition-colors duration-200', policies.mfaEnabled ? 'bg-blue-600' : 'bg-slate-200')}>
+                  <div className={cn('absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-200', policies.mfaEnabled ? 'right-1' : 'left-1')}></div>
+                </div>
+              </div>
+              <div
+                onClick={() => setPolicies((current) => ({ ...current, livenessDetection: !current.livenessDetection }))}
+                className="flex items-center justify-between p-4 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                <div>
+                  <p className="text-sm font-bold text-slate-900">Liveness Detection</p>
+                  <p className="text-xs text-slate-500">Prevent spoofing using high-resolution 3D depth sensing.</p>
+                </div>
+                <div className={cn('w-12 h-6 rounded-full relative transition-colors duration-200', policies.livenessDetection ? 'bg-blue-600' : 'bg-slate-200')}>
+                  <div className={cn('absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-200', policies.livenessDetection ? 'right-1' : 'left-1')}></div>
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                 </div>
               </div>
             </div>
             <div className="space-y-2">
+<<<<<<< HEAD
               <label className="text-sm font-bold text-slate-700">
                 Verification Sensitivity ({policies.sensitivity}%)
               </label>
+=======
+              <label className="text-sm font-bold text-slate-700">Verification Sensitivity ({policies.sensitivity}%)</label>
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
               <input
                 type="range"
                 min="0"
                 max="100"
                 value={policies.sensitivity}
+<<<<<<< HEAD
                 onChange={(e) =>
                   setPolicies((current) => ({
                     ...current,
                     sensitivity: parseInt(e.target.value || "0", 10),
                   }))
                 }
+=======
+                onChange={(e) => setPolicies((current) => ({ ...current, sensitivity: parseInt(e.target.value || '0', 10) }))}
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                 className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
               />
               <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -643,14 +948,19 @@ export default function SetPolicies() {
             </div>
             <div>
               <h3 className="font-bold text-slate-900">Access Control</h3>
+<<<<<<< HEAD
               <p className="text-xs text-slate-500">
                 Manage system-wide access and session policies
               </p>
+=======
+              <p className="text-xs text-slate-500">Manage system-wide access and session policies</p>
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
             </div>
           </div>
           <div className="p-6 md:p-8 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
               <div className="space-y-2">
+<<<<<<< HEAD
                 <label className="text-sm font-bold text-slate-700">
                   Session Timeout
                 </label>
@@ -666,6 +976,14 @@ export default function SetPolicies() {
                 >
                   <option>1 Hour</option>
                   <option>2 Hours</option>
+=======
+                <label className="text-sm font-bold text-slate-700">Session Timeout</label>
+                <select
+                  value={policies.sessionTimeout}
+                  onChange={(e) => setPolicies((current) => ({ ...current, sessionTimeout: e.target.value }))}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                >
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                   <option>4 Hours</option>
                   <option>8 Hours</option>
                   <option>12 Hours</option>
@@ -673,6 +991,7 @@ export default function SetPolicies() {
                 </select>
               </div>
               <div className="space-y-2">
+<<<<<<< HEAD
                 <label className="text-sm font-bold text-slate-700">
                   Password Expiry
                 </label>
@@ -684,6 +1003,12 @@ export default function SetPolicies() {
                       passwordExpiry: e.target.value,
                     }))
                   }
+=======
+                <label className="text-sm font-bold text-slate-700">Password Expiry</label>
+                <select
+                  value={policies.passwordExpiry}
+                  onChange={(e) => setPolicies((current) => ({ ...current, passwordExpiry: e.target.value }))}
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option>30 Days</option>
@@ -704,13 +1029,18 @@ export default function SetPolicies() {
               </div>
               <div>
                 <h3 className="font-bold text-slate-900">Custom Policies</h3>
+<<<<<<< HEAD
                 <p className="text-xs text-slate-500">
                   Additional organization-specific rules
                 </p>
+=======
+                <p className="text-xs text-slate-500">Additional organization-specific rules</p>
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
               </div>
             </div>
             <div className="p-6 space-y-4">
               {customPolicies.map((policy) => (
+<<<<<<< HEAD
                 <div
                   key={policy.id}
                   className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-xl group"
@@ -733,6 +1063,23 @@ export default function SetPolicies() {
                       <p className="text-xs text-slate-500">
                         {policy.description}
                       </p>
+=======
+                <div key={policy.id} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-xl group">
+                  <div className="flex items-center gap-4">
+                    <div
+                      className={cn(
+                        'w-2 h-2 rounded-full',
+                        policy.category === 'attendance'
+                          ? 'bg-blue-500'
+                          : policy.category === 'security'
+                            ? 'bg-purple-500'
+                            : 'bg-amber-500',
+                      )}
+                    />
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900">{policy.name}</h4>
+                      <p className="text-xs text-slate-500">{policy.description}</p>
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
@@ -740,6 +1087,7 @@ export default function SetPolicies() {
                       {policy.value}
                     </span>
                     <button
+<<<<<<< HEAD
                       onClick={() => handleEditCustomPolicy(policy)}
                       className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                       aria-label={`Edit ${policy.name}`}
@@ -752,6 +1100,10 @@ export default function SetPolicies() {
                       className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                       aria-label={`Delete ${policy.name}`}
                       title={`Delete ${policy.name}`}
+=======
+                      onClick={() => handleDeleteCustomPolicy(policy.id)}
+                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -763,10 +1115,14 @@ export default function SetPolicies() {
         )}
 
         <div className="flex flex-col sm:flex-row items-center justify-end gap-4 pt-4">
+<<<<<<< HEAD
           <button
             onClick={handleReset}
             className="secondary-button gap-2 w-full sm:w-auto justify-center"
           >
+=======
+          <button onClick={handleReset} className="secondary-button gap-2 w-full sm:w-auto justify-center">
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
             <RotateCcw className="w-4 h-4" />
             Reset to Defaults
           </button>
@@ -792,14 +1148,19 @@ export default function SetPolicies() {
 
       {showAddModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+<<<<<<< HEAD
           <div
             className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
             onClick={closePolicyModal}
           />
+=======
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowAddModal(false)} />
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
           <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white">
+<<<<<<< HEAD
                   {editingPolicyId ? (
                     <Pencil className="w-5 h-5" />
                   ) : (
@@ -821,10 +1182,21 @@ export default function SetPolicies() {
                 onClick={closePolicyModal}
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
               >
+=======
+                  <Plus className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Register New Policy</h3>
+                  <p className="text-xs text-slate-500">Define a custom system rule</p>
+                </div>
+              </div>
+              <button onClick={() => setShowAddModal(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                 <X className="w-5 h-5" />
               </button>
             </div>
 
+<<<<<<< HEAD
             <form
               onSubmit={handleAddPolicy}
               className="flex-1 overflow-y-auto p-6 space-y-6"
@@ -833,32 +1205,49 @@ export default function SetPolicies() {
                 <label className="text-sm font-bold text-slate-700">
                   Policy Name
                 </label>
+=======
+            <form onSubmit={handleAddPolicy} className="flex-1 overflow-y-auto p-6 space-y-6">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Policy Name</label>
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                 <input
                   type="text"
                   required
                   placeholder="e.g., Remote Work Allowance"
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                   value={newPolicy.name}
+<<<<<<< HEAD
                   onChange={(e) =>
                     setNewPolicy((current) => ({
                       ...current,
                       name: e.target.value,
                     }))
                   }
+=======
+                  onChange={(e) => setNewPolicy((current) => ({ ...current, name: e.target.value }))}
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                 />
               </div>
 
               <div className="space-y-2">
+<<<<<<< HEAD
                 <label className="text-sm font-bold text-slate-700">
                   Category
                 </label>
+=======
+                <label className="text-sm font-bold text-slate-700">Category</label>
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                 <select
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                   value={newPolicy.category}
                   onChange={(e) =>
                     setNewPolicy((current) => ({
                       ...current,
+<<<<<<< HEAD
                       category: e.target.value as CustomPolicy["category"],
+=======
+                      category: e.target.value as CustomPolicy['category'],
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                     }))
                   }
                 >
@@ -869,44 +1258,61 @@ export default function SetPolicies() {
               </div>
 
               <div className="space-y-2">
+<<<<<<< HEAD
                 <label className="text-sm font-bold text-slate-700">
                   Policy Value
                 </label>
+=======
+                <label className="text-sm font-bold text-slate-700">Policy Value</label>
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                 <input
                   type="text"
                   required
                   placeholder="e.g., 2 Days/Week or Enabled"
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                   value={newPolicy.value}
+<<<<<<< HEAD
                   onChange={(e) =>
                     setNewPolicy((current) => ({
                       ...current,
                       value: e.target.value,
                     }))
                   }
+=======
+                  onChange={(e) => setNewPolicy((current) => ({ ...current, value: e.target.value }))}
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                 />
               </div>
 
               <div className="space-y-2">
+<<<<<<< HEAD
                 <label className="text-sm font-bold text-slate-700">
                   Description
                 </label>
+=======
+                <label className="text-sm font-bold text-slate-700">Description</label>
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                 <textarea
                   required
                   rows={3}
                   placeholder="Explain the purpose of this policy..."
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
                   value={newPolicy.description}
+<<<<<<< HEAD
                   onChange={(e) =>
                     setNewPolicy((current) => ({
                       ...current,
                       description: e.target.value,
                     }))
                   }
+=======
+                  onChange={(e) => setNewPolicy((current) => ({ ...current, description: e.target.value }))}
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                 />
               </div>
 
               <div className="flex gap-3 pt-4 sticky bottom-0 bg-white pb-2">
+<<<<<<< HEAD
                 <button
                   type="button"
                   onClick={closePolicyModal}
@@ -919,6 +1325,13 @@ export default function SetPolicies() {
                   className="primary-button flex-1 py-3 shadow-lg shadow-blue-200"
                 >
                   {editingPolicyId ? "Update Policy" : "Register Policy"}
+=======
+                <button type="button" onClick={() => setShowAddModal(false)} className="secondary-button flex-1 py-3">
+                  Cancel
+                </button>
+                <button type="submit" className="primary-button flex-1 py-3 shadow-lg shadow-blue-200">
+                  Register Policy
+>>>>>>> 5b011c722a6b59e8a016ee8f0dc221343adf2d1e
                 </button>
               </div>
             </form>

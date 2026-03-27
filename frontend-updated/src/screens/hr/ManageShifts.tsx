@@ -43,7 +43,7 @@ interface Assignment {
   userName: string;
   shiftName: string;
   from_date: string;
-  to_date: string;
+  to_date: string | null;
   assigned_by: string;
 }
 
@@ -57,6 +57,11 @@ export default function ManageShifts() {
   const [isLoading, setIsLoading] = useState(true);
   const [departments, setDepartments] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
+  // Calendar State
+  const [currentDate, setCurrentDate] = useState(new Date());
 
   // New Shift Form State
   const [newShift, setNewShift] = useState({
@@ -162,23 +167,30 @@ export default function ManageShifts() {
       }
     } catch (error) {
       console.error('Failed to submit shift:', error);
+      alert(error instanceof Error ? error.message : 'Failed to save shift');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteShift = async (shiftId: string) => {
-    if (!confirm('Are you sure you want to delete this shift?')) return;
+    if (isDeleting) return;
+    if (!confirm('Are you sure you want to delete this shift? This will also remove all associated employee assignments.')) return;
 
+    setIsDeleting(shiftId);
     try {
-      const response = await apiRequest<{ success: boolean }>(`/api/scheduling/shifts/${shiftId}/`, {
+      await apiRequest(`/api/scheduling/shifts/${shiftId}/`, {
         method: 'DELETE'
       });
-      if (response.success || response) { // status 204
-        fetchShifts();
-      }
+      setShifts(prev => prev.filter(s => s.id !== shiftId));
+      fetchShifts();
+      fetchAssignments();
     } catch (error) {
       console.error('Failed to delete shift:', error);
+      alert('Failed to delete shift.');
+      fetchShifts();
+    } finally {
+      setIsDeleting(null);
     }
   };
 
@@ -198,7 +210,6 @@ export default function ManageShifts() {
   };
 
   const convertToTimeInput = (timeStr: string) => {
-    // Converts "08:00 AM" to "08:00"
     try {
       const [time, period] = timeStr.split(' ');
       let [hours, minutes] = time.split(':');
@@ -218,7 +229,7 @@ export default function ManageShifts() {
 
     setIsSubmitting(true);
     try {
-      const response = await apiRequest<{ success: boolean }>('/api/scheduling/assignments/', {
+      const response = await apiRequest<{ success: boolean; message?: string }>('/api/scheduling/assignments/', {
         method: 'POST',
         body: {
           user_id: assignModal.userId,
@@ -227,33 +238,96 @@ export default function ManageShifts() {
           to_date: assignModal.to_date || null
         }
       });
+      
       if (response.success) {
-        setAssignModal({ ...assignModal, show: false });
-        fetchShifts(); // Update counts
-        fetchAssignments(); // Update list
+        setAssignModal(prev => ({ ...prev, show: false, userId: '', to_date: '' }));
+        fetchShifts();
+        fetchAssignments();
+      } else {
+        alert(response.message || 'Failed to create assignment');
       }
     } catch (error) {
       console.error('Failed to create assignment:', error);
+      alert(error instanceof Error ? error.message : 'Invalid data provided.');
+      fetchShifts();
+      fetchAssignments();
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteAssignment = async (assignmentId: string) => {
+    if (isDeleting) return;
     if (!confirm('Remove this assignment?')) return;
 
+    setIsDeleting(assignmentId);
     try {
-      const response = await apiRequest<{ success: boolean }>(`/api/scheduling/assignments/${assignmentId}/`, {
+      await apiRequest(`/api/scheduling/assignments/${assignmentId}/`, {
         method: 'DELETE'
       });
-      if (response.success || response) {
-        fetchShifts();
-        fetchAssignments();
-      }
+      setAssignments(prev => prev.filter(a => a.id !== assignmentId));
+      fetchShifts();
+      fetchAssignments();
     } catch (error) {
       console.error('Failed to delete assignment:', error);
+      alert('Failed to delete assignment.');
+      fetchAssignments();
+    } finally {
+      setIsDeleting(null);
     }
   };
+
+  // Calendar Helpers
+  const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+  const firstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
+
+  const calendarDays = useMemo(() => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const days = [];
+    const totalDays = daysInMonth(year, month);
+    const startDay = firstDayOfMonth(year, month);
+
+    // Fill previous month days
+    for (let i = 0; i < startDay; i++) {
+      days.push({ day: null, date: null });
+    }
+
+    // Current month days
+    for (let i = 1; i <= totalDays; i++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+      days.push({ day: i, date: dateStr });
+    }
+
+    return days;
+  }, [currentDate]);
+
+  const getAssignmentsForDate = (dateStr: string) => {
+    return assignments.filter(assignment => {
+      const from = new Date(assignment.from_date);
+      const to = assignment.to_date ? new Date(assignment.to_date) : null;
+      const target = new Date(dateStr);
+      
+      from.setHours(0, 0, 0, 0);
+      target.setHours(0, 0, 0, 0);
+      
+      if (to) {
+        to.setHours(0, 0, 0, 0);
+        return target >= from && target <= to;
+      }
+      return target.getTime() === from.getTime();
+    });
+  };
+
+  const prevMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  };
+
+  const nextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  };
+
+  const monthName = currentDate.toLocaleString('default', { month: 'long' });
 
   return (
     <div className="space-y-6">
@@ -372,10 +446,11 @@ export default function ManageShifts() {
                   </button>
                   <button 
                     onClick={() => handleDeleteShift(shift.id)}
-                    className="col-span-2 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg border border-red-50 transition-colors flex items-center justify-center gap-1.5 mt-1 opacity-60 hover:opacity-100"
+                    disabled={isDeleting === shift.id}
+                    className="col-span-2 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg border border-red-50 transition-colors flex items-center justify-center gap-1.5 mt-1 opacity-60 hover:opacity-100 disabled:opacity-30"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Delete Shift
+                    {isDeleting === shift.id ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                    {isDeleting === shift.id ? 'Deleting...' : 'Delete Shift'}
                   </button>
                 </div>
               </div>
@@ -385,66 +460,133 @@ export default function ManageShifts() {
       </div>
 
       <div className="professional-card">
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+        <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h3 className="text-lg font-bold text-slate-900">Shift Assignments</h3>
-          <div className="flex gap-2">
-            <button className="secondary-button py-1.5 text-xs">Calendar View</button>
-            <button className="primary-button py-1.5 text-xs">List View</button>
+          <div className="flex items-center gap-4">
+            {viewMode === 'calendar' && (
+              <div className="flex items-center bg-slate-100 rounded-lg p-1">
+                <button onClick={prevMonth} className="p-1 hover:bg-white rounded transition-colors"><ChevronLeft className="w-4 h-4" /></button>
+                <span className="px-3 text-xs font-bold text-slate-700 min-w-[100px] text-center">{monthName} {currentDate.getFullYear()}</span>
+                <button onClick={nextMonth} className="p-1 hover:bg-white rounded transition-colors"><ChevronRight className="w-4 h-4" /></button>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setViewMode('calendar')}
+                className={cn(
+                  "py-1.5 px-4 text-xs font-bold rounded-lg transition-all",
+                  viewMode === 'calendar' ? "bg-blue-600 text-white shadow-md shadow-blue-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                )}
+              >
+                Calendar View
+              </button>
+              <button 
+                onClick={() => setViewMode('list')}
+                className={cn(
+                  "py-1.5 px-4 text-xs font-bold rounded-lg transition-all",
+                  viewMode === 'list' ? "bg-blue-600 text-white shadow-md shadow-blue-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                )}
+              >
+                List View
+              </button>
+            </div>
           </div>
         </div>
         
-        {assignments.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50/50">
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Employee</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Shift</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Duration</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Assigned By</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {assignments.map((assignment) => (
-                  <tr key={assignment.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
-                          {assignment.employeeName.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-slate-900">{assignment.employeeName}</p>
-                          <p className="text-[10px] text-slate-500">@{assignment.userName}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium text-slate-700">{assignment.shiftName}</td>
-                    <td className="px-6 py-4 text-xs text-slate-500">{assignment.from_date} to {assignment.to_date || 'Ongoing'}</td>
-                    <td className="px-6 py-4 text-xs text-slate-500">{assignment.assigned_by}</td>
-                    <td className="px-6 py-4 text-right">
-                      <button 
-                        onClick={() => handleDeleteAssignment(assignment.id)}
-                        className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
+        {viewMode === 'list' ? (
+          assignments.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/50">
+                    <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Employee</th>
+                    <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Shift</th>
+                    <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Duration</th>
+                    <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Assigned By</th>
+                    <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {assignments.map((assignment) => (
+                    <tr key={assignment.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
+                            {assignment.employeeName.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-900">{assignment.employeeName}</p>
+                            <p className="text-[10px] text-slate-500">@{assignment.userName}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium text-slate-700">{assignment.shiftName}</td>
+                      <td className="px-6 py-4 text-xs text-slate-500">{assignment.from_date} to {assignment.to_date || 'Ongoing'}</td>
+                      <td className="px-6 py-4 text-xs text-slate-500">{assignment.assigned_by}</td>
+                      <td className="px-6 py-4 text-right">
+                        <button 
+                          onClick={() => handleDeleteAssignment(assignment.id)}
+                          disabled={isDeleting === assignment.id}
+                          className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-colors disabled:opacity-30"
+                        >
+                          {isDeleting === assignment.id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-12 text-center space-y-4">
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
+                <Calendar className="w-8 h-8" />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-900">No recent assignments</h4>
+                <p className="text-sm text-slate-500 mt-1">Start assigning employees to shifts to see them here.</p>
+              </div>
+            </div>
+          )
         ) : (
-          <div className="p-12 text-center space-y-4">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
-              <Calendar className="w-8 h-8" />
+          <div className="p-6">
+            <div className="grid grid-cols-7 gap-px bg-slate-100 border border-slate-100 rounded-xl overflow-hidden">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                <div key={day} className="bg-slate-50 py-2 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">{day}</div>
+              ))}
+              {calendarDays.map((item, idx) => {
+                const dateAssignments = item.date ? getAssignmentsForDate(item.date) : [];
+                const isToday = item.date === new Date().toISOString().split('T')[0];
+                
+                return (
+                  <div key={idx} className={cn(
+                    "min-h-[120px] bg-white p-2 group transition-colors",
+                    item.day ? "hover:bg-slate-50/50" : "bg-slate-50/30"
+                  )}>
+                    {item.day && (
+                      <div className="flex justify-between items-start mb-2">
+                        <span className={cn(
+                          "text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full",
+                          isToday ? "bg-blue-600 text-white" : "text-slate-500"
+                        )}>{item.day}</span>
+                      </div>
+                    )}
+                    <div className="space-y-1">
+                      {dateAssignments.slice(0, 3).map(assign => (
+                        <div key={assign.id} className="text-[10px] p-1 bg-blue-50 text-blue-700 rounded border border-blue-100 truncate font-medium">
+                          {assign.employeeName.split(' ')[0]}: {assign.shiftName}
+                        </div>
+                      ))}
+                      {dateAssignments.length > 3 && (
+                        <div className="text-[9px] text-center font-bold text-slate-400 mt-1">
+                          + {dateAssignments.length - 3} more
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <div>
-              <h4 className="font-bold text-slate-900">No recent assignments</h4>
-              <p className="text-sm text-slate-500 mt-1">Start assigning employees to shifts to see them here.</p>
-            </div>
-            <button className="text-blue-600 font-bold text-sm hover:underline">Assign Employees Now</button>
           </div>
         )}
       </div>

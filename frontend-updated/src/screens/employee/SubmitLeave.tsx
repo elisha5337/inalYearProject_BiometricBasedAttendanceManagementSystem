@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Send, Calendar, AlertCircle, Info, CheckCircle2 } from 'lucide-react';
+import { Send, Calendar, AlertCircle, Info, CheckCircle2, Paperclip, X } from 'lucide-react';
 import { User } from '../../types';
-import { fetchMyLeaveRequests, normalizeLeaveType, submitLeaveRequest } from '../../lib/leave';
+import { fetchMyLeaveRequests, submitLeaveRequest } from '../../lib/leave';
 
 export default function SubmitLeave({ user }: { user: User }) {
   const [formData, setFormData] = useState({
@@ -10,6 +10,7 @@ export default function SubmitLeave({ user }: { user: User }) {
     endDate: '',
     reason: '',
   });
+  const [attachment, setAttachment] = useState<File | null>(null);
   const [leaveBalance, setLeaveBalance] = useState({ annual_left: 0, sick_left: 0 });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -49,19 +50,21 @@ export default function SubmitLeave({ user }: { user: User }) {
 
     try {
       const response = await submitLeaveRequest({
-        leave_type: normalizeLeaveType(formData.type),
-        start_date: formData.startDate,
-        end_date: formData.endDate,
+        leaveType: formData.type,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
         reason: formData.reason,
+        attachment: attachment,
       });
 
-      setSuccessMessage(response.message || 'Leave request submitted successfully.');
+      setSuccessMessage((response as any).message || 'Leave request submitted successfully.');
       setFormData({
         type: 'Annual Leave',
         startDate: '',
         endDate: '',
         reason: '',
       });
+      setAttachment(null);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Failed to submit leave request.');
     } finally {
@@ -109,11 +112,35 @@ export default function SubmitLeave({ user }: { user: User }) {
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Attachment (Optional)</label>
-                <input
-                  type="file"
-                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                />
+                <label className="text-sm font-semibold text-slate-700">Attachment (Medical Proof/Proof)</label>
+                <div className="relative">
+                   <input
+                    type="file"
+                    id="attachment"
+                    className="hidden"
+                    onChange={(e) => setAttachment(e.target.files?.[0] || null)}
+                  />
+                  <label 
+                    htmlFor="attachment"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 border-dashed rounded-lg flex items-center gap-2 cursor-pointer hover:bg-slate-100 transition-colors text-sm text-slate-600 font-medium"
+                  >
+                    <Paperclip className="w-4 h-4 text-blue-500" />
+                    {attachment ? (
+                      <span className="text-blue-600 font-bold truncate max-w-[180px]">{attachment.name}</span>
+                    ) : (
+                      "Click to upload proof"
+                    )}
+                  </label>
+                  {attachment && (
+                    <button 
+                      type="button" 
+                      onClick={() => setAttachment(null)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-red-50 text-red-400 rounded-full"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -161,7 +188,10 @@ export default function SubmitLeave({ user }: { user: User }) {
             <div className="pt-4 flex justify-end gap-3">
               <button
                 type="button"
-                onClick={() => setFormData({ type: 'Annual Leave', startDate: '', endDate: '', reason: '' })}
+                onClick={() => {
+                  setFormData({ type: 'Annual Leave', startDate: '', endDate: '', reason: '' });
+                  setAttachment(null);
+                }}
                 className="secondary-button"
               >
                 Cancel
@@ -175,7 +205,7 @@ export default function SubmitLeave({ user }: { user: User }) {
         </div>
 
         <div className="space-y-6">
-          <div className="professional-card p-6 bg-blue-600 text-white">
+          <div className="professional-card p-6 bg-blue-600 text-white shadow-lg shadow-blue-600/20">
             <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
               <Info className="w-5 h-5" />
               Leave Balance
@@ -187,7 +217,7 @@ export default function SubmitLeave({ user }: { user: User }) {
               </div>
               <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden">
                 <div
-                  className="bg-white h-full"
+                  className="bg-white h-full transition-all duration-500"
                   style={{ width: `${Math.max(5, Math.min(100, (leaveBalance.annual_left / 20) * 100))}%` }}
                 ></div>
               </div>
@@ -197,7 +227,7 @@ export default function SubmitLeave({ user }: { user: User }) {
               </div>
               <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden">
                 <div
-                  className="bg-white h-full"
+                  className="bg-white h-full transition-all duration-500"
                   style={{ width: `${Math.max(5, Math.min(100, (leaveBalance.sick_left / 12) * 100))}%` }}
                 ></div>
               </div>

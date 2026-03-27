@@ -57,4 +57,9 @@ class LeaveRequest(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
     reason = models.TextField(blank=True, null=True)
+    attachment = models.FileField(upload_to='leave_attachments/', blank=True, null=True)
     status = models.CharField(max_length=50, choices=LeaveStatus.choices, default=LeaveStatus.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True, db_column='createdAt')
+
+    def __str__(self):
+        return f"{self.leave_type} for {self.user.username} ({self.status})"

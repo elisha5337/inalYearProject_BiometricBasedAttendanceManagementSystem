@@ -7,6 +7,14 @@ urlpatterns = [
     # GET to generate an attendance report
     # Example: /api/reporting/attendance/?start_date=2023-01-01&end_date=2023-01-31
     path('attendance/', views.attendance_report, name='attendance_report'),
+
+    # HR download/export endpoint for attendance reports
+    # Example: /api/reporting/attendance-export/?start_date=2023-01-01&end_date=2023-01-31&format=csv
+    path('attendance-export/', views.attendance_report_export, name='attendance_report_export'),
+    path('leave-export/', views.leave_summary_export, name='leave_summary_export'),
+    path('overtime-export/', views.overtime_report_export, name='overtime_report_export'),
+    path('tardiness-export/', views.tardiness_report_export, name='tardiness_report_export'),
+
     path('my-notifications/', views.get_my_notifications, name='get_my_notifications'),
     path('notifications/<uuid:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
     path('notifications/<uuid:notification_id>/delete/', views.delete_notification, name='delete_notification'),

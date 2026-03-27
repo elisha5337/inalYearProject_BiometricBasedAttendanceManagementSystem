@@ -125,13 +125,15 @@ export interface IntegrationConfigPayload {
 export interface AdminLeaveRequestRecord {
   id: string;
   employeeName: string;
-  employeeId: string;
+  username: string;
+  email: string;
   type: string;
   startDate: string;
   endDate: string;
   status: 'Approved' | 'Rejected' | 'Pending' | 'Cancelled';
   reason: string;
   appliedOn: string;
+  attachment: string | null;
 }
 
 export interface AppNotificationRecord {
@@ -159,6 +161,11 @@ export interface ProfileRecord {
   biometricEnrolled: boolean;
   phone: string;
   bio: string;
+  profilePhoto: string | null;
+  notificationSettings: Record<string, boolean>;
+  regionalSettings: Record<string, string>;
+  lastLogin: string | null;
+  dateJoined: string;
 }
 
 export interface ProfileUpdatePayload {
@@ -166,6 +173,11 @@ export interface ProfileUpdatePayload {
   lastName: string;
   email: string;
   position: string;
+  phone?: string;
+  bio?: string;
+  profilePhoto?: string | null;
+  notificationSettings?: Record<string, boolean>;
+  regionalSettings?: Record<string, string>;
 }
 
 export interface DashboardOverview {
@@ -792,10 +804,15 @@ export async function fetchAdminLeaveRequests() {
       leave_requests: Array<{
         id: string;
         employee_name: string;
+        username: string;
+        email: string;
         leave_type: string;
         start_date: string;
         end_date: string;
         status: string;
+        reason: string;
+        attachment: string | null;
+        requested_at: string;
       }>;
     }>('/api/leave/api/all/'),
     apiRequest<{
@@ -804,30 +821,26 @@ export async function fetchAdminLeaveRequests() {
     }>('/api/attendance/all/').catch(() => ({ success: false })),
   ]);
 
-  const attendanceUsers =
-    detailCandidates && typeof detailCandidates === 'object' && 'records' in detailCandidates
-      ? (detailCandidates.records as Array<Record<string, unknown>>)
-      : [];
-
-  const knownEmployeeIds = new Map<string, string>();
-  for (const record of attendanceUsers) {
-    const username = String(record.username ?? '');
-    if (username && !knownEmployeeIds.has(username)) {
-      knownEmployeeIds.set(username, username.toUpperCase());
-    }
-  }
-
-  return (listResponse.leave_requests ?? []).map((request, index) => ({
+  return (listResponse.leave_requests ?? []).map((request) => ({
     id: request.id,
     employeeName: request.employee_name,
-    employeeId: knownEmployeeIds.get(request.employee_name) || `EMP-${String(index + 1).padStart(3, '0')}`,
-    type: request.leave_type,
+    username: request.username,
+    email: request.email,
+    type: titleCase(request.leave_type),
     startDate: request.start_date,
     endDate: request.end_date,
     status: titleCase(request.status) as AdminLeaveRequestRecord['status'],
-    reason: 'Reason is available in the detailed leave record.',
-    appliedOn: request.start_date,
+    reason: request.reason || 'No reason provided.',
+    appliedOn: request.requested_at || request.start_date,
+    attachment: request.attachment,
   }));
+}
+
+export function processLeaveRequest(id: string, status: 'APPROVED' | 'REJECTED') {
+  return apiRequest<{ success: boolean; message: string }>(`/api/leave/api/manage/${id}/`, {
+    method: 'PUT',
+    body: { status },
+  });
 }
 
 export async function fetchNotifications() {
@@ -891,6 +904,11 @@ export async function fetchProfile() {
       biometric_enrolled?: boolean;
       phone?: string;
       bio?: string;
+      profile_photo?: string | null;
+      notification_settings?: Record<string, boolean>;
+      regional_settings?: Record<string, string>;
+      last_login?: string | null;
+      date_joined?: string;
     };
   }>('/accounts/api/profile/');
 
@@ -915,6 +933,11 @@ export async function fetchProfile() {
     biometricEnrolled: Boolean(profile.biometric_enrolled),
     phone: profile.phone || '',
     bio: profile.bio || '',
+    profilePhoto: profile.profile_photo || null,
+    notificationSettings: profile.notification_settings || {},
+    regionalSettings: profile.regional_settings || {},
+    lastLogin: profile.last_login || null,
+    dateJoined: profile.date_joined || '',
   } satisfies ProfileRecord;
 }
 
@@ -936,6 +959,11 @@ export async function updateProfile(payload: ProfileUpdatePayload) {
       biometric_enrolled?: boolean;
       phone?: string;
       bio?: string;
+      profile_photo?: string | null;
+      notification_settings?: Record<string, boolean>;
+      regional_settings?: Record<string, string>;
+      last_login?: string | null;
+      date_joined?: string;
     };
   }>('/accounts/api/profile/update/', {
     method: 'POST',
@@ -944,6 +972,11 @@ export async function updateProfile(payload: ProfileUpdatePayload) {
       last_name: payload.lastName,
       email: payload.email,
       position: payload.position,
+      phone: payload.phone,
+      bio: payload.bio,
+      profile_photo: payload.profilePhoto,
+      notification_settings: payload.notificationSettings,
+      regional_settings: payload.regionalSettings,
     },
   });
 
@@ -963,6 +996,11 @@ export async function updateProfile(payload: ProfileUpdatePayload) {
     biometricEnrolled: Boolean(profile.biometric_enrolled),
     phone: profile.phone || '',
     bio: profile.bio || '',
+    profilePhoto: profile.profile_photo || null,
+    notificationSettings: profile.notification_settings || {},
+    regionalSettings: profile.regional_settings || {},
+    lastLogin: profile.last_login || null,
+    dateJoined: profile.date_joined || '',
   } satisfies ProfileRecord;
 }
 
@@ -976,3 +1014,14 @@ export function changePassword(newPassword: string) {
 }
 
 export { formatRelativeTime };
+
+export async function fetchFAQs(query: string = '') {
+  const url = `/api/support/api/faqs/${query ? `?q=${encodeURIComponent(query)}` : ''}`;
+  return apiRequest<{
+    categories: {
+      title: string;
+      icon: string;
+      items: string[];
+    }[];
+  }>(url);
+}

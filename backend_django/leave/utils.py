@@ -69,6 +69,45 @@ class PolicyResolver:
 
         return delay > grace_minutes
 
+    @staticmethod
+    def calculate_leave_balance(user, department_id=None):
+        """
+        Calculates remaining leave for a user based on active policies and approved requests.
+        """
+        from .models import LeaveRequest
+        
+        # 1. Fetch Allowances
+        annual_policy = PolicyResolver.get_active_policy('Annual Leave', department_id)
+        medical_policy = PolicyResolver.get_active_policy('Medical/Sick Leave', department_id)
+        
+        annual_quota = PolicyResolver.extract_numeric_value(annual_policy.value) if annual_policy else 20.0
+        sick_quota = PolicyResolver.extract_numeric_value(medical_policy.value) if medical_policy else 12.0
+        
+        # 2. Sum up approved days
+        approved_leaves = LeaveRequest.objects.filter(
+            user=user, 
+            status=LeaveRequest.LeaveStatus.APPROVED
+        )
+        
+        annual_taken = 0.0
+        sick_taken = 0.0
+        
+        for r in approved_leaves:
+            days = (r.end_date - r.start_date).days + 1
+            if r.leave_type == LeaveRequest.LeaveType.ANNUAL:
+                annual_taken += days
+            elif r.leave_type == LeaveRequest.LeaveType.SICK:
+                sick_taken += days
+                
+        return {
+            'annual': max(0.0, annual_quota - annual_taken),
+            'sick': max(0.0, sick_quota - sick_taken),
+            'total_quota': {
+                'annual': annual_quota,
+                'sick': sick_quota
+            }
+        }
+
 def get_policy_rules(policy_name: str, department_id: Optional[str] = None) -> List[str]:
     """Helper to get rules list directly."""
     policy = PolicyResolver.get_active_policy(policy_name, department_id)

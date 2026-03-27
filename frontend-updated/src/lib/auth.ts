@@ -11,6 +11,7 @@ type BackendUser = {
   role: AppUserRole | 'Administrator' | 'HR Officer' | 'Employee';
   status?: string;
   must_change_password?: boolean;
+  profile_photo?: string | null;
 };
 
 type AuthEnvelope = {
@@ -49,6 +50,7 @@ export function mapBackendUser(user: BackendUser): User {
     status: user.status || 'ACTIVE',
     createdAt: new Date().toISOString(),
     mustChangePassword: Boolean(user.must_change_password),
+    profilePhoto: user.profile_photo || null,
   };
 }
 

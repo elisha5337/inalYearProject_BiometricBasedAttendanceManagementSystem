@@ -211,7 +211,7 @@ export default function ManageAttendance() {
   const stats = useMemo(() => {
     return {
       total: records.length,
-      present: records.filter((record) => record.status.toLowerCase() === 'present').length,
+      present: records.filter((record) => record.status.toLowerCase().includes('present')).length,
       late: records.filter((record) => record.status.toLowerCase().includes('late')).length,
       pendingVerification: records.filter((record) =>
         record.verificationStatus.toLowerCase().includes('pending'),

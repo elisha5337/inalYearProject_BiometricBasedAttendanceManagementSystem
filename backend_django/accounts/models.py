@@ -103,6 +103,11 @@ class EmployeeDetail(models.Model):
     employment_type = models.CharField(max_length=50, choices=EmploymentType.choices, null=True, blank=True, db_column='employmentType')
     hire_date = models.DateField(db_column='hireDate')
     biometric_enrolled = models.BooleanField(default=False, db_column='biometricEnrolled')
+    phone = models.CharField(max_length=20, null=True, blank=True)
+    bio = models.TextField(null=True, blank=True)
+    profile_photo = models.TextField(null=True, blank=True)
+    notification_settings = models.JSONField(default=dict, blank=True)
+    regional_settings = models.JSONField(default=dict, blank=True)
 
     def __str__(self):
         return f"Profile of {self.user.username}"

@@ -268,8 +268,12 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
           to={`/${userRole}/profile`}
           className="flex items-center gap-3 p-1 pr-3 hover:bg-slate-100 rounded-full transition-colors"
         >
-          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-            {user.name.charAt(0)}
+          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+            {user.profilePhoto ? (
+              <img src={user.profilePhoto} alt={user.name} className="w-full h-full object-cover" />
+            ) : (
+              (user.name || user.username).charAt(0)
+            )}
           </div>
           <div className="hidden lg:block text-left">
             <p className="text-xs font-bold text-slate-900 leading-tight">{user.name}</p>

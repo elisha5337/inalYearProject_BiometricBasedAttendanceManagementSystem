@@ -11,6 +11,7 @@ export interface HrAttendanceRecord {
   hoursWorked: number;
   status: string;
   verificationStatus: string;
+  method?: string;
   location: string;
   assignment: string;
 }
@@ -153,6 +154,7 @@ function mapAttendanceRecord(raw: unknown): HrAttendanceRecord {
     hoursWorked: formatHours(checkInTime, checkOutTime, item.hours_worked ?? item.hoursWorked),
     status: String(item.status ?? 'Present'),
     verificationStatus: String(item.verification_status ?? item.verificationStatus ?? 'verified'),
+    method: item.method ? String(item.method) : undefined,
     location: String(item.location ?? item.site ?? 'Main Office'),
     assignment: String(item.assignment ?? item.shift_name ?? item.shift ?? 'Standard Shift'),
   };
@@ -160,6 +162,24 @@ function mapAttendanceRecord(raw: unknown): HrAttendanceRecord {
 
 export async function fetchAttendanceRecords() {
   const payload = await requestFirstAvailable<unknown>(attendanceListPaths);
+
+  return extractRows(payload)
+    .map(mapAttendanceRecord)
+    .sort((left, right) => {
+      const leftKey = `${left.date} ${left.checkInTime ?? ''}`;
+      const rightKey = `${right.date} ${right.checkInTime ?? ''}`;
+      return new Date(rightKey).getTime() - new Date(leftKey).getTime();
+    });
+}
+
+/**
+ * HR dashboard needs date-scoped attendance records (for "today" chart + recent check-ins).
+ * We keep the existing `fetchAttendanceRecords()` untouched for ManageAttendance compatibility.
+ */
+export async function fetchAttendanceRecordsForRange(startDate: string, endDate: string) {
+  const payload = await apiRequest<unknown>(
+    `/api/attendance/api/records/?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`,
+  );
 
   return extractRows(payload)
     .map(mapAttendanceRecord)

@@ -1,24 +1,37 @@
+import { useEffect, useState } from 'react';
 import { Search, HelpCircle, Book, MessageCircle, Phone, ExternalLink, ChevronRight, FileText } from 'lucide-react';
+import { fetchFAQs } from '../lib/admin';
 
-const faqCategories = [
-  {
-    title: 'Getting Started',
-    icon: HelpCircle,
-    items: ['How to check-in?', 'Setting up your profile', 'Understanding roles'],
-  },
-  {
-    title: 'Attendance & Shifts',
-    icon: Book,
-    items: ['Manual entry requests', 'Shift schedule changes', 'Grace periods'],
-  },
-  {
-    title: 'Leave & Absence',
-    icon: FileText,
-    items: ['Applying for leave', 'Leave balance tracking', 'Medical certificate upload'],
-  },
-];
+const iconMap: Record<string, any> = {
+  HelpCircle,
+  Book,
+  FileText,
+  MessageCircle,
+  Phone,
+};
 
 export default function HelpCenter() {
+  const [categories, setCategories] = useState<{ title: string; icon: string; items: string[] }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const data = await fetchFAQs(query);
+        setCategories(data.categories);
+      } catch (error) {
+        console.error('Failed to load FAQs', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const timer = setTimeout(loadData, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
   return (
     <div className="max-w-5xl mx-auto space-y-12">
       <div className="text-center space-y-4">
@@ -30,31 +43,50 @@ export default function HelpCenter() {
           <input 
             type="text" 
             placeholder="Search for help articles..." 
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
             className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-lg shadow-xl shadow-slate-200/50 focus:ring-2 focus:ring-blue-500 outline-none"
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {faqCategories.map((category) => (
-          <div key={category.title} className="professional-card p-6 space-y-6">
-            <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600">
-              <category.icon className="w-6 h-6" />
+      {loading && categories.length === 0 ? (
+        <div className="flex justify-center items-center py-20">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {categories.map((category) => {
+            const Icon = iconMap[category.icon] || HelpCircle;
+            return (
+              <div key={category.title} className="professional-card p-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600">
+                  <Icon className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900">{category.title}</h3>
+                <ul className="space-y-3">
+                  {category.items.map((item) => (
+                    <li key={item}>
+                      <button className="text-sm text-slate-600 hover:text-blue-600 flex items-center justify-between w-full group text-left">
+                        {item}
+                        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-400 transition-colors shrink-0" />
+                      </button>
+                    </li>
+                  ))}
+                  {category.items.length === 0 && (
+                    <li className="text-sm text-slate-400 italic">No articles found in this category.</li>
+                  )}
+                </ul>
+              </div>
+            );
+          })}
+          {categories.length === 0 && !loading && (
+            <div className="col-span-1 md:col-span-3 text-center py-10">
+              <p className="text-slate-500">No results found for "{query}". Try a different search term.</p>
             </div>
-            <h3 className="text-xl font-bold text-slate-900">{category.title}</h3>
-            <ul className="space-y-3">
-              {category.items.map((item) => (
-                <li key={item}>
-                  <button className="text-sm text-slate-600 hover:text-blue-600 flex items-center justify-between w-full group">
-                    {item}
-                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-400 transition-colors" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
+          )}
+        </div>
+      )}
 
       <div className="professional-card p-8 bg-blue-600 text-white overflow-hidden relative">
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">

@@ -374,6 +374,26 @@ def mark_attendance(request):
             else:
                 record_type = AttendanceRecord.RecordType.CHECK_IN
 
+        # Explicit rule: check-out requires a valid (latest) check-in for the same day.
+        # (Normally guaranteed by the toggle logic above, but we enforce it for correctness
+        # and for cases like out-of-band record inserts / concurrency.)
+        last_check_in_today = None
+        if record_type == AttendanceRecord.RecordType.CHECK_OUT:
+            last_check_in_today = (
+                AttendanceRecord.objects.filter(
+                    user=user,
+                    timestamp__date=today,
+                    type=AttendanceRecord.RecordType.CHECK_IN,
+                )
+                .order_by('-timestamp')
+                .first()
+            )
+            if not last_check_in_today:
+                return JsonResponse(
+                    {'error': 'Valid check-in must exist before check-out.'},
+                    status=400,
+                )
+
         # 3. Status Calculation (Late / Early)
         status = AttendanceRecord.RecordStatus.ON_TIME
         current_time = now.time()
@@ -395,6 +415,36 @@ def mark_attendance(request):
             # Create timezone-aware datetimes for comparison
             shift_start_dt = timezone.make_aware(datetime.combine(today, shift.start_time))
             shift_end_dt = timezone.make_aware(datetime.combine(today, shift.end_time))
+
+            # Explicit schedule validity checks (only applied when a shift assignment exists).
+            # Windows are intentionally permissive to avoid breaking existing deployments.
+            early_window = timedelta(minutes=60)
+            checkin_window_after_end = timedelta(hours=6)
+            checkout_window_after_end = timedelta(hours=12)
+
+            if record_type == AttendanceRecord.RecordType.CHECK_IN:
+                if now < (shift_start_dt - early_window):
+                    return JsonResponse(
+                        {'error': 'Invalid check-in time. Too early for the scheduled shift.'},
+                        status=400,
+                    )
+                if now > (shift_end_dt + checkin_window_after_end):
+                    return JsonResponse(
+                        {'error': 'Invalid check-in time. Shift window has passed.'},
+                        status=400,
+                    )
+
+            if record_type == AttendanceRecord.RecordType.CHECK_OUT and last_check_in_today:
+                if now < last_check_in_today.timestamp:
+                    return JsonResponse(
+                        {'error': 'Invalid check-out time. Must be after the latest check-in.'},
+                        status=400,
+                    )
+                if now > (shift_end_dt + checkout_window_after_end):
+                    return JsonResponse(
+                        {'error': 'Invalid check-out time. Beyond allowed overtime window.'},
+                        status=400,
+                    )
 
             if record_type == AttendanceRecord.RecordType.CHECK_IN:
                 # Resolve Grace Period Policy
@@ -595,6 +645,228 @@ def api_list_all_attendance(request):
         return JsonResponse({'success': True, 'records': data})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def api_list_hr_attendance_records(request):
+    """
+    Returns daily, per-employee attendance rows for HR tables.
+
+    This endpoint is consumed by:
+    `frontend-updated/src/lib/hrAttendance.ts` (ManageAttendance screen).
+    """
+    user, auth_error = require_authenticated_user(request)
+    if auth_error:
+        return auth_error
+
+    if not (getattr(user, 'is_hr_officer', False) or getattr(user, 'is_administrator', False) or getattr(user, 'is_superuser', False)):
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+
+    if request.method != 'GET':
+        return JsonResponse({'error': 'GET required'}, status=405)
+
+    # Date window for generating HR table rows (defaults to last 30 days).
+    # This screen performs filtering client-side, but we still limit server output.
+    try:
+        today = timezone.now().date()
+        start_date_str = request.GET.get('start_date')
+        end_date_str = request.GET.get('end_date')
+
+        if start_date_str:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        else:
+            start_date = today - timedelta(days=30)
+
+        if end_date_str:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        else:
+            end_date = today
+
+        if start_date > end_date:
+            return JsonResponse({'error': 'Invalid date range'}, status=400)
+    except Exception:
+        return JsonResponse({'error': 'Invalid date parameters. Use YYYY-MM-DD.'}, status=400)
+
+    # Gather attendance events within the window.
+    events_qs = (
+        AttendanceRecord.objects.filter(timestamp__date__range=(start_date, end_date))
+        .select_related('user', 'user__employeedetail__department', 'device')
+        .order_by('user__id', 'timestamp')
+    )
+
+    user_ids = list(events_qs.values_list('user_id', flat=True).distinct())
+    if not user_ids:
+        return JsonResponse({'success': True, 'records': []})
+
+    # Preload biometric template types so HR dashboard can display "method"
+    # (Face ID / Fingerprint / Manual ID). This is derived from enrolled templates
+    # and the verification_status returned for the attendance row.
+    biometric_templates = (
+        BiometricTemplate.objects.filter(
+            user_id__in=user_ids,
+            type__in=[BiometricTemplate.BiometricType.FACE, BiometricTemplate.BiometricType.FINGERPRINT],
+        )
+        .values_list('user_id', 'type')
+    )
+    biometric_types_by_user = {}
+    for user_id, template_type in biometric_templates:
+        uid = str(user_id)
+        ttype = str(template_type)
+        if uid not in biometric_types_by_user:
+            biometric_types_by_user[uid] = set()
+        biometric_types_by_user[uid].add(ttype)
+
+    # Preload shift assignments overlapping the window for active lookup per day.
+    assignments = (
+        Assignment.objects.filter(user_id__in=user_ids, from_date__lte=end_date)
+        .filter(Q(to_date__isnull=True) | Q(to_date__gte=start_date))
+        .select_related('user', 'shift')
+        .order_by('from_date')
+    )
+
+    assignments_by_user: dict[str, list[Assignment]] = {}
+    for a in assignments:
+        assignments_by_user.setdefault(str(a.user_id), []).append(a)
+
+    def get_assignment_for_day(user_id: str, day):
+        for a in assignments_by_user.get(user_id, []):
+            if a.from_date <= day and (a.to_date is None or a.to_date >= day):
+                return a.shift.name if a.shift else 'Standard Shift'
+        return 'Standard Shift'
+
+    # Aggregate to daily rows.
+    # Key: (user_id, date_iso)
+    daily: dict[tuple[str, str], dict] = {}
+
+    def update_verification_rank(existing_rank: int, new_status: str) -> int:
+        # Higher rank = worse severity.
+        # Verified < Unverified < Pending
+        if new_status == AttendanceRecord.VerificationStatus.PENDING:
+            return 3 if existing_rank < 3 else existing_rank
+        if new_status == AttendanceRecord.VerificationStatus.UNVERIFIED:
+            return 2 if existing_rank < 2 else existing_rank
+        return 1 if existing_rank < 1 else existing_rank
+
+    for r in events_qs:
+        uid = str(r.user_id)
+        day_iso = r.timestamp.date().isoformat()
+        key = (uid, day_iso)
+
+        if key not in daily:
+            employee_detail = getattr(r.user, 'employeedetail', None)
+            department_name = (
+                employee_detail.department.name
+                if employee_detail and getattr(employee_detail, 'department', None)
+                else 'Unassigned'
+            )
+
+            daily[key] = {
+                'employee_name': r.user.get_full_name() or r.user.username,
+                'employee_code': r.user.username,
+                'department': department_name,
+                'date': day_iso,
+                'check_in_time': None,
+                'check_out_time': None,
+                'hours_worked': 0.0,
+                'status': 'Present',
+                'late': False,
+                'early_exit': False,
+                'verification_rank': 1,
+                'verification_status': AttendanceRecord.VerificationStatus.VERIFIED,
+                'location': getattr(r.device, 'location', '') if r.device else '',
+                'assignment': get_assignment_for_day(uid, r.timestamp.date()),
+            }
+
+        row = daily[key]
+
+        # Prefer first check-in and last check-out for the day.
+        if r.type == AttendanceRecord.RecordType.CHECK_IN:
+            if row['check_in_time'] is None or r.timestamp < row['check_in_time']:
+                row['check_in_time'] = r.timestamp
+            if r.status == AttendanceRecord.RecordStatus.LATE:
+                row['late'] = True
+
+        if r.type == AttendanceRecord.RecordType.CHECK_OUT:
+            if row['check_out_time'] is None or r.timestamp > row['check_out_time']:
+                row['check_out_time'] = r.timestamp
+            if r.status == AttendanceRecord.RecordStatus.EARLY_EXIT:
+                row['early_exit'] = True
+
+        # Verification severity aggregation.
+        row['verification_rank'] = update_verification_rank(row['verification_rank'], r.verification_status)
+
+        # If any record has a device location, keep it.
+        if r.device and getattr(r.device, 'location', None) and not row['location']:
+            row['location'] = r.device.location
+
+    # Finalize derived fields for JSON response.
+    records = []
+    seq_id = 1
+    for (uid, day_iso), row in daily.items():
+        check_in_dt = row['check_in_time']
+        check_out_dt = row['check_out_time']
+
+        if check_in_dt and check_out_dt and check_out_dt >= check_in_dt:
+            hours = (check_out_dt - check_in_dt).total_seconds() / 3600.0
+            row['hours_worked'] = round(hours, 2)
+
+        if row['late']:
+            row['status'] = 'Late'
+        elif row['early_exit']:
+            row['status'] = 'Present (Early Leave)'
+        elif row['check_in_time'] is not None:
+            row['status'] = 'Present'
+        else:
+            row['status'] = 'Absent'
+
+        # Map verification rank to human-readable strings used by the frontend.
+        if row['verification_rank'] == 3:
+            row['verification_status'] = AttendanceRecord.VerificationStatus.PENDING
+        elif row['verification_rank'] == 2:
+            row['verification_status'] = AttendanceRecord.VerificationStatus.UNVERIFIED
+        else:
+            row['verification_status'] = AttendanceRecord.VerificationStatus.VERIFIED
+
+        # Derive "method" label for HR dashboard UI.
+        enrolled_types = biometric_types_by_user.get(uid, set())
+        if row['verification_status'] == AttendanceRecord.VerificationStatus.UNVERIFIED:
+            method = 'Manual ID'
+        elif BiometricTemplate.BiometricType.FACE in enrolled_types:
+            method = 'Face ID'
+        elif BiometricTemplate.BiometricType.FINGERPRINT in enrolled_types:
+            method = 'Fingerprint'
+        else:
+            method = 'Biometric'
+
+        verification_string = {
+            AttendanceRecord.VerificationStatus.VERIFIED: 'Verified',
+            AttendanceRecord.VerificationStatus.UNVERIFIED: 'Unverified (Bypass)',
+            AttendanceRecord.VerificationStatus.PENDING: 'Pending Validation',
+        }.get(row['verification_status'], 'Verified')
+
+        records.append(
+            {
+                'id': seq_id,
+                'employee_name': row['employee_name'],
+                'employee_code': row['employee_code'],
+                'department': row['department'],
+                'date': row['date'],
+                'check_in_time': row['check_in_time'].isoformat() if row['check_in_time'] else None,
+                'check_out_time': row['check_out_time'].isoformat() if row['check_out_time'] else None,
+                'hours_worked': row['hours_worked'],
+                'status': row['status'],
+                'verification_status': verification_string,
+                'location': row['location'] or 'Main Office',
+                'assignment': row['assignment'],
+                'method': method,
+            }
+        )
+        seq_id += 1
+
+    # Stable ordering: date desc, then employee name.
+    records.sort(key=lambda r: (r['date'], r['employee_name']), reverse=True)
+
+    return JsonResponse({'success': True, 'records': records})
 
 @csrf_exempt
 def api_update_attendance_verification(request, record_id):

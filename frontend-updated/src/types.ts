@@ -12,6 +12,7 @@ export interface User {
   status?: string;
   createdAt: string;
   mustChangePassword?: boolean;
+  profilePhoto?: string | null;
 }
 
 export interface EmployeeDetail {

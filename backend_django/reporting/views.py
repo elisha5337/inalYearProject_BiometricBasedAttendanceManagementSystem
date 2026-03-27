@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from attendance.models import AttendanceRecord, Device
 from accounts.models import User, Role, ExternalIntegration, BiometricTemplate
@@ -11,6 +11,7 @@ from django.conf import settings
 import subprocess
 import os
 import json
+import csv
 
 from attendance.config_utils import read_global_config, update_global_config as save_global_config
 from .utils import log_audit_event
@@ -155,6 +156,408 @@ def attendance_report(request):
         return JsonResponse({'error': 'Invalid date format. Please use YYYY-MM-DD.'}, status=400)
     except Exception as e:
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+def attendance_report_export(request):
+    """
+    Exports an attendance report as CSV (downloadable).
+
+    Example:
+      /api/reporting/attendance-export/?start_date=2023-01-01&end_date=2023-01-31&format=csv
+    """
+    user, auth_error = require_authenticated_user(request)
+    if auth_error:
+        return auth_error
+
+    if not (is_hr_officer(user) or is_admin(user)):
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+    try:
+        start_date_str = request.GET.get('start_date')
+        end_date_str = request.GET.get('end_date')
+        export_format = (request.GET.get('format') or 'csv').lower()
+
+        if not start_date_str or not end_date_str:
+            return JsonResponse({'error': 'start_date and end_date are required.'}, status=400)
+
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+
+        if start_date > end_date:
+            return JsonResponse({'error': 'Invalid date range'}, status=400)
+
+        if export_format not in ['csv']:
+            # The UI offers PDF/Excel options; for now we only export CSV to avoid
+            # adding new heavy dependencies. The filename still reflects the requested format.
+            export_format = 'csv'
+    except ValueError:
+        return JsonResponse({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
+    except Exception:
+        return JsonResponse({'error': 'Invalid export parameters.'}, status=400)
+
+    from scheduling.models import Assignment
+    from django.db.models import Q
+
+    # Query attendance events in the requested window.
+    events_qs = (
+        AttendanceRecord.objects.filter(timestamp__date__range=(start_date, end_date))
+        .select_related('user', 'user__employeedetail__department', 'device')
+        .order_by('user__id', 'timestamp')
+    )
+
+    user_ids = list(events_qs.values_list('user_id', flat=True).distinct())
+    if not user_ids:
+        resp = HttpResponse(content_type='text/csv')
+        resp['Content-Disposition'] = f'attachment; filename="attendance-report_{start_date}_{end_date}.csv"'
+        writer = csv.writer(resp)
+        writer.writerow([
+            'Employee Name',
+            'Department',
+            'Date',
+            'Check In',
+            'Check Out',
+            'Hours Worked',
+            'Status',
+            'Verification',
+            'Location',
+            'Assignment',
+        ])
+        return resp
+
+    # Preload assignments overlapping the window to render shift/assignment name.
+    assignments = (
+        Assignment.objects.filter(user_id__in=user_ids, from_date__lte=end_date)
+        .filter(Q(to_date__isnull=True) | Q(to_date__gte=start_date))
+        .select_related('shift')
+        .order_by('from_date')
+    )
+    assignments_by_user: dict[str, list[Assignment]] = {}
+    for a in assignments:
+        assignments_by_user.setdefault(str(a.user_id), []).append(a)
+
+    def get_assignment_for_day(user_id: str, day):
+        for a in assignments_by_user.get(user_id, []):
+            if a.from_date <= day and (a.to_date is None or a.to_date >= day):
+                return a.shift.name if a.shift else 'Standard Shift'
+        return 'Standard Shift'
+
+    # Aggregate events into daily rows.
+    daily: dict[tuple[str, str], dict] = {}
+
+    def verification_rank_for(status: str) -> int:
+        if status == AttendanceRecord.VerificationStatus.PENDING:
+            return 3
+        if status == AttendanceRecord.VerificationStatus.UNVERIFIED:
+            return 2
+        return 1
+
+    for r in events_qs:
+        uid = str(r.user_id)
+        day_iso = r.timestamp.date().isoformat()
+        key = (uid, day_iso)
+
+        if key not in daily:
+            employee_detail = getattr(r.user, 'employeedetail', None)
+            department_name = (
+                employee_detail.department.name
+                if employee_detail and getattr(employee_detail, 'department', None)
+                else 'Unassigned'
+            )
+
+            daily[key] = {
+                'employee_name': r.user.get_full_name() or r.user.username,
+                'department': department_name,
+                'date': day_iso,
+                'check_in_time': None,
+                'check_out_time': None,
+                'hours_worked': 0.0,
+                'late': False,
+                'early_exit': False,
+                'verification_rank': 1,
+                'location': getattr(r.device, 'location', '') if r.device else '',
+                'assignment': get_assignment_for_day(uid, r.timestamp.date()),
+            }
+
+        row = daily[key]
+
+        if r.type == AttendanceRecord.RecordType.CHECK_IN:
+            if row['check_in_time'] is None or r.timestamp < row['check_in_time']:
+                row['check_in_time'] = r.timestamp
+            if r.status == AttendanceRecord.RecordStatus.LATE:
+                row['late'] = True
+
+        if r.type == AttendanceRecord.RecordType.CHECK_OUT:
+            if row['check_out_time'] is None or r.timestamp > row['check_out_time']:
+                row['check_out_time'] = r.timestamp
+            if r.status == AttendanceRecord.RecordStatus.EARLY_EXIT:
+                row['early_exit'] = True
+
+        row['verification_rank'] = max(row['verification_rank'], verification_rank_for(r.verification_status))
+
+        if r.device and getattr(r.device, 'location', None) and not row['location']:
+            row['location'] = r.device.location
+
+    # Stream CSV response.
+    filename = f"attendance-report_{start_date}_to_{end_date}.csv"
+    resp = HttpResponse(content_type='text/csv; charset=utf-8')
+    resp['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    writer = csv.writer(resp)
+    writer.writerow([
+        'Employee Name',
+        'Department',
+        'Date',
+        'Check In',
+        'Check Out',
+        'Hours Worked',
+        'Status',
+        'Verification',
+        'Location',
+        'Assignment',
+    ])
+
+    # Sort by date, then employee name.
+    finalized = sorted(daily.items(), key=lambda kv: (kv[1]['date'], kv[1]['employee_name']), reverse=True)
+    for _, row in finalized:
+        check_in_dt = row['check_in_time']
+        check_out_dt = row['check_out_time']
+
+        if check_in_dt and check_out_dt and check_out_dt >= check_in_dt:
+            hours = (check_out_dt - check_in_dt).total_seconds() / 3600.0
+            row['hours_worked'] = round(hours, 2)
+
+        if row['late']:
+            status = 'Late'
+        elif row['early_exit']:
+            status = 'Present (Early Leave)'
+        elif row['check_in_time'] is not None:
+            status = 'Present'
+        else:
+            status = 'Absent'
+
+        if row['verification_rank'] == 3:
+            verification = 'Pending Validation'
+        elif row['verification_rank'] == 2:
+            verification = 'Unverified (Bypass)'
+        else:
+            verification = 'Verified'
+
+        writer.writerow([
+            row['employee_name'],
+            row['department'],
+            row['date'],
+            row['check_in_time'].isoformat() if row['check_in_time'] else '',
+            row['check_out_time'].isoformat() if row['check_out_time'] else '',
+            row['hours_worked'],
+            status,
+            verification,
+            row['location'] or 'Main Office',
+            row['assignment'],
+        ])
+
+    return resp
+
+
+@csrf_exempt
+def leave_summary_export(request):
+    """Exports a leave summary CSV."""
+    user, auth_error = require_authenticated_user(request)
+    if auth_error:
+        return auth_error
+    if not (is_hr_officer(user) or is_admin(user)):
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    if request.method != 'GET':
+        return JsonResponse({'error': 'GET required'}, status=405)
+
+    from leave.models import LeaveRequest
+
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    dept_filter = request.GET.get('department', 'All Departments')
+
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else None
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else None
+    except ValueError:
+        return JsonResponse({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
+
+    qs = LeaveRequest.objects.all().select_related(
+        'user', 'user__employeedetail__department'
+    ).order_by('created_at')
+
+    if start_date:
+        qs = qs.filter(start_date__gte=start_date)
+    if end_date:
+        qs = qs.filter(end_date__lte=end_date)
+    if dept_filter and dept_filter != 'All Departments':
+        qs = qs.filter(user__employeedetail__department__name=dept_filter)
+
+    resp = HttpResponse(content_type='text/csv')
+    resp['Content-Disposition'] = f'attachment; filename="leave-summary_{start_date_str}_{end_date_str}.csv"'
+    writer = csv.writer(resp)
+    writer.writerow(['Employee', 'Department', 'Leave Type', 'Start Date', 'End Date', 'Days', 'Status', 'Reason'])
+    for r in qs:
+        detail = getattr(r.user, 'employeedetail', None)
+        dept = detail.department.name if detail and detail.department else 'Unassigned'
+        days = (r.end_date - r.start_date).days + 1
+        writer.writerow([
+            r.user.get_full_name() or r.user.username,
+            dept,
+            r.leave_type or '',
+            str(r.start_date),
+            str(r.end_date),
+            days,
+            r.status,
+            r.reason or '',
+        ])
+    return resp
+
+
+@csrf_exempt
+def overtime_report_export(request):
+    """Exports an overtime CSV: employees who worked more than their shift hours."""
+    user, auth_error = require_authenticated_user(request)
+    if auth_error:
+        return auth_error
+    if not (is_hr_officer(user) or is_admin(user)):
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    if request.method != 'GET':
+        return JsonResponse({'error': 'GET required'}, status=405)
+
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    dept_filter = request.GET.get('department', 'All Departments')
+
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else None
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else None
+    except ValueError:
+        return JsonResponse({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
+
+    qs = (
+        AttendanceRecord.objects.filter(timestamp__date__range=(start_date, end_date))
+        .select_related('user', 'user__employeedetail__department')
+        .order_by('user__id', 'timestamp')
+    )
+    if dept_filter and dept_filter != 'All Departments':
+        qs = qs.filter(user__employeedetail__department__name=dept_filter)
+
+    # Aggregate daily hours per user
+    daily: dict = {}
+    for r in qs:
+        uid = str(r.user_id)
+        day = r.timestamp.date().isoformat()
+        key = (uid, day)
+        if key not in daily:
+            detail = getattr(r.user, 'employeedetail', None)
+            dept = detail.department.name if detail and detail.department else 'Unassigned'
+            daily[key] = {'name': r.user.get_full_name() or r.user.username, 'dept': dept, 'day': day, 'check_in': r.timestamp, 'check_out': r.timestamp}
+        else:
+            if r.timestamp < daily[key]['check_in']:
+                daily[key]['check_in'] = r.timestamp
+            if r.timestamp > daily[key]['check_out']:
+                daily[key]['check_out'] = r.timestamp
+
+    standard_hours = 8.0
+    resp = HttpResponse(content_type='text/csv')
+    resp['Content-Disposition'] = f'attachment; filename="overtime-report_{start_date_str}_{end_date_str}.csv"'
+    writer = csv.writer(resp)
+    writer.writerow(['Employee', 'Department', 'Date', 'Hours Worked', 'Overtime Hours'])
+    for row in daily.values():
+        worked = (row['check_out'] - row['check_in']).total_seconds() / 3600
+        overtime = max(0, worked - standard_hours)
+        if overtime > 0:
+            writer.writerow([row['name'], row['dept'], row['day'], round(worked, 2), round(overtime, 2)])
+    return resp
+
+
+@csrf_exempt
+def tardiness_report_export(request):
+    """Exports a tardiness CSV: late check-ins and early check-outs vs shift start."""
+    user, auth_error = require_authenticated_user(request)
+    if auth_error:
+        return auth_error
+    if not (is_hr_officer(user) or is_admin(user)):
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    if request.method != 'GET':
+        return JsonResponse({'error': 'GET required'}, status=405)
+
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    dept_filter = request.GET.get('department', 'All Departments')
+
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else None
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else None
+    except ValueError:
+        return JsonResponse({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
+
+    from scheduling.models import Assignment
+    from django.db.models import Q
+
+    qs = (
+        AttendanceRecord.objects.filter(timestamp__date__range=(start_date, end_date))
+        .select_related('user', 'user__employeedetail__department')
+        .order_by('user__id', 'timestamp')
+    )
+    if dept_filter and dept_filter != 'All Departments':
+        qs = qs.filter(user__employeedetail__department__name=dept_filter)
+
+    user_ids = list(qs.values_list('user_id', flat=True).distinct())
+    assignments = (
+        Assignment.objects.filter(user_id__in=user_ids, from_date__lte=end_date)
+        .filter(Q(to_date__isnull=True) | Q(to_date__gte=start_date))
+        .select_related('shift')
+    )
+    asn_map: dict = {}
+    for a in assignments:
+        asn_map.setdefault(str(a.user_id), []).append(a)
+
+    daily: dict = {}
+    for r in qs:
+        uid = str(r.user_id)
+        day = r.timestamp.date()
+        key = (uid, day.isoformat())
+        if key not in daily:
+            detail = getattr(r.user, 'employeedetail', None)
+            dept = detail.department.name if detail and detail.department else 'Unassigned'
+            # Get shift start time
+            shift_start_hour = 8  # default 8 AM
+            for a in asn_map.get(uid, []):
+                if a.from_date <= day and (a.to_date is None or a.to_date >= day) and a.shift and a.shift.start_time:
+                    shift_start_hour = a.shift.start_time.hour
+                    break
+            daily[key] = {
+                'name': r.user.get_full_name() or r.user.username,
+                'dept': dept, 'day': day.isoformat(),
+                'first_in': r.timestamp, 'shift_start_hour': shift_start_hour,
+            }
+        else:
+            if r.timestamp < daily[key]['first_in']:
+                daily[key]['first_in'] = r.timestamp
+
+    resp = HttpResponse(content_type='text/csv')
+    resp['Content-Disposition'] = f'attachment; filename="tardiness-report_{start_date_str}_{end_date_str}.csv"'
+    writer = csv.writer(resp)
+    writer.writerow(['Employee', 'Department', 'Date', 'Expected Start', 'Actual Check-In', 'Minutes Late'])
+    for row in daily.values():
+        actual_hour = row['first_in'].hour
+        actual_min = row['first_in'].minute
+        expected_min = row['shift_start_hour'] * 60
+        actual_total = actual_hour * 60 + actual_min
+        minutes_late = max(0, actual_total - expected_min)
+        if minutes_late > 5:  # only flag if more than 5 mins late
+            writer.writerow([
+                row['name'], row['dept'], row['day'],
+                f"{row['shift_start_hour']:02d}:00",
+                row['first_in'].strftime('%H:%M'),
+                minutes_late,
+            ])
+    return resp
 
 
 from django.utils import timezone

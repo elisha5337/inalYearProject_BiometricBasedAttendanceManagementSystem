@@ -152,6 +152,13 @@ def get_frontend_role_slug(user):
 
 
 def serialize_user_for_frontend(user):
+    profile_photo = None
+    try:
+        if hasattr(user, 'employeedetail'):
+            profile_photo = user.employeedetail.profile_photo
+    except:
+        pass
+
     return {
         'id': str(user.id),
         'username': user.username,
@@ -162,6 +169,7 @@ def serialize_user_for_frontend(user):
         'role': get_frontend_role_slug(user),
         'status': user.status,
         'must_change_password': user.must_change_password,
+        'profile_photo': profile_photo,
     }
 
 
@@ -176,8 +184,13 @@ def serialize_profile_for_frontend(user):
         'employment_type': detail.employment_type if detail and detail.employment_type else '',
         'hire_date': detail.hire_date.isoformat() if detail and detail.hire_date else None,
         'biometric_enrolled': bool(detail.biometric_enrolled) if detail else False,
-        'phone': '',
-        'bio': '',
+        'phone': detail.phone if detail and detail.phone else '',
+        'bio': detail.bio if detail and detail.bio else '',
+        'profile_photo': detail.profile_photo if detail and detail.profile_photo else None,
+        'notification_settings': detail.notification_settings if detail else {},
+        'regional_settings': detail.regional_settings if detail else {},
+        'last_login': user.last_login.isoformat() if user.last_login else None,
+        'date_joined': user.date_joined.isoformat(),
     }
 
 
@@ -236,6 +249,16 @@ def api_update_profile(request):
             detail.position = str(data.get('position') or '').strip() or None
         if 'employment_type' in data:
             detail.employment_type = data.get('employment_type') or None
+        if 'phone' in data:
+            detail.phone = str(data.get('phone') or '').strip() or None
+        if 'bio' in data:
+            detail.bio = str(data.get('bio') or '').strip() or None
+        if 'profile_photo' in data:
+            detail.profile_photo = data.get('profile_photo') # Expecting base64
+        if 'notification_settings' in data:
+            detail.notification_settings = data.get('notification_settings')
+        if 'regional_settings' in data:
+            detail.regional_settings = data.get('regional_settings')
         detail.save()
 
         return JsonResponse({
@@ -448,6 +471,10 @@ def api_list_users(request):
             'status': u.status,
             'is_active': u.status == User.Status.ACTIVE,
             'must_change_password': u.must_change_password,
+            'position': detail.position or '' if detail else '',
+            'employment_type': detail.employment_type or '' if detail else '',
+            'hire_date': str(detail.hire_date) if detail and detail.hire_date else '',
+            'profile_photo': detail.profile_photo if detail else None,
         })
     return JsonResponse({'success': True, 'users': user_list})
 

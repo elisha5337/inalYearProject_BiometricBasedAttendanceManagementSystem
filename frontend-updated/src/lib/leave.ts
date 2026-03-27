@@ -24,6 +24,8 @@ export interface LeaveBalanceSummary {
   paternity: number;
   compassionate: number;
   unpaid: number;
+  annual_left?: number;
+  sick_left?: number;
 }
 
 export interface LeaveRequestsPayload {
@@ -34,6 +36,8 @@ export interface LeaveRequestsPayload {
     approved: number;
     rejected: number;
     balances: LeaveBalanceSummary;
+    annual_left: number;
+    sick_left: number;
   };
 }
 
@@ -42,6 +46,7 @@ export interface SubmitLeaveRequestPayload {
   startDate: string;
   endDate: string;
   reason: string;
+  attachment?: File | null;
 }
 
 const leaveTypeLabelMap: Record<string, string> = {
@@ -60,17 +65,11 @@ const leaveTypeLabelMap: Record<string, string> = {
 };
 
 const leaveRequestPaths = [
-  '/api/leave/api/my-requests/',
-  '/api/leave/api/requests/',
-  '/api/leave/api/history/',
-  '/leave/api/my-requests/',
-  '/leave/api/requests/',
-  '/leave/api/history/',
+  '/api/leave/api/my/',
 ];
 
 const submitLeavePaths = [
   '/api/leave/api/request/',
-  '/leave/api/request/',
 ];
 
 function startOfDay(value: string) {
@@ -89,7 +88,7 @@ function calculateDays(startDate: string, endDate: string) {
 }
 
 function titleCase(value: string) {
-  return value
+  return String(value ?? '')
     .replace(/[_-]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
@@ -97,7 +96,9 @@ function titleCase(value: string) {
 }
 
 export function normalizeLeaveType(value: string) {
-  const normalized = value.trim().toLowerCase().replace(/\s+/g, '_');
+  const normalized = String(value ?? '').trim().toLowerCase().replace(/\s+/g, '_');
+
+  if (!normalized) return 'Other';
 
   switch (normalized) {
     case 'annual':
@@ -124,7 +125,7 @@ export function normalizeLeaveType(value: string) {
 }
 
 function toBackendLeaveType(value: string) {
-  const normalized = value.trim().toLowerCase().replace(/\s+/g, '_');
+  const normalized = String(value ?? '').trim().toLowerCase().replace(/\s+/g, '_');
 
   switch (normalized) {
     case 'annual':
@@ -146,7 +147,7 @@ function toBackendLeaveType(value: string) {
     case 'unpaid_leave':
       return 'unpaid_leave';
     default:
-      return normalized;
+      return normalized || 'annual_leave';
   }
 }
 
@@ -220,7 +221,7 @@ function mapLeaveRequest(raw: unknown): LeaveRequestRecord {
 
   const startDate = String(item.start_date ?? item.startDate ?? '');
   const endDate = String(item.end_date ?? item.endDate ?? startDate);
-  const leaveTypeKey = String(leaveTypeValue).trim().toLowerCase().replace(/\s+/g, '_');
+  const leaveTypeKey = String(leaveTypeValue ?? 'annual_leave').trim().toLowerCase().replace(/\s+/g, '_');
 
   return {
     id: Number(item.id ?? Date.now()),
@@ -240,7 +241,7 @@ function mapLeaveRequest(raw: unknown): LeaveRequestRecord {
   };
 }
 
-function buildLeaveSummary(requests: LeaveRequestRecord[]) {
+function buildLeaveSummary(requests: LeaveRequestRecord[], rawSummary?: any) {
   const balances: LeaveBalanceSummary = {
     annual: 0,
     sick: 0,
@@ -291,11 +292,13 @@ function buildLeaveSummary(requests: LeaveRequestRecord[]) {
     approved: requests.filter((request) => request.status === 'approved').length,
     rejected: requests.filter((request) => request.status === 'rejected').length,
     balances,
+    annual_left: rawSummary?.annual_left ?? 0,
+    sick_left: rawSummary?.sick_left ?? 0,
   };
 }
 
 export async function fetchMyLeaveRequests(): Promise<LeaveRequestsPayload> {
-  const payload = await requestFirstAvailable<unknown>(leaveRequestPaths);
+  const payload = await requestFirstAvailable<any>(leaveRequestPaths);
   const requests = extractRequests(payload)
     .map(mapLeaveRequest)
     .sort((left, right) => {
@@ -304,7 +307,7 @@ export async function fetchMyLeaveRequests(): Promise<LeaveRequestsPayload> {
       return new Date(rightDate).getTime() - new Date(leftDate).getTime();
     });
 
-  const summary = buildLeaveSummary(requests);
+  const summary = buildLeaveSummary(requests, payload.summary);
 
   return {
     requests,
@@ -313,13 +316,17 @@ export async function fetchMyLeaveRequests(): Promise<LeaveRequestsPayload> {
 }
 
 export async function submitLeaveRequest(payload: SubmitLeaveRequestPayload) {
+  const formData = new FormData();
+  formData.append('leave_type', toBackendLeaveType(payload.leaveType));
+  formData.append('start_date', payload.startDate);
+  formData.append('end_date', payload.endDate);
+  formData.append('reason', payload.reason);
+  if (payload.attachment) {
+    formData.append('attachment', payload.attachment);
+  }
+
   return requestFirstAvailable(submitLeavePaths, {
     method: 'POST',
-    body: {
-      leave_type: toBackendLeaveType(payload.leaveType),
-      start_date: payload.startDate,
-      end_date: payload.endDate,
-      reason: payload.reason,
-    },
+    body: formData,
   });
 }

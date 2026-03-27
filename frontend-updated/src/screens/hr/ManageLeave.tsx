@@ -1,50 +1,171 @@
-import { useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { 
   CheckCircle2, 
   XCircle, 
   Clock, 
-  Search, 
-  Filter, 
-  MoreVertical, 
-  Calendar, 
-  User, 
   MessageSquare, 
   ChevronLeft, 
   ChevronRight, 
   Check, 
   X, 
-  Plus, 
-  AlertCircle, 
   ArrowLeft, 
   Download, 
   FileText, 
   Table as TableIcon, 
   FileSpreadsheet,
-  RefreshCw
+  RefreshCw,
+  Mail,
+  User,
+  Paperclip,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Briefcase,
+  Eye,
+  Image as ImageIcon
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Link } from 'react-router-dom';
+import { apiRequest, API_BASE } from '../../lib/api';
+import { formatRelativeTime } from '../../lib/admin';
 
-const leaveRequests = [
-  { _id: '1', userId: 'Biruk Bedilu', departmentId: 'Engineering', type: 'Annual Leave', startDate: '2026-04-10', endDate: '2026-04-15', days: 5, balance: 14, reason: 'Family vacation to Bahir Dar.', status: 'Pending', requested: '2 hours ago' },
-  { _id: '2', userId: 'Kaleb Wondimu', departmentId: 'Computer Science', type: 'Sick Leave', startDate: '2026-03-26', endDate: '2026-03-27', days: 2, balance: 8, reason: 'Severe flu and headache.', status: 'Pending', requested: '5 hours ago' },
-  { _id: '3', userId: 'Adan Mohamed', departmentId: 'Informatics', type: 'Study Leave', startDate: '2026-05-01', endDate: '2026-05-15', days: 15, balance: 20, reason: 'Final exams for Masters degree.', status: 'Pending', requested: 'Yesterday' },
-];
+interface LeaveRequest {
+  id: string;
+  employee_name: string;
+  username: string;
+  email: string;
+  department: string;
+  leave_type: string;
+  start_date: string;
+  end_date: string;
+  days: number;
+  balance: number;
+  reason: string;
+  status: string;
+  attachment: string | null;
+  requested_at: string | null;
+}
 
 export default function ManageLeave() {
   const [activeTab, setActiveTab] = useState('Pending');
-  const [showModal, setShowModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [allRequests, setAllRequests] = useState<LeaveRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [expandedRequestId, setExpandedRequestId] = useState<string | null>(null);
+  const [previewFile, setPreviewFile] = useState<{ url: string; type: string } | null>(null);
+
+  const fetchRequests = async () => {
+    setIsRefreshing(true);
+    try {
+      const response = await apiRequest<{ success: boolean; leave_requests: LeaveRequest[] }>('/api/leave/api/all/');
+      if (response.success) {
+        setAllRequests(response.leave_requests);
+      }
+    } catch (error) {
+      console.error('Failed to fetch leave requests:', error);
+    } finally {
+      setIsRefreshing(false);
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
 
   const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => setIsRefreshing(false), 1000);
+    fetchRequests();
+  };
+
+  const handleAction = async (requestId: string, action: 'APPROVED' | 'REJECTED') => {
+    try {
+      const response = await apiRequest<{ success: boolean }>(`/api/leave/api/manage/${requestId}/`, {
+        method: 'POST',
+        body: { status: action }
+      });
+      if (response.success) {
+        fetchRequests();
+      }
+    } catch (error) {
+      console.error(`Failed to ${action.toLowerCase()} leave request:`, error);
+    }
+  };
+
+  const filteredRequests = useMemo(() => {
+    return allRequests.filter(req => (req.status || '').toLowerCase() === activeTab.toLowerCase());
+  }, [allRequests, activeTab]);
+
+  const pendingCount = useMemo(() => {
+    return allRequests.filter(req => (req.status || '').toLowerCase() === 'pending').length;
+  }, [allRequests]);
+
+  const toggleExpand = (id: string) => {
+    setExpandedRequestId(expandedRequestId === id ? null : id);
+  };
+
+  const getFullAttachmentUrl = (path: string | null) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    const base = API_BASE.replace(/\/$/, '');
+    const relativePath = path.startsWith('/') ? path : `/${path}`;
+    return `${base}${relativePath}`;
+  };
+
+  const handlePreview = (url: string) => {
+    const extension = url.split('.').pop()?.toLowerCase() || '';
+    setPreviewFile({ url, type: extension });
   };
 
   return (
     <div className="space-y-6">
+      {/* File Preview Modal */}
+      {previewFile && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-slate-900/90 backdrop-blur-sm">
+          <div className="relative w-full max-w-5xl h-full bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white">
+                  {['jpg', 'jpeg', 'png', 'gif'].includes(previewFile.type) ? <ImageIcon className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 uppercase">Document Preview</h3>
+                  <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Format: {previewFile.type}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <a href={previewFile.url} download className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Download Original">
+                  <Download className="w-5 h-5" />
+                </a>
+                <button onClick={() => setPreviewFile(null)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex-1 bg-slate-100/50 overflow-auto p-4 flex items-center justify-center">
+              {['jpg', 'jpeg', 'png', 'gif'].includes(previewFile.type) ? (
+                <img src={previewFile.url} alt="Preview" className="max-w-full max-h-full object-contain shadow-lg" />
+              ) : previewFile.type === 'pdf' ? (
+                <iframe src={`${previewFile.url}#toolbar=0`} className="w-full h-full border-none rounded-xl bg-white shadow-lg" title="PDF Preview" />
+              ) : (
+                <div className="text-center space-y-4 p-12 bg-white rounded-3xl shadow-xl border border-slate-200">
+                  <div className="w-20 h-20 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto">
+                    <FileText className="w-10 h-10" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900">Preview not available</h3>
+                  <p className="text-sm text-slate-500 max-w-xs mx-auto">This file type ({previewFile.type}) cannot be previewed in the browser. Please download it to view.</p>
+                  <a href={previewFile.url} download className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20">
+                    <Download className="w-4 h-4" /> Download File
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link 
@@ -75,13 +196,6 @@ export default function ManageLeave() {
           >
             <Download className="w-4 h-4" />
           </button>
-          <button 
-            onClick={() => setShowModal(true)}
-            className="primary-button gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">New Request</span>
-          </button>
           <div className="flex bg-white border border-slate-200 rounded-xl p-1 shadow-sm overflow-x-auto">
             {['Pending', 'Approved', 'Rejected'].map((tab) => (
               <button 
@@ -93,7 +207,7 @@ export default function ManageLeave() {
                 )}
               >
                 {tab}
-                {tab === 'Pending' && <span className="ml-2 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">3</span>}
+                {tab === 'Pending' && pendingCount > 0 && <span className="ml-2 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{pendingCount}</span>}
               </button>
             ))}
           </div>
@@ -101,70 +215,195 @@ export default function ManageLeave() {
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        {leaveRequests.map((request) => (
-          <div key={request._id} className="professional-card">
-            <div className="p-6 flex flex-col lg:flex-row gap-8">
-              {/* Employee Info */}
-              <div className="lg:w-64 shrink-0 space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 font-bold text-lg">
-                    {request.userId.charAt(0)}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900">{request.userId}</h3>
-                    <p className="text-xs text-slate-500">{request.departmentId}</p>
-                  </div>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Leave Balance</p>
-                  <p className="text-sm font-bold text-slate-900 mt-1">{request.balance} Days Available</p>
-                </div>
-              </div>
-
-              {/* Request Details */}
-              <div className="flex-1 space-y-4">
-                <div className="flex flex-wrap gap-6">
-                  <div>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Leave Type</p>
-                    <span className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-bold">{request.type}</span>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Duration</p>
-                    <p className="text-sm font-bold text-slate-900">{request.days} Days</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Period</p>
-                    <p className="text-sm font-bold text-slate-900">{request.startDate} - {request.endDate}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Requested</p>
-                    <p className="text-sm text-slate-500">{request.requested}</p>
-                  </div>
-                </div>
-
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                  <div className="flex gap-2 mb-2">
-                    <MessageSquare className="w-4 h-4 text-slate-400" />
-                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Reason</span>
-                  </div>
-                  <p className="text-sm text-slate-600 leading-relaxed italic">"{request.reason}"</p>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="lg:w-48 shrink-0 flex flex-col justify-center gap-3">
-                <button className="w-full py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-600/20 transition-all active:scale-[0.98]">
-                  <Check className="w-4 h-4" />
-                  Approve
-                </button>
-                <button className="w-full py-3 bg-white border border-red-200 text-red-600 hover:bg-red-50 rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
-                  <X className="w-4 h-4" />
-                  Reject
-                </button>
-              </div>
-            </div>
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 grayscale opacity-50">
+            <RefreshCw className="w-8 h-8 animate-spin mb-4" />
+            <p className="text-sm font-bold">Synchronizing Leave Records...</p>
           </div>
-        ))}
+        ) : filteredRequests.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-dashed border-slate-200">
+            <Clock className="w-12 h-12 text-slate-300 mb-4" />
+            <h3 className="text-lg font-bold text-slate-900">No {activeTab} Requests</h3>
+            <p className="text-sm text-slate-500">There are no leave applications in this category.</p>
+          </div>
+        ) : (
+          filteredRequests.map((request) => {
+            const isExpanded = expandedRequestId === request.id;
+            const attachmentUrl = getFullAttachmentUrl(request.attachment);
+            
+            return (
+              <div key={request.id} className={cn(
+                "professional-card transition-all duration-300 overflow-hidden",
+                isExpanded ? "ring-2 ring-blue-500 shadow-xl" : "hover:border-slate-300"
+              )}>
+                <div className="p-6">
+                  <div className="flex flex-col lg:flex-row gap-6 lg:items-center">
+                    {/* Employee Mini Info */}
+                    <div className="flex items-center gap-4 min-w-[280px]">
+                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 font-bold text-lg">
+                        {(request.employee_name || 'U').charAt(0)}
+                      </div>
+                      <div className="overflow-hidden">
+                        <h3 className="font-bold text-slate-900 truncate">{request.employee_name || 'Unknown'}</h3>
+                        <div className="flex items-center gap-2 text-[10px] text-slate-500 uppercase font-bold tracking-tighter">
+                           <Briefcase className="w-3 h-3 text-slate-400" />
+                           <span className="truncate">{request.department || 'No Department'}</span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-mono uppercase truncate mt-0.5">{request.username || 'N/A'}</p>
+                      </div>
+                    </div>
+
+                    {/* Quick Stats */}
+                    <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Leave Type</p>
+                        <p className="text-sm font-bold text-slate-700 truncate">{request.leave_type}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Duration</p>
+                        <p className="text-sm font-bold text-slate-900">{request.days} Days</p>
+                      </div>
+                      <div className="hidden md:block">
+                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Start Date</p>
+                        <p className="text-sm font-bold text-slate-900">{request.start_date}</p>
+                      </div>
+                      <div className="hidden md:block">
+                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Requested</p>
+                        <p className="text-sm text-slate-500">{formatRelativeTime(request.requested_at)}</p>
+                      </div>
+                    </div>
+
+                    {/* Expand Toggle */}
+                    <div className="flex items-center gap-3 shrink-0">
+                      <button 
+                        onClick={() => toggleExpand(request.id)}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg text-xs font-bold transition-all border border-slate-200"
+                      >
+                        {isExpanded ? (
+                          <>Close Details <ChevronUp className="w-4 h-4" /></>
+                        ) : (
+                          <>See Details <ChevronDown className="w-4 h-4" /></>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Expanded Content */}
+                  <div className={cn(
+                    "grid transition-all duration-300 ease-in-out",
+                    isExpanded ? "grid-rows-[1fr] opacity-100 mt-8" : "grid-rows-[0fr] opacity-0"
+                  )}>
+                    <div className="overflow-hidden">
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-8 border-t border-slate-100">
+                        {/* Detailed Employee Info */}
+                        <div className="space-y-6">
+                           <div className="space-y-4">
+                              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Full Identity</h4>
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-3 text-sm text-slate-600">
+                                  <User className="w-4 h-4 text-blue-500" />
+                                  <span className="font-bold">{request.employee_name}</span>
+                                </div>
+                                <div className="flex items-center gap-3 text-sm text-slate-600">
+                                  <Briefcase className="w-4 h-4 text-blue-500" />
+                                  <span>{request.department}</span>
+                                </div>
+                                <div className="flex items-center gap-3 text-sm text-slate-600">
+                                  <Mail className="w-4 h-4 text-blue-500" />
+                                  <span className="truncate">{request.email}</span>
+                                </div>
+                              </div>
+                           </div>
+                           <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 shadow-sm">
+                              <p className="text-[10px] text-blue-400 uppercase font-bold tracking-wider mb-2">Leave Quota Status</p>
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-2xl font-bold text-blue-700">{request.balance}</span>
+                                <span className="text-xs font-bold text-blue-500 uppercase">Days Remaining</span>
+                              </div>
+                           </div>
+                        </div>
+
+                        {/* Leave Reason & Attachment */}
+                        <div className="lg:col-span-2 space-y-6">
+                           <div className="space-y-3">
+                              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <MessageSquare className="w-3 h-3" /> 
+                                Justification/Reason
+                              </h4>
+                              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 shadow-inner italic text-slate-600 text-sm whitespace-pre-wrap break-words leading-relaxed max-h-[400px] overflow-y-auto">
+                                "{request.reason || 'No reason provided by the employee.'}"
+                              </div>
+                           </div>
+
+                           {attachmentUrl && (
+                             <div className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                               <div className="flex items-center gap-3 overflow-hidden">
+                                 <div className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center shrink-0">
+                                   <FileText className="w-5 h-5" />
+                                 </div>
+                                 <div className="overflow-hidden">
+                                   <p className="text-xs font-bold text-slate-900 uppercase">Supporting Document</p>
+                                   <p className="text-[10px] text-slate-400 truncate">Evidence for review</p>
+                                 </div>
+                               </div>
+                               <div className="flex items-center gap-2 shrink-0">
+                                 <button 
+                                   onClick={() => handlePreview(attachmentUrl)}
+                                   className="flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold transition-all"
+                                 >
+                                   <Eye className="w-3.5 h-3.5" /> Quick Preview
+                                 </button>
+                                 <a 
+                                   href={attachmentUrl} 
+                                   target="_blank" 
+                                   rel="noopener noreferrer"
+                                   className="p-2 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-all"
+                                   title="Open in new tab"
+                                 >
+                                   <ExternalLink className="w-4 h-4" />
+                                 </a>
+                               </div>
+                             </div>
+                           )}
+
+                           {/* Action Footer inside expanded area */}
+                           {(request.status || '').toLowerCase() === 'pending' && (
+                             <div className="flex items-center justify-end gap-3 pt-4">
+                               <button 
+                                 onClick={() => handleAction(request.id, 'REJECTED')}
+                                 className="px-6 py-2.5 bg-white border-2 border-red-100 text-red-600 hover:bg-red-50 rounded-xl font-bold text-sm transition-all flex items-center gap-2"
+                               >
+                                 <XCircle className="w-4 h-4" /> Reject
+                               </button>
+                               <button 
+                                 onClick={() => handleAction(request.id, 'APPROVED')}
+                                 className="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-green-600/20 transition-all flex items-center gap-2"
+                               >
+                                 <CheckCircle2 className="w-4 h-4" /> Approve Leave
+                               </button>
+                             </div>
+                           )}
+
+                           {((request.status || '').toLowerCase() === 'approved' || (request.status || '').toLowerCase() === 'rejected') && (
+                             <div className="flex items-center justify-end gap-3 pt-4">
+                               <div className={cn(
+                                 "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest",
+                                 (request.status || '').toLowerCase() === 'approved' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                               )}>
+                                 {(request.status || '').toLowerCase() === 'approved' ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                                 Already {request.status}
+                               </div>
+                             </div>
+                           )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       <div className="flex items-center justify-center gap-4 pt-4">
@@ -177,105 +416,6 @@ export default function ManageLeave() {
         </button>
       </div>
 
-      {/* New Request Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">New Leave Request</h2>
-                <p className="text-sm text-slate-500">Apply for leave on behalf of an employee</p>
-              </div>
-              <button 
-                onClick={() => setShowModal(false)}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-slate-400" />
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-6 overflow-y-auto">
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">Employee</label>
-                <select className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                  <option>Select Employee</option>
-                  <option>Biruk Bedilu (HU-EMP-003)</option>
-                  <option>Kaleb Wondimu (HU-EMP-004)</option>
-                  <option>Adan Mohamed (HU-EMP-005)</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">Leave Type</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {['Annual', 'Sick', 'Study'].map((type) => (
-                    <button 
-                      key={type}
-                      className="px-4 py-2 text-xs font-bold border border-slate-200 rounded-lg hover:border-blue-500 hover:text-blue-600 transition-all"
-                    >
-                      {type}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Start Date</label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input 
-                      type="date" 
-                      className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">End Date</label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input 
-                      type="date" 
-                      className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">Reason / Description</label>
-                <textarea 
-                  rows={3}
-                  placeholder="Provide a brief reason for the leave..."
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                ></textarea>
-              </div>
-
-              <div className="p-4 bg-blue-50 rounded-xl flex gap-3">
-                <AlertCircle className="w-5 h-5 text-blue-600 shrink-0" />
-                <p className="text-xs text-blue-700 leading-relaxed">
-                  Employee has <strong>14 days</strong> of annual leave remaining.
-                </p>
-              </div>
-            </div>
-
-            <div className="p-6 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row justify-end gap-3 shrink-0">
-              <button 
-                onClick={() => setShowModal(false)}
-                className="w-full sm:w-auto px-6 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-all order-2 sm:order-1"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={() => setShowModal(false)}
-                className="w-full sm:w-auto px-6 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95 order-1 sm:order-2"
-              >
-                Submit Request
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       {/* Export Report Modal */}
       {showExportModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">

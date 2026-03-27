@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import backroundimage from "../../assets/backroundimage.jpg"
 import {
   Fingerprint,
   Lock,
@@ -217,12 +218,12 @@ export default function Login({ onLogin }: LoginProps) {
       <div className="hidden md:flex md:w-1/2 p-12 flex-col justify-between text-white relative overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img
-            src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=1920"
+            src={backroundimage}
             alt="Technology Background"
             className="w-full h-full object-cover"
             referrerPolicy="no-referrer"
           />
-          <div className="absolute inset-0 bg-blue-600/80 backdrop-blur-[2px]"></div>
+          <div className="absolute inset-0   backdrop-blur-[2px]"></div>
         </div>
 
         <div className="relative z-10">

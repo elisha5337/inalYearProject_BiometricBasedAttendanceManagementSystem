@@ -12,29 +12,34 @@ def get_user_from_request(request):
         return request.user
     return None
 
-def is_hr_officer(user):
-    try:
-        hr_role = Role.objects.get(name='HR_OFFICER')
-        return user.roles.filter(id=hr_role.id).exists()
-    except Role.DoesNotExist:
-        return False
+# Forced reload at : 2026-03-27 10:20
+def can_manage_scheduling(user):
+    # Check if user has HR or Admin roles
+    if not user: return False
+    return user.is_hr_officer or user.is_administrator
 
 # --- Shift Management Views (CRUD) ---
 
 @csrf_exempt
 def shift_list_create(request):
     user = get_user_from_request(request)
-    if not user or not is_hr_officer(user):
+    if not can_manage_scheduling(user):
         return JsonResponse({'error': 'Permission denied'}, status=403)
 
     if request.method == 'GET':
-        shifts = Shift.objects.all().select_related('department')
+        from django.db.models import Count
+        shifts = Shift.objects.all().select_related('department').annotate(employees_count=Count('assignment'))
         data = [{
-            'id': shift.id,
+            'id': str(shift.id),
             'name': shift.name,
-            'department': shift.department.name if shift.department else None,
-            'start_time': shift.start_time.strftime('%H:%M'),
-            'end_time': shift.end_time.strftime('%H:%M'),
+            'description': shift.description or '',
+            'department': shift.department.name if shift.department else 'Unassigned',
+            'department_id': str(shift.department.id) if shift.department else None,
+            'start_time': shift.start_time.strftime('%I:%M %p'),
+            'end_time': shift.end_time.strftime('%I:%M %p'),
+            'grace_period': f"{shift.grace_period} mins",
+            'work_days': shift.work_days,
+            'employeesCount': shift.employees_count
         } for shift in shifts]
         return JsonResponse({'success': True, 'shifts': data})
 
@@ -45,11 +50,14 @@ def shift_list_create(request):
             
             shift = Shift.objects.create(
                 name=data['name'],
+                description=data.get('description'),
                 department=department,
                 start_time=data['start_time'],
-                end_time=data['end_time']
+                end_time=data['end_time'],
+                grace_period=int(data.get('grace_period', 15)),
+                work_days=data.get('work_days', 'Mon - Fri')
             )
-            return JsonResponse({'success': True, 'message': 'Shift created successfully', 'shift_id': shift.id}, status=201)
+            return JsonResponse({'success': True, 'message': 'Shift created successfully', 'shift_id': str(shift.id)}, status=201)
         except (KeyError, Department.DoesNotExist):
             return JsonResponse({'error': 'Invalid data provided'}, status=400)
         except Exception as e:
@@ -58,7 +66,7 @@ def shift_list_create(request):
 @csrf_exempt
 def shift_detail(request, shift_id):
     user = get_user_from_request(request)
-    if not user or not is_hr_officer(user):
+    if not can_manage_scheduling(user):
         return JsonResponse({'error': 'Permission denied'}, status=403)
 
     try:
@@ -68,11 +76,14 @@ def shift_detail(request, shift_id):
 
     if request.method == 'GET':
         data = {
-            'id': shift.id,
+            'id': str(shift.id),
             'name': shift.name,
-            'department_id': shift.department.id if shift.department else None,
+            'description': shift.description or '',
+            'department_id': str(shift.department.id) if shift.department else None,
             'start_time': shift.start_time.strftime('%H:%M'),
             'end_time': shift.end_time.strftime('%H:%M'),
+            'grace_period': shift.grace_period,
+            'work_days': shift.work_days
         }
         return JsonResponse({'success': True, 'shift': data})
 
@@ -80,8 +91,12 @@ def shift_detail(request, shift_id):
         try:
             data = json.loads(request.body)
             shift.name = data.get('name', shift.name)
+            shift.description = data.get('description', shift.description)
             shift.start_time = data.get('start_time', shift.start_time)
             shift.end_time = data.get('end_time', shift.end_time)
+            shift.grace_period = int(data.get('grace_period', shift.grace_period))
+            shift.work_days = data.get('work_days', shift.work_days)
+            
             if 'department_id' in data:
                 shift.department = Department.objects.get(id=data['department_id']) if data['department_id'] else None
             shift.save()
@@ -100,17 +115,19 @@ def shift_detail(request, shift_id):
 @csrf_exempt
 def assignment_list_create(request):
     user = get_user_from_request(request)
-    if not user or not is_hr_officer(user):
+    if not can_manage_scheduling(user):
         return JsonResponse({'error': 'Permission denied'}, status=403)
 
     if request.method == 'GET':
-        assignments = Assignment.objects.all().select_related('user', 'shift')
+        assignments = Assignment.objects.all().select_related('user', 'shift').order_by('-from_date')
         data = [{
-            'id': assignment.id,
-            'user': assignment.user.username,
-            'shift': assignment.shift.name,
+            'id': str(assignment.id),
+            'employeeName': assignment.user.get_full_name() or assignment.user.username,
+            'userName': assignment.user.username,
+            'shiftName': assignment.shift.name,
             'from_date': assignment.from_date,
             'to_date': assignment.to_date,
+            'assigned_by': assignment.assigned_by.get_full_name() or assignment.assigned_by.username if assignment.assigned_by else 'System',
         } for assignment in assignments]
         return JsonResponse({'success': True, 'assignments': data})
 
@@ -136,7 +153,7 @@ def assignment_list_create(request):
 @csrf_exempt
 def assignment_detail(request, assignment_id):
     user = get_user_from_request(request)
-    if not user or not is_hr_officer(user):
+    if not can_manage_scheduling(user):
         return JsonResponse({'error': 'Permission denied'}, status=403)
 
     try:

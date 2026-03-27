@@ -149,8 +149,12 @@ export default function Sidebar({ user, onClose, isCollapsed, onToggleCollapse }
           "flex items-center gap-3 px-3 py-2",
           isCollapsed && "lg:px-0"
         )}>
-          <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
-            {user.name.charAt(0)}
+          <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-white shrink-0 overflow-hidden">
+            {user.profilePhoto ? (
+              <img src={user.profilePhoto} alt={user.name} className="w-full h-full object-cover" />
+            ) : (
+              (user.name || user.username).charAt(0)
+            )}
           </div>
           <div className={cn(
             "flex-1 min-w-0 transition-all duration-300",

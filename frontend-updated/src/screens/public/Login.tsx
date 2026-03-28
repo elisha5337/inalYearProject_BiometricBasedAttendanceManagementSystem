@@ -112,34 +112,34 @@ export default function Login({ onLogin }: LoginProps) {
     { id: 'admin', label: 'Administrator', icon: Shield },
   ];
 
-  const demoCredentials: Array<{
-    role: UserRole;
-    label: string;
-    username: string;
-    password: string;
-  }> = [
-    {
-      role: 'admin',
-      label: 'Admin',
-      username: 'elsa',
-      password: 'Admin@123',
-    },
-    {
-      role: 'hr',
-      label: 'HR',
-      username: 'hr_demo',
-      password: 'Hr@12345',
-    },
-    {
-      role: 'employee',
-      label: 'Employee',
-      username: 'employee_demo',
-      password: 'Employee@123',
-    },
-  ];
+  // const demoCredentials: Array<{
+  //   role: UserRole;
+  //   label: string;
+  //   username: string;
+  //   password: string;
+  // }> = [
+  //   {
+  //     role: 'admin',
+  //     label: 'Admin',
+  //     username: 'elsa',
+  //     password: 'Admin@123',
+  //   },
+  //   {
+  //     role: 'hr',
+  //     label: 'HR',
+  //     username: 'hr_demo',
+  //     password: 'Hr@12345',
+  //   },
+  //   {
+  //     role: 'employee',
+  //     label: 'Employee',
+  //     username: 'employee_demo',
+  //     password: 'Employee@123',
+  //   },
+  // ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row relative">
+    <div className="h-screen w-screen bg-slate-50 flex flex-col md:flex-row overflow-hidden relative">
       {showForgotPassword && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-8 space-y-6 relative overflow-hidden">
@@ -215,7 +215,7 @@ export default function Login({ onLogin }: LoginProps) {
         </div>
       )}
 
-      <div className="hidden md:flex md:w-1/2 p-12 flex-col justify-between text-white relative overflow-hidden">
+      <div className="hidden md:flex md:w-1/2 p-12 flex-col justify-between text-white relative overflow-hidden h-full">
         <div className="absolute inset-0 z-0">
           <img
             src={backroundimage}
@@ -223,7 +223,7 @@ export default function Login({ onLogin }: LoginProps) {
             className="w-full h-full object-cover"
             referrerPolicy="no-referrer"
           />
-          <div className="absolute inset-0   backdrop-blur-[2px]"></div>
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"></div>
         </div>
 
         <div className="relative z-10">
@@ -254,11 +254,11 @@ export default function Login({ onLogin }: LoginProps) {
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md space-y-8">
+      <div className="flex-1 flex flex-col items-center justify-center bg-white h-full overflow-y-auto custom-scrollbar p-6 lg:p-12">
+        <div className="w-full max-w-md space-y-6 py-8">
           <div className="text-center md:text-left">
             <h2 className="text-3xl font-bold text-slate-900">Welcome Back</h2>
-            <p className="text-slate-500 mt-2">Select your role and enter your credentials</p>
+            <p className="text-slate-500 mt-2 text-sm">Select your role and enter your credentials</p>
           </div>
 
           <div className="grid grid-cols-3 gap-3">
@@ -278,101 +278,89 @@ export default function Login({ onLogin }: LoginProps) {
               >
                 <selectedRole.icon
                   className={cn(
-                    'w-6 h-6',
+                    'w-5 h-5',
                     role === selectedRole.id ? 'text-blue-600' : 'text-slate-400',
                   )}
                 />
-                <span className="text-xs font-bold uppercase tracking-wider">
+                <span className="text-[10px] font-bold uppercase tracking-wider">
                   {selectedRole.label.split(' ')[0]}
                 </span>
               </button>
             ))}
           </div>
 
-          <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-bold text-slate-900">Sample Credentials</p>
-                <p className="text-xs text-slate-500">
-                  Use these after running the demo-user seed command.
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              {demoCredentials.map((credential) => (
-                <button
-                  key={credential.role}
-                  type="button"
-                  disabled={isLoading}
-                  onClick={() => {
-                    setRole(credential.role);
-                    setUsername(credential.username);
-                    setPassword(credential.password);
-                    setError('');
-                  }}
-                  className="w-full rounded-xl border border-white bg-white px-4 py-3 text-left transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-semibold text-slate-900">{credential.label}</span>
-                    <span className="text-xs font-medium uppercase tracking-wider text-blue-600">
-                      Use
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {credential.username} / {credential.password}
-                  </p>
-                </button>
-              ))}
-            </div>
-          </div>
+          {/*<div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4 space-y-3">*/}
+          {/*  <p className="text-xs font-bold text-slate-900 uppercase tracking-widest opacity-60 text-center">Sample Credentials</p>*/}
+          {/*  <div className="space-y-2">*/}
+          {/*    {demoCredentials.map((credential) => (*/}
+          {/*      <button*/}
+          {/*        key={credential.role}*/}
+          {/*        type="button"*/}
+          {/*        disabled={isLoading}*/}
+          {/*        onClick={() => {*/}
+          {/*          setRole(credential.role);*/}
+          {/*          setUsername(credential.username);*/}
+          {/*          setPassword(credential.password);*/}
+          {/*          setError('');*/}
+          {/*        }}*/}
+          {/*        className="w-full rounded-xl border border-white bg-white/80 px-4 py-2 text-left transition hover:border-blue-200 hover:bg-white disabled:opacity-60"*/}
+          {/*      >*/}
+          {/*        <div className="flex items-center justify-between">*/}
+          {/*          <span className="text-xs font-bold text-slate-700">{credential.label}</span>*/}
+          {/*          <span className="text-[10px] font-bold text-blue-600">AUTO-FILL</span>*/}
+          {/*        </div>*/}
+          {/*        <p className="text-[10px] text-slate-400 font-mono mt-0.5">{credential.username} / {credential.password}</p>*/}
+          {/*      </button>*/}
+          {/*    ))}*/}
+          {/*  </div>*/}
+          {/*</div>*/}
 
           {error && (
-            <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-sm text-red-600 animate-in fade-in slide-in-from-top-2">
-              <AlertCircle className="w-5 h-5 shrink-0" />
-              {error}
+            <div className="p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-3 text-xs font-bold text-rose-600 animate-in fade-in slide-in-from-top-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              {error.toUpperCase()}
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Username</label>
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Username</label>
               <div className="relative">
-                <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
                   required
                   disabled={isLoading}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:bg-slate-50"
-                  placeholder="Enter your username"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 outline-none transition-all disabled:bg-slate-100"
+                  placeholder="Employee Username"
                   autoComplete="username"
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="flex justify-between items-center">
-                <label className="text-sm font-semibold text-slate-700">Password</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Password</label>
                 <button
                   type="button"
                   onClick={() => setShowForgotPassword(true)}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                  className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wider"
                 >
-                  Forgot password?
+                  Reset?
                 </button>
               </div>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="password"
                   required
                   disabled={isLoading}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:bg-slate-50"
-                  placeholder="........"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 outline-none transition-all disabled:bg-slate-100"
+                  placeholder="••••••••"
                   autoComplete="current-password"
                 />
               </div>
@@ -386,15 +374,15 @@ export default function Login({ onLogin }: LoginProps) {
                 onChange={(e) => setRememberMe(e.target.checked)}
                 className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
               />
-              <label htmlFor="remember" className="text-sm text-slate-600 cursor-pointer">
-                Remember me for 30 days
+              <label htmlFor="remember" className="text-xs font-bold text-slate-500 uppercase tracking-wider cursor-pointer select-none">
+                Remember session
               </label>
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 transition-all transform active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full bg-slate-900 hover:bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>
@@ -410,16 +398,13 @@ export default function Login({ onLogin }: LoginProps) {
             </button>
           </form>
 
-          <div className="text-center pt-8 border-t border-slate-100">
-            <p className="text-slate-500 text-sm">
-              Need to mark attendance?
-              <button
-                onClick={() => navigate('/terminal')}
-                className="ml-1 text-blue-600 font-bold hover:underline"
-              >
-                Go to Biometric Terminal
-              </button>
-            </p>
+          <div className="text-center pt-6 border-t border-slate-100">
+            <button
+              onClick={() => navigate('/terminal')}
+              className="text-slate-400 text-xs font-bold uppercase tracking-[0.2em] hover:text-blue-600 transition-colors"
+            >
+              Go to Mark Attendance
+            </button>
           </div>
         </div>
       </div>

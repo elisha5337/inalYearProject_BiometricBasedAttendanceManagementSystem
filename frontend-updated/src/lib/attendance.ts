@@ -8,6 +8,12 @@ export interface AttendanceMarkResponse {
   verification_status: string;
   message: string;
   timestamp: string;
+  profile?: {
+    full_name: string;
+    department: string;
+    position: string;
+    profile_photo: string | null;
+  };
 }
 
 export function markAttendance(payload: { image: string; userId?: string }) {

@@ -378,17 +378,33 @@
                     .then(vd => {
                         if (vd.success && vd.completed) {
                             statusText.innerText = "Enrollment Complete!";
-                            msg.innerText = "Securely synchronized. Closing...";
+                            msg.innerText = "Securely synchronized. Finalizing...";
+
+                            // Include status and userId in the redirect URL
+                            const targetUrl = `http://localhost:3000/admin/enroll?status=success&userId={{ user.id }}`;
+
                             setTimeout(() => { 
                                 if (window.opener) {
-                                  window.opener.location.reload();
-                                  window.close();
+                                    try {
+                                        window.opener.location.href = targetUrl;
+                                    } catch (e) {
+                                        console.error("Failed to redirect opener:", e);
+                                    }
+                                    window.close();
                                 } else {
-                                  window.location.href = vd.redirect; 
+                                    window.location.href = targetUrl;
                                 }
                             }, 1500);
                         } else {
-                            msg.innerText = vd.error || "Verification failed. Try again.";
+                            const errorMsg = vd.error || "Verification failed. Try again.";
+                            msg.innerText = errorMsg;
+
+                            // For errors, we also redirect the parent so it can show the error
+                            if (window.opener) {
+                                const failUrl = `http://localhost:3000/admin/enroll?status=error&message=${encodeURIComponent(errorMsg)}`;
+                                try { window.opener.location.href = failUrl; } catch(e) {}
+                                window.close();
+                            }
                             stableCount = 0;
                         }
                     });

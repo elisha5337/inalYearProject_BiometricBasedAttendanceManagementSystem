@@ -11,6 +11,8 @@ import {
   Server,
   Database,
   ArrowRight,
+  UserCheck,
+  UserX
 } from 'lucide-react';
 import { User } from '../../types';
 import { cn } from '../../lib/utils';
@@ -146,6 +148,57 @@ export default function AdminDashboard({ user }: { user: User }) {
           {error}
         </div>
       ) : null}
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="professional-card p-6 bg-white border border-slate-200">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
+              <Users className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Users</p>
+              <h3 className="text-2xl font-bold text-slate-900">{loading ? '...' : overview.stats.totalEmployees}</h3>
+            </div>
+          </div>
+        </div>
+
+        <div className="professional-card p-6 bg-white border border-slate-200">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+              <UserCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Active Accounts</p>
+              <h3 className="text-2xl font-bold text-slate-900">{loading ? '...' : overview.stats.activeEmployees}</h3>
+            </div>
+          </div>
+        </div>
+
+        <div className="professional-card p-6 bg-white border border-slate-200">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-600">
+              <UserX className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Suspended</p>
+              <h3 className="text-2xl font-bold text-slate-900">{loading ? '...' : overview.stats.suspendedEmployees}</h3>
+            </div>
+          </div>
+        </div>
+
+        <div className="professional-card p-6 bg-white border border-slate-200">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600">
+              <Fingerprint className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Bio-Enrolled</p>
+              <h3 className="text-2xl font-bold text-slate-900">{loading ? '...' : overview.stats.faceEnrolled}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {healthCards.map((card) => (

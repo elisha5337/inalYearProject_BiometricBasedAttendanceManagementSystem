@@ -1225,7 +1225,7 @@ def verify_face(request, user_id):
                 sample_frames.extend(step_f[:3])
 
         if not sample_frames:
-            return JsonResponse({"success": False, "error": "Incomplete biometric data"})
+            return JsonResponse({"success": False, "error": "Insufficient biometric data"})
 
         embeddings = []
         for f in sample_frames:
@@ -1268,7 +1268,10 @@ def verify_face(request, user_id):
 
         EmployeeDetail.objects.update_or_create(
             user=user,
-            defaults={"biometric_enrolled": True},
+            defaults={
+                "biometric_enrolled": True,
+                "hire_date": timezone.now().date() # Ensure a hire_date exists if creating
+            },
         )
 
         request.session.pop("face_frames", None)

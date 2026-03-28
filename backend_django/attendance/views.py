@@ -15,7 +15,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.utils.text import slugify
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, authenticate
 
 from mtcnn import MTCNN
 # Internal model imports
@@ -254,95 +254,89 @@ def mark_attendance(request):
 
         data = json.loads(request.body)
         image_data = data.get('image')
-        # Allow passing userId directly if we are in maintenance bypass or authenticated
-        provided_user_id = data.get('userId') 
-
-        if not image_data:
-            return JsonResponse({'error': 'No image data provided'}, status=400)
-
-        # Decode image
-        try:
-            format, imgstr = image_data.split(';base64,')
-            image_content = base64.b64decode(imgstr)
-            image = Image.open(io.BytesIO(image_content)).convert('RGB')
-            image_array = np.array(image)
-        except Exception as e:
-            logger.error(f"Image decoding failed: {e}")
-            return JsonResponse({'error': 'Invalid image format'}, status=400)
-
-        if face_cascade is None:
-            logger.critical("Attendance API: Face detector is not initialized.")
-            return JsonResponse({'error': 'System misconfiguration'}, status=500)
-
-        # Detect face for initial presence check
-        gray_image = cv2.cvtColor(image_array, cv2.COLOR_RGB2GRAY)
-        faces = face_cascade.detectMultiScale(
-            gray_image, scaleFactor=1.1, minNeighbors=5, minSize=(80, 80)
-        )
-
-        if len(faces) == 0:
-            logger.warning("Attendance Failed: No face detected in request.")
-            return JsonResponse({'error': 'Face not found in guide. Please align correctly.'}, status=400)
+        is_manual = data.get('is_manual', False)
         
-        x, y, w, h = faces[0]
-        face_img = image_array[y:y + h, x:x + w]
-
-        # 1. Liveness Check (Heuristic)
-        is_live, liveness_msg = is_live_face(face_img)
-        if not is_live and biometric_lock_active:
-            logger.error(f"Security Alert: Heuristic Spoof Detection. {liveness_msg}")
-            return JsonResponse({'error': 'Biometric verification failed (Liveness).'}, status=403)
-
         # Initialize core variables
         user = None
         current_status_flag = AttendanceRecord.VerificationStatus.VERIFIED
         match = None
         distance = 0.0
 
-        # 2. Recognition Logic based on Configuration
-        if is_realtime:
-            # Full Real-time DeepFace Validation
-            live_embedding = extract_embedding(face_img)
-            if live_embedding is None:
-                return JsonResponse({'error': 'Biometric processing failed. Try better lighting.'}, status=500)
-
-            threshold, sensitivity, _ = resolve_verification_threshold(strict_mode=is_strict)
-            match, distance = find_best_match(np.array(live_embedding), threshold=threshold)
+        if is_manual:
+            username = data.get('userId') # Username passed here
+            password = data.get('password')
             
-            if not match:
-                if is_strict:
-                    logger.info(f"Recognition Failed (Strict): Unknown person (Best dist: {distance:.4f})")
-                    return JsonResponse({'error': 'Identity not recognized. Ensure you are enrolled.'}, status=401)
-                else:
-                    # Maintenance Bypass: Try to use provided ID if biometric failed
-                    if provided_user_id:
-                        try:
-                            user = User.objects.get(id=provided_user_id)
-                            current_status_flag = AttendanceRecord.VerificationStatus.UNVERIFIED
-                        except User.DoesNotExist:
-                            pass
+            if not username or not password:
+                return JsonResponse({'error': 'Username and password required for manual entry.'}, status=400)
+            
+            authenticated_user = authenticate(username=username, password=password)
+            if authenticated_user:
+                user = authenticated_user
+                current_status_flag = AttendanceRecord.VerificationStatus.UNVERIFIED # Flag as manual bypass
             else:
-                user = User.objects.get(id=match['user_id'])
-                current_status_flag = AttendanceRecord.VerificationStatus.VERIFIED
+                return JsonResponse({'error': 'Invalid manual credentials.'}, status=401)
         else:
-            # Deferred Processing Mode
-            current_status_flag = AttendanceRecord.VerificationStatus.PENDING
-            if provided_user_id:
-                try:
-                    user = User.objects.get(id=provided_user_id)
-                except User.DoesNotExist:
-                    return JsonResponse({'error': 'Deferred processing requires a valid User ID.'}, status=400)
+            if not image_data:
+                return JsonResponse({'error': 'No image data provided'}, status=400)
+
+            # Decode image
+            try:
+                format, imgstr = image_data.split(';base64,')
+                image_content = base64.b64decode(imgstr)
+                image = Image.open(io.BytesIO(image_content)).convert('RGB')
+                image_array = np.array(image)
+            except Exception as e:
+                logger.error(f"Image decoding failed: {e}")
+                return JsonResponse({'error': 'Invalid image format'}, status=400)
+
+            if face_cascade is None:
+                logger.critical("Attendance API: Face detector is not initialized.")
+                return JsonResponse({'error': 'System misconfiguration'}, status=500)
+
+            # Detect face for initial presence check
+            gray_image = cv2.cvtColor(image_array, cv2.COLOR_RGB2GRAY)
+            faces = face_cascade.detectMultiScale(
+                gray_image, scaleFactor=1.1, minNeighbors=5, minSize=(80, 80)
+            )
+
+            if len(faces) == 0:
+                logger.warning("Attendance Failed: No face detected in request.")
+                return JsonResponse({'error': 'Face not found in guide. Please align correctly.'}, status=400)
+            
+            x, y, w, h = faces[0]
+            face_img = image_array[y:y + h, x:x + w]
+
+            # 1. Liveness Check (Heuristic)
+            is_live, liveness_msg = is_live_face(face_img)
+            if not is_live and biometric_lock_active:
+                logger.error(f"Security Alert: Heuristic Spoof Detection. {liveness_msg}")
+                return JsonResponse({'error': 'Biometric verification failed (Liveness).'}, status=403)
+
+            # 2. Recognition Logic based on Configuration
+            if is_realtime:
+                # Full Real-time DeepFace Validation
+                live_embedding = extract_embedding(face_img)
+                if live_embedding is None:
+                    return JsonResponse({'error': 'Biometric processing failed. Try better lighting.'}, status=500)
+
+                threshold, sensitivity, _ = resolve_verification_threshold(strict_mode=is_strict)
+                match, distance = find_best_match(np.array(live_embedding), threshold=threshold)
+                
+                if not match:
+                    return JsonResponse({'error': 'Identity not recognized. Please ensure you are enrolled or use manual access.'}, status=401)
+                else:
+                    user = User.objects.get(id=match['user_id'])
+                    current_status_flag = AttendanceRecord.VerificationStatus.VERIFIED
             else:
-                # If no ID provided and real-time is OFF, we can't identify the user
-                # We could try a "Quick Match" or just fail
-                return JsonResponse({'error': 'Deferred Processing requires User ID or Real-time Validation.'}, status=400)
+                # Deferred Processing Mode
+                return JsonResponse({'error': 'Real-time validation is required for terminal usage.'}, status=400)
 
         if not user:
             return JsonResponse({'error': 'Identity identification failed.'}, status=401)
 
         # 3. Security Check: Reject suspended accounts
         if user.status == User.Status.SUSPENDED:
-            logger.warning(f"Security Alert: Suspended user {user.username} (ID: {user.id}) attempted biometric verification.")
+            logger.warning(f"Security Alert: Suspended user {user.username} (ID: {user.id}) attempted verification.")
             return JsonResponse({
                 'error': 'Attendance rejected. Your account is currently suspended. Please contact HR.'
             }, status=403)
@@ -351,12 +345,11 @@ def mark_attendance(request):
         now = timezone.now()
         today = now.date()
 
-        # 1. Cooldown Check (to prevent double-taps)
+        # 1. Cooldown Check
         last_record = AttendanceRecord.objects.filter(user=user).order_by('-timestamp').first()
         if last_record:
             seconds_since_last = (now - last_record.timestamp).total_seconds()
             if seconds_since_last < 60:  # 1-minute cooldown
-                logger.warning(f"Cooldown: {user.username} tried to mark again too soon ({seconds_since_last:.1f}s).")
                 return JsonResponse({
                     'error': 'Already marked recently. Please wait a moment.',
                     'already_marked': True
@@ -364,7 +357,6 @@ def mark_attendance(request):
 
         # 2. Daily Logic: Determine if CHECK_IN or CHECK_OUT
         records_today = AttendanceRecord.objects.filter(user=user, timestamp__date=today).order_by('-timestamp')
-        
         if not records_today.exists():
             record_type = AttendanceRecord.RecordType.CHECK_IN
         else:
@@ -374,9 +366,6 @@ def mark_attendance(request):
             else:
                 record_type = AttendanceRecord.RecordType.CHECK_IN
 
-        # Explicit rule: check-out requires a valid (latest) check-in for the same day.
-        # (Normally guaranteed by the toggle logic above, but we enforce it for correctness
-        # and for cases like out-of-band record inserts / concurrency.)
         last_check_in_today = None
         if record_type == AttendanceRecord.RecordType.CHECK_OUT:
             last_check_in_today = (
@@ -389,126 +378,65 @@ def mark_attendance(request):
                 .first()
             )
             if not last_check_in_today:
-                return JsonResponse(
-                    {'error': 'Valid check-in must exist before check-out.'},
-                    status=400,
-                )
+                return JsonResponse({'error': 'Valid check-in must exist before check-out.'}, status=400)
 
         # 3. Status Calculation (Late / Early)
         status = AttendanceRecord.RecordStatus.ON_TIME
-        current_time = now.time()
         employee_detail = get_employee_detail(user)
         department_id = employee_detail.department_id if employee_detail else None
         late_threshold_exceeded = False
         policy_message_suffix = ''
         
         assignment = Assignment.objects.filter(
-            user=user,
-            from_date__lte=today,
+            user=user, from_date__lte=today
         ).filter(
             Q(to_date__isnull=True) | Q(to_date__gte=today)
         ).select_related('shift').first()
 
         if assignment:
             shift = assignment.shift
-            
-            # Create timezone-aware datetimes for comparison
             shift_start_dt = timezone.make_aware(datetime.combine(today, shift.start_time))
             shift_end_dt = timezone.make_aware(datetime.combine(today, shift.end_time))
 
-            # Explicit schedule validity checks (only applied when a shift assignment exists).
-            # Windows are intentionally permissive to avoid breaking existing deployments.
-            early_window = timedelta(minutes=60)
-            checkin_window_after_end = timedelta(hours=6)
-            checkout_window_after_end = timedelta(hours=12)
-
             if record_type == AttendanceRecord.RecordType.CHECK_IN:
-                if now < (shift_start_dt - early_window):
-                    return JsonResponse(
-                        {'error': 'Invalid check-in time. Too early for the scheduled shift.'},
-                        status=400,
-                    )
-                if now > (shift_end_dt + checkin_window_after_end):
-                    return JsonResponse(
-                        {'error': 'Invalid check-in time. Shift window has passed.'},
-                        status=400,
-                    )
-
-            if record_type == AttendanceRecord.RecordType.CHECK_OUT and last_check_in_today:
-                if now < last_check_in_today.timestamp:
-                    return JsonResponse(
-                        {'error': 'Invalid check-out time. Must be after the latest check-in.'},
-                        status=400,
-                    )
-                if now > (shift_end_dt + checkout_window_after_end):
-                    return JsonResponse(
-                        {'error': 'Invalid check-out time. Beyond allowed overtime window.'},
-                        status=400,
-                    )
-
-            if record_type == AttendanceRecord.RecordType.CHECK_IN:
-                # Resolve Grace Period Policy
-                grace_policy = PolicyResolver.get_active_policy(
-                    'Grace Period',
-                    department_id
-                )
-                late_threshold_minutes, late_threshold_policy = resolve_numeric_policy_value(
-                    'Late Threshold',
-                    60.0,
-                    department_id,
-                )
+                grace_policy = PolicyResolver.get_active_policy('Grace Period', department_id)
+                late_threshold_minutes, _ = resolve_numeric_policy_value('Late Threshold', 60.0, department_id)
                 delay_minutes = max(0.0, (now - shift_start_dt).total_seconds() / 60.0)
                 
                 if delay_minutes > late_threshold_minutes:
                     status = AttendanceRecord.RecordStatus.LATE
                     late_threshold_exceeded = True
-                    policy_message_suffix = (
-                        f' Late threshold exceeded ({int(round(delay_minutes))} min late; '
-                        f'policy limit {int(round(late_threshold_minutes))} min).'
-                    )
+                    policy_message_suffix = f' Late threshold exceeded ({int(round(delay_minutes))} min late).'
                 elif PolicyResolver.is_late(now, shift_start_dt, grace_policy):
                     status = AttendanceRecord.RecordStatus.LATE
-                else:
-                    status = AttendanceRecord.RecordStatus.ON_TIME
             
             elif record_type == AttendanceRecord.RecordType.CHECK_OUT:
-                # Basic Early Exit Check (Can be further refined with 'Early Exit' policy)
                 if now < shift_end_dt:
                     status = AttendanceRecord.RecordStatus.EARLY_EXIT
-                else:
-                    status = AttendanceRecord.RecordStatus.ON_TIME
 
         new_record = AttendanceRecord.objects.create(
             user=user, 
             timestamp=now, 
             type=record_type, 
             status=status,
-            verification_status=current_status_flag if current_status_flag else AttendanceRecord.VerificationStatus.VERIFIED
+            verification_status=current_status_flag
         )
 
         if current_status_flag == AttendanceRecord.VerificationStatus.UNVERIFIED:
             log_audit_event(
-                'ATTENDANCE_UNVERIFIED',
-                f'Attendance recorded for "{user.username}" without a confirmed biometric match.',
-                user=user,
-                request=request,
-            )
-        elif current_status_flag == AttendanceRecord.VerificationStatus.PENDING:
-            log_audit_event(
-                'ATTENDANCE_PENDING_VALIDATION',
-                f'Attendance recorded for "{user.username}" in deferred validation mode.',
+                'ATTENDANCE_MANUAL_ENTRY',
+                f'Manual attendance entry via credentials for "{user.username}". Flagged for review.',
                 user=user,
                 request=request,
             )
 
-        if late_threshold_exceeded:
-            log_audit_event(
-                'LATE_THRESHOLD_EXCEEDED',
-                f'"{user.username}" exceeded the configured late threshold at {now.isoformat()}.',
-                user=user,
-                request=request,
-            )
-        logger.info(f"Attendance Success: {user.username} | {record_type} | Status: {status} | Verif: {new_record.verification_status} | Dist: {distance:.4f}")
+        # Gather profile info for the success screen
+        profile_data = {
+            'full_name': user.get_full_name() or user.username,
+            'department': employee_detail.department.name if employee_detail and employee_detail.department else 'N/A',
+            'position': employee_detail.position if employee_detail else 'N/A',
+            'profile_photo': employee_detail.profile_photo if employee_detail else None,
+        }
 
         return JsonResponse({
             'success': True,
@@ -516,18 +444,14 @@ def mark_attendance(request):
             'username': user.username,
             'status': status,
             'verification_status': new_record.verification_status,
-            'message': (
-                f"Successfully {record_type.label.lower()} "
-                f"(Mode: {new_record.verification_status.label}).{policy_message_suffix}"
-            ),
-            'timestamp': new_record.timestamp.isoformat()
+            'message': f"Successfully {record_type.label.lower()}. {policy_message_suffix}",
+            'timestamp': new_record.timestamp.isoformat(),
+            'profile': profile_data
         })
 
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON format.'}, status=400)
     except Exception as e:
         logger.exception("Critical Error in mark_attendance view")
-        return JsonResponse({'error': 'Internal server error processing biometric data.'}, status=500)
+        return JsonResponse({'error': 'Internal server error processing data.'}, status=500)
 
 
 def get_my_attendance_history(request):

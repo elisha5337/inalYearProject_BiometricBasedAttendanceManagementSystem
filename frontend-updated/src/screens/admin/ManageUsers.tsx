@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import { ApiError } from '../../lib/api';
+import { ApiError, apiRequest } from '../../lib/api';
 import {
   createUser,
   fetchUsers,
@@ -11,6 +11,16 @@ import {
 } from '../../lib/users';
 import type { AppUserRole } from '../../types';
 
+interface Department {
+  id: string;
+  name: string;
+}
+
+interface Position {
+  id: string;
+  name: string;
+}
+
 const emptyFormState: SaveUserPayload = {
   username: '',
   email: '',
@@ -19,6 +29,10 @@ const emptyFormState: SaveUserPayload = {
   role: 'employee',
   isActive: true,
   password: '',
+  departmentId: '',
+  position: '',
+  hireDate: new Date().toISOString().split('T')[0],
+  biometricEnrolled: false,
 };
 
 function getRoleClasses(role: AppUserRole) {
@@ -47,15 +61,22 @@ function buildFormFromUser(user: ManagedUserRecord): SaveUserPayload {
     role: user.role,
     isActive: user.isActive,
     password: '',
+    departmentId: user.departmentId || '',
+    position: user.position || '',
+    hireDate: user.hireDate || new Date().toISOString().split('T')[0],
+    biometricEnrolled: user.biometricEnrolled,
   };
 }
 
 function applyUserChanges(
   user: ManagedUserRecord,
   payload: SaveUserPayload,
+  departments: Department[]
 ): ManagedUserRecord {
   const fullName =
     [payload.firstName, payload.lastName].filter(Boolean).join(' ').trim() || payload.username;
+
+  const departmentName = departments.find(d => d.id === payload.departmentId)?.name || 'No Department';
 
   return {
     ...user,
@@ -67,12 +88,18 @@ function applyUserChanges(
     role: payload.role,
     isActive: payload.isActive,
     status: payload.isActive ? 'ACTIVE' : 'SUSPENDED',
+    departmentId: payload.departmentId,
+    department: departmentName,
+    position: payload.position,
+    hireDate: payload.hireDate,
   };
 }
 
 export default function ManageUsers() {
   const [searchParams] = useSearchParams();
   const [users, setUsers] = useState<ManagedUserRecord[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [availablePositions, setAvailablePositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [statusActionUserId, setStatusActionUserId] = useState<string | null>(null);
@@ -88,21 +115,26 @@ export default function ManageUsers() {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadUsers() {
+    async function loadInitialData() {
       try {
         setLoading(true);
         setError(null);
 
-        const data = await fetchUsers();
+        const [usersData, deptsData] = await Promise.all([
+          fetchUsers(),
+          apiRequest<{ success: boolean; departments: Department[] }>('/accounts/api/departments/')
+        ]);
 
         if (!cancelled) {
-          setUsers(data);
+          setUsers(usersData);
+          if (deptsData.success) {
+            setDepartments(deptsData.departments);
+          }
         }
       } catch (loadError) {
         if (!cancelled) {
           const message =
-            loadError instanceof ApiError ? loadError.message : 'Unable to load users right now.';
-
+            loadError instanceof ApiError ? loadError.message : 'Unable to load initial data right now.';
           setError(message);
         }
       } finally {
@@ -112,12 +144,38 @@ export default function ManageUsers() {
       }
     }
 
-    loadUsers();
+    loadInitialData();
 
     return () => {
       cancelled = true;
     };
   }, []);
+
+  // Fetch positions when department changes
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPositions() {
+      if (!formState.departmentId) {
+        setAvailablePositions([]);
+        return;
+      }
+
+      try {
+        const data = await apiRequest<{ success: boolean; positions: Position[] }>(
+          `/accounts/api/positions/?departmentId=${formState.departmentId}`
+        );
+        if (!cancelled && data.success) {
+          setAvailablePositions(data.positions);
+        }
+      } catch (err) {
+        console.error("Failed to load positions", err);
+      }
+    }
+
+    loadPositions();
+    return () => { cancelled = true; };
+  }, [formState.departmentId]);
 
   useEffect(() => {
     setSearchTerm(routeSearchTerm);
@@ -135,7 +193,7 @@ export default function ManageUsers() {
         return true;
       }
 
-      return [user.fullName, user.username, user.email, user.role]
+      return [user.fullName, user.username, user.email, user.role, user.department, user.position]
         .join(' ')
         .toLowerCase()
         .includes(normalizedSearch);
@@ -195,7 +253,7 @@ export default function ManageUsers() {
             ? applyUserChanges(currentUser, {
                 ...buildFormFromUser(currentUser),
                 isActive: nextIsActive,
-              })
+              }, departments)
             : currentUser,
         ),
       );
@@ -227,37 +285,47 @@ export default function ManageUsers() {
       setError(null);
       setSuccessMessage(null);
 
+      const username = formState.username.trim();
+
+      // Check if username exists before submittion
+      const duplicateUsername = users.some(u => 
+        u.username.toLowerCase() === username.toLowerCase() && u.id !== editingUserId
+      );
+
+      if (duplicateUsername) {
+        setError('This username is already taken. Please choose another.');
+        setSaving(false);
+        return;
+      }
+
       const payload: SaveUserPayload = {
         ...formState,
-        username: formState.username.trim(),
+        username,
         email: formState.email.trim(),
         firstName: formState.firstName.trim(),
         lastName: formState.lastName.trim(),
         isActive: Boolean(formState.isActive),
+        position: formState.position,
+        hireDate: formState.hireDate,
+        departmentId: formState.departmentId,
       };
 
       if (editingUserId) {
-        const existingUser = users.find((user) => user.id === editingUserId) || null;
         await updateUser(editingUserId, payload);
 
         setUsers((currentUsers) =>
           currentUsers.map((user) =>
             user.id === editingUserId
-              ? applyUserChanges(user, payload)
+              ? applyUserChanges(user, payload, departments)
               : user,
           ),
         );
 
-        if (existingUser && existingUser.isActive !== payload.isActive) {
-          setSuccessMessage(
-            `User ${payload.isActive ? 'activated' : 'suspended'} successfully.`,
-          );
-        } else {
-          setSuccessMessage('User updated successfully.');
-        }
+        setSuccessMessage('User updated successfully.');
       } else {
         if (!payload.password?.trim()) {
           setError('A password is required when creating a new user.');
+          setSaving(false);
           return;
         }
 
@@ -277,32 +345,25 @@ export default function ManageUsers() {
     }
   }
 
+  const currentEditingRecord = users.find(u => u.id === editingUserId);
+
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="space-y-2">
-            <p className="text-sm font-medium uppercase tracking-[0.22em] text-slate-500">
-              Administration
-            </p>
+            <p className="text-sm font-medium uppercase tracking-[0.22em] text-slate-500">Administration</p>
             <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Manage Users</h1>
-            <p className="max-w-2xl text-sm text-slate-600">
-              Create, update, and review users from live backend account data while preserving the
-              existing admin experience.
-            </p>
+            <p className="max-w-2xl text-sm text-slate-600">Browse employee database and manage profile details in a single workspace.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <div className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-                Total Users
-              </p>
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Total Users</p>
               <p className="mt-2 text-2xl font-semibold text-slate-900">{stats.total}</p>
             </div>
             <div className="rounded-2xl bg-violet-50 p-4">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-violet-700">
-                Admin
-              </p>
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-violet-700">Admin</p>
               <p className="mt-2 text-2xl font-semibold text-violet-900">{stats.admins}</p>
             </div>
             <div className="rounded-2xl bg-sky-50 p-4">
@@ -310,298 +371,213 @@ export default function ManageUsers() {
               <p className="mt-2 text-2xl font-semibold text-sky-900">{stats.hr}</p>
             </div>
             <div className="rounded-2xl bg-emerald-50 p-4">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-emerald-700">
-                Employees
-              </p>
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-emerald-700">Employees</p>
               <p className="mt-2 text-2xl font-semibold text-emerald-900">{stats.employees}</p>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="grid gap-6 xl:items-start xl:grid-cols-[minmax(0,1.4fr)_420px]">
-        <div className="rounded-3xl border border-slate-200 bg-white shadow-sm xl:flex xl:h-[calc(100vh-10rem)] xl:flex-col">
-          <div className="border-b border-slate-200 px-6 py-5">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
-              <label className="space-y-2">
-                <span className="text-sm font-medium text-slate-700">Search users</span>
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search by name, username, or email..."
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
-                />
-              </label>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        
+        <div className="lg:col-span-7 xl:col-span-8 relative min-h-[600px]">
+          <div className="lg:absolute lg:inset-0 flex flex-col bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden h-full">
+            <div className="p-6 border-b border-slate-200 bg-white shrink-0">
+              <div className="grid gap-4 md:grid-cols-[1fr_200px]">
+                <label className="space-y-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Search Database</span>
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    placeholder="Search by name, position, or department..."
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white"
+                  />
+                </label>
 
-              <label className="space-y-2">
-                <span className="text-sm font-medium text-slate-700">Role</span>
-                <select
-                  value={roleFilter}
-                  onChange={(event) => setRoleFilter(event.target.value as 'all' | AppUserRole)}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
-                >
-                  <option value="all">All roles</option>
-                  <option value="admin">Admin</option>
-                  <option value="hr">HR</option>
-                  <option value="employee">Employee</option>
-                </select>
-              </label>
+                <label className="space-y-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Filter Role</span>
+                  <select
+                    value={roleFilter}
+                    onChange={(event) => setRoleFilter(event.target.value as 'all' | AppUserRole)}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white"
+                  >
+                    <option value="all">All roles</option>
+                    <option value="admin">Admin</option>
+                    <option value="hr">HR</option>
+                    <option value="employee">Employee</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto bg-white scrollbar-thin">
+              {loading ? (
+                <div className="px-6 py-10 text-sm text-slate-500 text-center">Synchronizing user data...</div>
+              ) : filteredUsers.length === 0 ? (
+                <div className="px-6 py-10 text-sm text-slate-500 text-center">No matching records found.</div>
+              ) : (
+                <table className="min-w-full divide-y divide-slate-200 border-separate border-spacing-0">
+                  <thead className="sticky top-0 z-10 bg-slate-50 shadow-[inset_0_-1px_0_rgba(0,0,0,0.05)]">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 bg-slate-50">Profile</th>
+                      <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 bg-slate-50">Department</th>
+                      <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 bg-slate-50">Status</th>
+                      <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 bg-slate-50">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {filteredUsers.map((user) => (
+                      <tr key={user.id} className="align-top hover:bg-slate-50/50 transition-colors group">
+                        <td className="px-6 py-5">
+                          <p className="font-bold text-slate-900">{user.fullName}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">@{user.username}</p>
+                        </td>
+                        <td className="px-6 py-5">
+                          <p className="text-sm font-medium text-slate-700">{user.department}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">{user.position || 'Position Unset'}</p>
+                          <div className="mt-2">
+                            <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${getRoleClasses(user.role)}`}>{user.role}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="flex flex-col gap-2">
+                            <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${user.biometricEnrolled ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200' : 'bg-slate-50 text-slate-400 ring-1 ring-slate-200'}`}>
+                              {user.biometricEnrolled ? `Enrolled ${user.enrollmentInfo}` : 'Pending'}
+                            </span>
+                            <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${getStatusClasses(user.isActive)}`}>
+                              {user.isActive ? 'Active' : 'Suspended'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="flex flex-wrap gap-2">
+                            <button type="button" onClick={() => startEditing(user)} className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600">Edit</button>
+                            {!isProtectedSystemUser(user) && (
+                              <button type="button" onClick={() => handleStatusToggle(user)} disabled={saving || statusActionUserId === user.id} className={`rounded-xl px-4 py-2 text-xs font-bold transition-all disabled:opacity-50 ${user.isActive ? 'border border-rose-100 bg-rose-50 text-rose-700 hover:bg-rose-100' : 'border border-emerald-100 bg-emerald-50 text-emerald-700 hover:border-emerald-100'}`}>{statusActionUserId === user.id ? '...' : user.isActive ? 'Suspend' : 'Activate'}</button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
-
-          {loading ? (
-            <div className="px-6 py-10 text-sm text-slate-500 xl:flex-1">Loading users...</div>
-          ) : filteredUsers.length === 0 ? (
-            <div className="px-6 py-10 text-sm text-slate-500 xl:flex-1">
-              No users matched the current filters.
-            </div>
-          ) : (
-            <div className="overflow-x-auto xl:min-h-0 xl:flex-1 xl:overflow-auto">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      User
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Role
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Status
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-slate-100 bg-white">
-                  {filteredUsers.map((user) => (
-                    <tr key={user.id} className="align-top">
-                      <td className="px-6 py-5">
-                        <div>
-                          <p className="font-medium text-slate-900">{user.fullName}</p>
-                          <p className="mt-1 text-sm text-slate-500">@{user.username}</p>
-                          <p className="mt-1 text-sm text-slate-500">{user.email}</p>
-                        </div>
-                      </td>
-                      <td className="px-6 py-5">
-                        <span
-                          className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase ${getRoleClasses(
-                            user.role,
-                          )}`}
-                        >
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="flex flex-col gap-2">
-                          <span
-                            className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(
-                              user.isActive,
-                            )}`}
-                          >
-                            {user.isActive ? 'Active' : 'Inactive'}
-                          </span>
-
-                          {user.mustChangePassword ? (
-                            <span className="inline-flex w-fit rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
-                              Password reset required
-                            </span>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={() => startEditing(user)}
-                            className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                          >
-                            Edit
-                          </button>
-
-                          {isProtectedSystemUser(user) ? (
-                            <span className="inline-flex items-center rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700">
-                              Protected
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleStatusToggle(user)}
-                              disabled={saving || statusActionUserId === user.id}
-                              className={`rounded-2xl px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                                user.isActive
-                                  ? 'border border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300 hover:bg-rose-100'
-                                  : 'border border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100'
-                              }`}
-                            >
-                              {statusActionUserId === user.id
-                                ? 'Updating...'
-                                : user.isActive
-                                  ? 'Suspend'
-                                  : 'Activate'}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm xl:sticky xl:top-6 xl:max-h-[calc(100vh-10rem)] xl:self-start xl:overflow-y-auto">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium uppercase tracking-[0.22em] text-slate-500">
-                {editingUserId ? 'Update User' : 'Create User'}
-              </p>
-              <h2 className="mt-2 text-xl font-semibold text-slate-900">
-                {editingUserId ? 'Edit selected account' : 'Add a new account'}
-              </h2>
+        <div className="lg:col-span-5 xl:col-span-4 h-full">
+          <aside className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col h-full sticky top-6">
+            <div className="flex items-start justify-between gap-4 shrink-0 mb-6">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-400">{editingUserId ? 'User Management' : 'System Enrollment'}</p>
+                <h2 className="mt-1 text-xl font-bold text-slate-900">{editingUserId ? 'Update Profile' : 'New Employee'}</h2>
+              </div>
+              {editingUserId && (
+                <button type="button" onClick={resetForm} className="rounded-xl border border-slate-200 px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest transition-all hover:bg-white hover:text-slate-900">Cancel</button>
+              )}
             </div>
 
-            {editingUserId ? (
-              <button
-                type="button"
-                onClick={resetForm}
-                className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-            ) : null}
-          </div>
+            <form className="space-y-5" onSubmit={handleSubmit}>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="space-y-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">First name</span>
+                  <input type="text" value={formState.firstName} onChange={(event) => setFormState((current) => ({ ...current, firstName: event.target.value }))} required className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/5" />
+                </label>
+                <label className="space-y-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Last name</span>
+                  <input type="text" value={formState.lastName} onChange={(event) => setFormState((current) => ({ ...current, lastName: event.target.value }))} required className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/5" />
+                </label>
+              </div>
 
-          <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="space-y-2">
-                <span className="text-sm font-medium text-slate-700">First name</span>
-                <input
-                  type="text"
-                  value={formState.firstName}
-                  onChange={(event) =>
-                    setFormState((current) => ({ ...current, firstName: event.target.value }))
-                  }
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
-                />
-              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="space-y-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Username</span>
+                  <input type="text" value={formState.username} onChange={(event) => setFormState((current) => ({ ...current, username: event.target.value }))} required className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/5" />
+                </label>
+                <label className="space-y-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Email</span>
+                  <input type="email" value={formState.email} onChange={(event) => setFormState((current) => ({ ...current, email: event.target.value }))} required className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/5" />
+                </label>
+              </div>
 
-              <label className="space-y-2">
-                <span className="text-sm font-medium text-slate-700">Last name</span>
-                <input
-                  type="text"
-                  value={formState.lastName}
-                  onChange={(event) =>
-                    setFormState((current) => ({ ...current, lastName: event.target.value }))
-                  }
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
-                />
-              </label>
-            </div>
-
-            <label className="space-y-2">
-              <span className="text-sm font-medium text-slate-700">Username</span>
-              <input
-                type="text"
-                value={formState.username}
-                onChange={(event) =>
-                  setFormState((current) => ({ ...current, username: event.target.value }))
-                }
-                required
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
-              />
-            </label>
-
-            <label className="space-y-2">
-              <span className="text-sm font-medium text-slate-700">Email</span>
-              <input
-                type="email"
-                value={formState.email}
-                onChange={(event) =>
-                  setFormState((current) => ({ ...current, email: event.target.value }))
-                }
-                required
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
-              />
-            </label>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="space-y-2">
-                <span className="text-sm font-medium text-slate-700">Role</span>
-                <select
-                  value={formState.role}
-                  onChange={(event) =>
-                    setFormState((current) => ({
-                      ...current,
-                      role: event.target.value as AppUserRole,
-                    }))
-                  }
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
-                >
-                  <option value="admin">Admin</option>
-                  <option value="hr">HR</option>
-                  <option value="employee">Employee</option>
+              <label className="block space-y-1.5">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Department</span>
+                <select value={formState.departmentId} onChange={(event) => setFormState((current) => ({ ...current, departmentId: event.target.value, position: "" }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white">
+                  <option value="">Unassigned</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>{dept.name}</option>
+                  ))}
                 </select>
               </label>
 
-              <label className="space-y-2">
-                <span className="text-sm font-medium text-slate-700">Password</span>
-                <input
-                  type="password"
-                  value={formState.password ?? ''}
-                  onChange={(event) =>
-                    setFormState((current) => ({ ...current, password: event.target.value }))
-                  }
-                  placeholder={editingUserId ? 'Leave blank to keep current password' : 'Required'}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
-                />
-              </label>
-            </div>
-
-            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((current) => ({ ...current, isActive: event.target.checked }))
-                }
-                className="h-4 w-4 rounded border-slate-300"
-              />
-              <span className="text-sm font-medium text-slate-700">User account is active</span>
-            </label>
-
-            {willSuspendOnUpdate ? (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
-                Updating with this unchecked will suspend the user account.
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="space-y-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Position</span>
+                  <select value={formState.position} onChange={(event) => setFormState((current) => ({ ...current, position: event.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white">
+                    <option value="">{formState.departmentId ? 'Select Role' : 'Pick Dept First'}</option>
+                    {availablePositions.map((pos) => (
+                      <option key={pos.id} value={pos.name}>{pos.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="space-y-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Hire Date</span>
+                  <input type="date" value={formState.hireDate} onChange={(event) => setFormState((current) => ({ ...current, hireDate: event.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white" />
+                </label>
               </div>
-            ) : null}
 
-            {error ? (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
-                {error}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="space-y-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Access Role</span>
+                  <select value={formState.role} onChange={(event) => setRoleFilter(event.target.value as any)} className="hidden invisible" tabIndex={-1} aria-hidden="true" />
+                  <select value={formState.role} onChange={(event) => setFormState((current) => ({ ...current, role: event.target.value as AppUserRole }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white">
+                    <option value="admin">Admin</option>
+                    <option value="hr">HR</option>
+                    <option value="employee">Employee</option>
+                  </select>
+                </label>
+                <label className="space-y-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Password</span>
+                  <input type="password" value={formState.password ?? ''} onChange={(event) => setFormState((current) => ({ ...current, password: event.target.value }))} placeholder={editingUserId ? 'Leave blank' : 'Required'} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white" />
+                </label>
               </div>
-            ) : null}
 
-            {successMessage ? (
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-                {successMessage}
+              <div className="grid gap-4 sm:grid-cols-2 pt-2">
+                <label className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/50 px-4 py-3 cursor-pointer group hover:bg-white transition-all">
+                  <input type="checkbox" checked={formState.isActive} onChange={(event) => setFormState((current) => ({ ...current, isActive: event.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                  <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Active</span>
+                </label>
+                <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/50 px-4 py-3 cursor-not-allowed opacity-80">
+                  <input type="checkbox" checked={formState.biometricEnrolled} readOnly disabled className="h-4 w-4 rounded border-slate-300 text-blue-400" />
+                  <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                    Enrolled {currentEditingRecord?.enrollmentInfo}
+                  </span>
+                </div>
               </div>
-            ) : null}
 
-            <button
-              type="submit"
-              disabled={saving}
-              className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {saving ? 'Saving...' : editingUserId ? 'Update User' : 'Create User'}
-            </button>
-          </form>
-        </section>
-      </section>
+              {error && <div className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-600 text-center uppercase tracking-wider">{error}</div>}
+              {successMessage && <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-600 text-center uppercase tracking-wider">{successMessage}</div>}
+
+              <button type="submit" disabled={saving} className="w-full rounded-2xl bg-slate-900 px-4 py-4 text-sm font-bold text-white transition-all hover:bg-blue-600 active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg">
+                {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
+                {saving ? 'Processing...' : editingUserId ? 'Update Profile' : 'Register Employee'}
+              </button>
+            </form>
+          </aside>
+        </div>
+      </div>
     </div>
+  );
+}
+
+function RefreshCw({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M23 4v6h-6"></path>
+      <path d="M1 20v-6h6"></path>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+    </svg>
   );
 }

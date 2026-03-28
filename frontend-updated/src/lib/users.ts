@@ -12,7 +12,11 @@ export interface ManagedUserRecord {
   isActive: boolean;
   mustChangePassword: boolean;
   department: string;
+  departmentId?: string;
+  position?: string;
+  hireDate?: string;
   biometricEnrolled: boolean;
+  enrollmentInfo: string;
   status: string;
 }
 
@@ -24,6 +28,10 @@ export interface SaveUserPayload {
   role: AppUserRole;
   isActive: boolean;
   password?: string;
+  departmentId?: string;
+  position?: string;
+  hireDate?: string;
+  biometricEnrolled?: boolean;
 }
 
 const userListPaths = [
@@ -123,7 +131,11 @@ function mapUser(raw: unknown): ManagedUserRecord {
     isActive: Boolean(item.is_active ?? item.isActive ?? status === 'ACTIVE'),
     mustChangePassword: Boolean(item.must_change_password ?? item.mustChangePassword ?? false),
     department,
+    departmentId: String(item.department_id ?? ''),
+    position: String(item.position ?? ''),
+    hireDate: String(item.hire_date ?? ''),
     biometricEnrolled: Boolean(item.enrolled ?? item.biometric_enrolled ?? false),
+    enrollmentInfo: String(item.enrollment_info ?? ''),
     status,
   };
 }
@@ -139,6 +151,10 @@ function buildPayload(payload: SaveUserPayload) {
     full_name: [payload.firstName, payload.lastName].filter(Boolean).join(' ').trim(),
     is_active: payload.isActive,
     status: payload.isActive ? 'ACTIVE' : 'SUSPENDED',
+    department_id: payload.departmentId,
+    position: payload.position,
+    hire_date: payload.hireDate,
+    // Note: biometric_enrolled is handled automatically by the backend based on templates
   };
 }
 

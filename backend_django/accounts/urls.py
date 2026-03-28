@@ -17,6 +17,7 @@ urlpatterns = [
     path('api/users/<uuid:user_id>/update/', views.api_update_user, name='api_user_update'),
     path('api/users/<uuid:user_id>/delete/', views.api_delete_user, name='api_delete_user'),
     path('api/departments/', views.api_list_departments, name='api_department_list'),
+    path('api/positions/', views.api_list_positions, name='api_position_list'),
     
     # Workflow API
     path('api/workflows/', views.api_list_workflows, name='api_workflow_list'),

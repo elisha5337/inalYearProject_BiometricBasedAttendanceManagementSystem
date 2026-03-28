@@ -20,7 +20,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 
 from django.utils import timezone
-from .models import EmployeeDetail, BiometricTemplate, Department, Role, UserRole, Workflow, ExternalIntegration
+from .models import EmployeeDetail, BiometricTemplate, Department, Role, UserRole, Workflow, ExternalIntegration, Position
 from .utils import PayrollSyncService
 from attendance.config_utils import read_global_config
 from leave.utils import PolicyResolver
@@ -451,6 +451,14 @@ def api_list_users(request):
     for u in users:
         detail = getattr(u, 'employeedetail', None)
         dept = detail.department.name if detail and detail.department else "No Department"
+        dept_id = str(detail.department.id) if detail and detail.department else ""
+        position = detail.position if detail else ""
+        hire_date = str(detail.hire_date) if detail and detail.hire_date else ""
+        
+        # Get enrollment types
+        enrollment_types = list(BiometricTemplate.objects.filter(user=u).values_list('type', flat=True))
+        enrollment_info = f" ({', '.join(enrollment_types)})" if enrollment_types else ""
+        
         role = 'Employee'
         if u.is_administrator:
             role = 'Administrator'
@@ -467,13 +475,15 @@ def api_list_users(request):
             'full_name': u.get_full_name() or u.username,
             'role': role,
             'department': dept,
+            'department_id': dept_id,
+            'position': position,
+            'hire_date': hire_date,
             'enrolled': detail.biometric_enrolled if detail else False,
+            'enrollment_info': enrollment_info,
             'status': u.status,
             'is_active': u.status == User.Status.ACTIVE,
             'must_change_password': u.must_change_password,
-            'position': detail.position or '' if detail else '',
             'employment_type': detail.employment_type or '' if detail else '',
-            'hire_date': str(detail.hire_date) if detail and detail.hire_date else '',
             'profile_photo': detail.profile_photo if detail else None,
         })
     return JsonResponse({'success': True, 'users': user_list})
@@ -481,7 +491,20 @@ def api_list_users(request):
 
 def api_list_departments(request):
     departments = Department.objects.all().values('id', 'name')
-    return JsonResponse({'success': True, 'departments': list(departments)})
+    # Convert UUIDs to strings explicitly
+    data = [{'id': str(d['id']), 'name': d['name']} for d in departments]
+    return JsonResponse({'success': True, 'departments': data})
+
+def api_list_positions(request):
+    department_id = request.GET.get('departmentId')
+    if department_id:
+        positions = Position.objects.filter(department_id=department_id).values('id', 'name').order_by('name')
+    else:
+        positions = Position.objects.all().values('id', 'name').order_by('name')
+    
+    # Convert UUIDs to strings explicitly
+    data = [{'id': str(p['id']), 'name': p['name']} for p in positions]
+    return JsonResponse({'success': True, 'positions': data})
 
 
 @csrf_exempt
@@ -498,6 +521,8 @@ def api_create_user(request):
         last_name = data.get('last_name', '')
         role_name = normalize_role_input(data.get('role', Role.EMPLOYEE))
         dept_id = data.get('department_id')
+        position_name = data.get('position')
+        hire_date = data.get('hire_date')
         
         if User.objects.filter(username=username).exists():
             return JsonResponse({'success': False, 'error': 'Username already exists'})
@@ -528,7 +553,9 @@ def api_create_user(request):
         EmployeeDetail.objects.create(
             user=user,
             department_id=dept_id,
-            hire_date=timezone.now().date()
+            position=position_name,
+            hire_date=hire_date,
+            biometric_enrolled=False
         )
         
         return JsonResponse({'success': True, 'message': 'User created successfully'})
@@ -575,17 +602,19 @@ def api_update_user(request, user_id):
                 user.roles.clear()
                 UserRole.objects.create(user=user, role=role)
                 
+            detail, created = EmployeeDetail.objects.get_or_create(
+                user=user,
+                defaults={'hire_date': timezone.now().date()}
+            )
+
             if 'department_id' in data:
-                dept_id = data['department_id']
-                if hasattr(user, 'employeedetail'):
-                    user.employeedetail.department_id = dept_id
-                    user.employeedetail.save()
-                else:
-                    EmployeeDetail.objects.create(
-                        user=user,
-                        department_id=dept_id,
-                        hire_date=timezone.now().date()
-                    )
+                detail.department_id = data['department_id']
+            if 'position' in data:
+                detail.position = data['position']
+            if 'hire_date' in data:
+                detail.hire_date = data['hire_date']
+            # biometric_enrolled is NOT updated here manually
+            detail.save()
 
             return JsonResponse({'success': True})
         except Exception as e:

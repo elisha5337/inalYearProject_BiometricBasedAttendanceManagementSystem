@@ -11,10 +11,23 @@ logger = logging.getLogger(__name__)
 class Department(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, db_column='_id')
     name = models.CharField(max_length=255, unique=True)
+    description = models.TextField(blank=True, null=True)
     manager = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True, related_name='managed_department')
 
     def __str__(self):
         return self.name
+
+# 20. Positions Table
+class Position(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, db_column='_id')
+    name = models.CharField(max_length=255)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='positions', db_column='departmentId')
+
+    def __str__(self):
+        return f"{self.name} ({self.department.name})"
+
+    class Meta:
+        unique_together = ('name', 'department')
 
 # 12. Roles Table
 class Role(models.Model):
@@ -190,5 +203,3 @@ def enforce_admin_singleton_policy(sender, instance, action, pk_set, **kwargs):
                     instance.groups.remove(hr_group)
         except Exception as e:
             logger.error(f"Signal enforcement error: {e}")
-
-# (Original sync_hr_group is replaced by the combined logic above)

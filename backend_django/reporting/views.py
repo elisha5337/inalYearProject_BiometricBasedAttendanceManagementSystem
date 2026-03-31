@@ -866,12 +866,7 @@ def get_system_health(request):
     })
 
 def get_global_config(request):
-    user, auth_error = require_authenticated_user(request)
-    if auth_error:
-        return auth_error
-
-    if not is_admin(user):
-        return JsonResponse({'error': 'Permission denied. Administrator required.'}, status=403)
+    # This endpoint is accessible to terminals to check for manual entry flags
     return JsonResponse({'success': True, 'config': read_global_config()})
 
 @csrf_exempt
@@ -890,7 +885,7 @@ def update_global_config(request):
         current_config = read_global_config()
         data = json.loads(request.body)
         updates = {}
-        for key in ['session_timeout_minutes', 'strict_mode', 'max_login_attempts', 'biometric_lock_active', 'real_time_validation']:
+        for key in ['session_timeout_minutes', 'strict_mode', 'max_login_attempts', 'biometric_lock_active', 'real_time_validation', 'manual_entry_enabled']:
             if key in data:
                 if key in ['session_timeout_minutes', 'max_login_attempts']:
                     updates[key] = int(data[key])

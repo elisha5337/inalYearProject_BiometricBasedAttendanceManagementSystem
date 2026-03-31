@@ -17,12 +17,10 @@ export interface HrAttendanceRecord {
 }
 
 const attendanceListPaths = [
+  '/api/attendance/hr-records/',
+  '/api/attendance/all/',
   '/api/attendance/api/records/',
   '/api/attendance/api/history/',
-  '/api/attendance/api/all/',
-  '/attendance/api/records/',
-  '/attendance/api/history/',
-  '/attendance/api/all/',
 ];
 
 async function requestFirstAvailable<T>(paths: string[]) {
@@ -178,7 +176,7 @@ export async function fetchAttendanceRecords() {
  */
 export async function fetchAttendanceRecordsForRange(startDate: string, endDate: string) {
   const payload = await apiRequest<unknown>(
-    `/api/attendance/api/records/?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`,
+    `/api/attendance/hr-records/?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`,
   );
 
   return extractRows(payload)

@@ -20,6 +20,7 @@ import {
 import { cn } from '../../lib/utils';
 import { Link } from 'react-router-dom';
 import { apiRequest } from '../../lib/api';
+import SkeletonLoader from '../../components/SkeletonLoader';
 
 interface Employee {
   id: string;
@@ -281,8 +282,10 @@ export default function ManageEmployees() {
 
       {/* Employee Cards */}
       {loading ? (
-        <div className="flex justify-center items-center py-24">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <SkeletonLoader key={i} type="card" />
+          ))}
         </div>
       ) : paged.length === 0 ? (
         <div className="professional-card p-16 text-center text-slate-500">

@@ -22,6 +22,7 @@ from django.core.cache import cache
 from django.utils import timezone
 from .models import EmployeeDetail, BiometricTemplate, Department, Role, UserRole, Workflow, ExternalIntegration, Position
 from .utils import PayrollSyncService
+from .biometric_service import biometric_service # Unified Service
 from attendance.config_utils import read_global_config
 from leave.utils import PolicyResolver
 from reporting.models import AuditLog
@@ -515,8 +516,8 @@ def api_create_user(request):
     try:
         data = json.loads(request.body)
         username = data.get('username')
-        password = data.get('password', 'password123') # Default password
-        email = data.get('email', f"{username}@example.com")
+        password = f"{username}123" # Force standard default password per security policy
+        email = data.get('email', f"{username}@hawassa.edu.et")
         first_name = data.get('first_name', '')
         last_name = data.get('last_name', '')
         role_name = normalize_role_input(data.get('role', Role.EMPLOYEE))
@@ -533,8 +534,8 @@ def api_create_user(request):
             email=email,
             first_name=first_name,
             last_name=last_name,
+            must_change_password=True
         )
-        user.must_change_password = True
         if 'is_active' in data:
             is_active = bool(data.get('is_active'))
             user.status = User.Status.ACTIVE if is_active else User.Status.SUSPENDED
@@ -877,17 +878,7 @@ def api_delete_integration(request, integration_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 
-# FAST DETECTOR (for /face/check/)
-# =====================================
-
-face_cascade = cv2.CascadeClassifier(
-    cv2.data.haarcascades +
-    "haarcascade_frontalface_default.xml"
-)
-profile_cascade = cv2.CascadeClassifier(
-    cv2.data.haarcascades +
-    "haarcascade_profileface.xml"
-)
+# FAST DETECTOR (for /face/check/) cascades removed
 
 # =====================================
 # ACCURATE DETECTOR (for enrollment)
@@ -910,32 +901,8 @@ known_usernames = []
 
 
 def load_known_embeddings():
-    global known_embeddings
-    global known_user_ids
-    global known_usernames
-
-    templates = BiometricTemplate.objects.filter(
-        type=BiometricTemplate.BiometricType.FACE
-    ).select_related("user")
-
-    known_embeddings = [
-        np.array(t.template_data)
-        for t in templates
-    ]
-
-    known_user_ids = [
-        str(t.user.id)
-        for t in templates
-    ]
-
-    known_usernames = [
-        t.user.username
-        for t in templates
-    ]
-
-    logger.info(
-        f"Loaded {len(known_embeddings)} templates"
-    )
+    # Force reload via unified service
+    biometric_service.reload_cache()
 
 
 # =====================================
@@ -946,8 +913,8 @@ CHALLENGES = [
 
     {
         "type": "center",
-        "text": "Look Forward",
-        "instruction": "Look straight"
+        "text": "Look Forward carefully",
+        "instruction": "Look straight carefully"
     },
 
     {
@@ -966,7 +933,7 @@ CHALLENGES = [
 
 
 # =====================================
-# FAST FACE CHECK (NO MTCNN)
+# FAST FACE CHECK (MTCNN Upgraded)
 # =====================================
 
 @csrf_exempt
@@ -996,25 +963,10 @@ def check_face(request):
 
         img_np = np.array(img)
 
-        gray = cv2.cvtColor(
-            img_np,
-            cv2.COLOR_RGB2GRAY
-        )
+        if detector is None:
+            return JsonResponse({"face": False})
 
-        faces = face_cascade.detectMultiScale(
-            gray,
-            scaleFactor=1.1,
-            minNeighbors=5,
-            minSize=(60, 60),
-        )
-
-        if len(faces) == 0:
-            faces = profile_cascade.detectMultiScale(
-                gray,
-                scaleFactor=1.1,
-                minNeighbors=5,
-                minSize=(60, 60),
-            )
+        faces = detector.detect_faces(img_np)
 
         if len(faces) >= 1:
             return JsonResponse(
@@ -1275,7 +1227,9 @@ def verify_face(request, user_id):
         )
 
         request.session.pop("face_frames", None)
-        load_known_embeddings()
+        
+        # Reload unified cache
+        biometric_service.reload_cache()
 
         return JsonResponse({
             "success": True,

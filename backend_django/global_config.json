@@ -3,5 +3,6 @@
     "strict_mode": false,
     "max_login_attempts": 3,
     "biometric_lock_active": true,
-    "real_time_validation": true
+    "real_time_validation": true,
+    "manual_entry_enabled": true
 }

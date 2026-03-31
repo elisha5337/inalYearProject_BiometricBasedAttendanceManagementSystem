@@ -1,5 +1,6 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { User } from './types';
 import { cn } from './lib/utils';
 import { ApiError } from './lib/api';
@@ -166,6 +167,7 @@ export default function App() {
 function Layout({ children, user, onLogout }: { children: React.ReactNode, user: User, onLogout: () => void }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const location = useLocation();
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
@@ -198,9 +200,20 @@ function Layout({ children, user, onLogout }: { children: React.ReactNode, user:
           onLogout={onLogout} 
           onMenuClick={() => setIsSidebarOpen(true)} 
         />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          <div className="max-w-7xl mx-auto">
-            {children}
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50 relative">
+          <div className="max-w-7xl mx-auto h-full">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="h-full w-full"
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </main>
       </div>

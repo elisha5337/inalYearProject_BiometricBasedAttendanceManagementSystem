@@ -32,6 +32,7 @@ export interface GlobalConfigRecord {
   maxLoginAttempts: number;
   biometricLockActive: boolean;
   realTimeValidation: boolean;
+  manualEntryEnabled: boolean; // Added
 }
 
 export interface LeavePolicyRecord {
@@ -522,6 +523,7 @@ export async function fetchGlobalConfig() {
       max_login_attempts?: number;
       biometric_lock_active?: boolean;
       real_time_validation?: boolean;
+      manual_entry_enabled?: boolean; // Added
     };
   }>('/api/reporting/global-config/');
 
@@ -531,6 +533,7 @@ export async function fetchGlobalConfig() {
     maxLoginAttempts: Number(response.config?.max_login_attempts ?? 3),
     biometricLockActive: Boolean(response.config?.biometric_lock_active ?? true),
     realTimeValidation: Boolean(response.config?.real_time_validation ?? true),
+    manualEntryEnabled: Boolean(response.config?.manual_entry_enabled ?? false), // Added
   } satisfies GlobalConfigRecord;
 }
 
@@ -543,6 +546,7 @@ export function updateGlobalConfig(payload: GlobalConfigRecord) {
       max_login_attempts: payload.maxLoginAttempts,
       biometric_lock_active: payload.biometricLockActive,
       real_time_validation: payload.realTimeValidation,
+      manual_entry_enabled: payload.manualEntryEnabled, // Added
     },
   });
 }

@@ -9,7 +9,8 @@ DEFAULT_CONFIG = {
     'strict_mode': False,
     'max_login_attempts': 3,
     'biometric_lock_active': True,
-    'real_time_validation': True
+    'real_time_validation': True,
+    'manual_entry_enabled': False  # New flag: Defaults to disabled
 }
 
 def read_global_config():
@@ -24,7 +25,12 @@ def read_global_config():
             
     try:
         with open(CONFIG_FILE_PATH, 'r') as f:
-            return json.load(f)
+            config = json.load(f)
+            # Ensure new keys are present even in existing config files
+            for key, value in DEFAULT_CONFIG.items():
+                if key not in config:
+                    config[key] = value
+            return config
     except Exception:
         return DEFAULT_CONFIG
 

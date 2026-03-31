@@ -16,7 +16,14 @@ export interface AttendanceMarkResponse {
   };
 }
 
-export function markAttendance(payload: { image: string; userId?: string }) {
+export interface MarkAttendancePayload {
+  image: string;
+  username?: string;
+  password?: string;
+  is_manual?: boolean;
+}
+
+export function markAttendance(payload: MarkAttendancePayload) {
   return apiRequest<AttendanceMarkResponse>('/api/attendance/mark/', {
     method: 'POST',
     body: payload,

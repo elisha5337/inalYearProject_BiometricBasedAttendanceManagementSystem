@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import backroundimage from "../../assets/backroundimage.jpg"
+import backroundimage from "../../assets/HUIOT.png"
 import {
   Fingerprint,
   Lock,
@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 import { ApiError } from '../../lib/api';
-import { loginUser } from '../../lib/auth';
+import { loginUser, changePassword, logoutUser } from '../../lib/auth';
 import type { User } from '../../types';
 import { cn } from '../../lib/utils';
 
@@ -38,6 +38,13 @@ export default function Login({ onLogin }: LoginProps) {
   const [forgotPasswordStatus, setForgotPasswordStatus] = useState<'idle' | 'loading' | 'success'>(
     'idle',
   );
+
+  const [forcePasswordReset, setForcePasswordReset] = useState(false);
+  const [resettingUser, setResettingUser] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
 
   const navigate = useNavigate();
 
@@ -83,6 +90,12 @@ export default function Login({ onLogin }: LoginProps) {
         role,
       });
 
+      if (authenticatedUser.mustChangePassword || password.trim() === `${normalizedUsername}123`) {
+        setResettingUser(authenticatedUser);
+        setForcePasswordReset(true);
+        return;
+      }
+
       onLogin(authenticatedUser);
       navigate(`/${authenticatedUser.role ?? role}/dashboard`, { replace: true });
     } catch (loginError) {
@@ -104,6 +117,38 @@ export default function Login({ onLogin }: LoginProps) {
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
     setForgotPasswordStatus('success');
+  };
+
+  const handleForcePasswordReset = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setResetError('');
+    
+    if (newPassword.length < 8) {
+      setResetError('Password must be at least 8 characters long.');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setResetError('Passwords do not match.');
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      await changePassword(newPassword);
+      await logoutUser();
+      
+      setForcePasswordReset(false);
+      setResettingUser(null);
+      setPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setResetError('');
+      setResetSuccess('SECURE PASSWORD SET. PLEASE LOG IN AGAIN.');
+    } catch (err) {
+      setResetError(err instanceof ApiError ? err.message : 'Failed to save password.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const roles: { id: UserRole; label: string; icon: typeof UserIcon }[] = [
@@ -140,6 +185,67 @@ export default function Login({ onLogin }: LoginProps) {
 
   return (
     <div className="h-screen w-screen bg-slate-50 flex flex-col md:flex-row overflow-hidden relative">
+      {forcePasswordReset && resettingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-8 space-y-6 relative overflow-hidden">
+            <div className="text-center space-y-2">
+              <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Shield className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900">Security Requirement</h3>
+              <p className="text-slate-500 text-sm">
+                You must update your default assigned password before accessing the system.
+              </p>
+            </div>
+
+            {resetError && (
+              <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-2 text-xs font-bold text-rose-600">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                {resetError}
+              </div>
+            )}
+
+            <form onSubmit={handleForcePasswordReset} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">New Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="password"
+                    required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="Minimum 8 characters"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Confirm Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="password"
+                    required
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="Retype new password"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg mt-2 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'SAVE & CONTINUE'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {showForgotPassword && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-8 space-y-6 relative overflow-hidden">
@@ -319,6 +425,13 @@ export default function Login({ onLogin }: LoginProps) {
             <div className="p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-3 text-xs font-bold text-rose-600 animate-in fade-in slide-in-from-top-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               {error.toUpperCase()}
+            </div>
+          )}
+
+          {resetSuccess && (
+            <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center gap-3 text-xs font-bold text-emerald-600 animate-in fade-in slide-in-from-top-2">
+              <CheckCircle className="w-4 h-4 shrink-0" />
+              {resetSuccess}
             </div>
           )}
 

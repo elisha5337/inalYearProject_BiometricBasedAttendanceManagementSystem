@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../../lib/api';
 import { fetchAttendanceRecords, type HrAttendanceRecord } from '../../lib/hrAttendance';
+import SkeletonLoader from '../../components/SkeletonLoader';
 
 function formatDisplayDate(value: string) {
   if (!value) {
@@ -332,7 +333,7 @@ export default function ManageAttendance() {
         </div>
 
         {loading ? (
-          <div className="px-6 py-10 text-sm text-slate-500">Loading attendance records...</div>
+          <SkeletonLoader type="table" rows={6} className="border-0 shadow-none rounded-t-none" />
         ) : filteredRecords.length === 0 ? (
           <div className="px-6 py-10 text-sm text-slate-500">
             No attendance records matched the current filters.

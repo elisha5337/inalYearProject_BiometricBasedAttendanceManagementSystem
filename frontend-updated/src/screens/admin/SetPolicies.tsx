@@ -12,6 +12,7 @@ import {
   Settings,
   Trash2,
   Pencil,
+  ShieldAlert,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { ApiError } from "../../lib/api";
@@ -42,6 +43,7 @@ type PolicyState = {
   sensitivity: number;
   sessionTimeout: string;
   passwordExpiry: string;
+  manualEntryEnabled: boolean;
 };
 
 const defaultPolicyState: PolicyState = {
@@ -52,6 +54,7 @@ const defaultPolicyState: PolicyState = {
   sensitivity: 75,
   sessionTimeout: "1 Hour",
   passwordExpiry: "90 Days",
+  manualEntryEnabled: false,
 };
 
 function extractNumber(value: string, fallback: number) {
@@ -80,40 +83,20 @@ function categoryToBackend(value: CustomPolicy["category"]) {
 }
 
 function timeoutFromMinutes(minutes: number) {
-  if (minutes <= 60) {
-    return "1 Hour";
-  }
-  if (minutes <= 120) {
-    return "2 Hours";
-  }
-  if (minutes <= 240) {
-    return "4 Hours";
-  }
-  if (minutes <= 480) {
-    return "8 Hours";
-  }
-  if (minutes <= 720) {
-    return "12 Hours";
-  }
+  if (minutes <= 60) return "1 Hour";
+  if (minutes <= 120) return "2 Hours";
+  if (minutes <= 240) return "4 Hours";
+  if (minutes <= 480) return "8 Hours";
+  if (minutes <= 720) return "12 Hours";
   return "24 Hours";
 }
 
 function minutesFromTimeout(label: string) {
-  if (label.startsWith("1")) {
-    return 60;
-  }
-  if (label.startsWith("2")) {
-    return 120;
-  }
-  if (label.startsWith("4")) {
-    return 240;
-  }
-  if (label.startsWith("8")) {
-    return 480;
-  }
-  if (label.startsWith("12")) {
-    return 720;
-  }
+  if (label.startsWith("1")) return 60;
+  if (label.startsWith("2")) return 120;
+  if (label.startsWith("4")) return 240;
+  if (label.startsWith("8")) return 480;
+  if (label.startsWith("12")) return 720;
   return 1440;
 }
 
@@ -192,6 +175,7 @@ export default function SetPolicies() {
         sensitivity: extractNumber(sensitivityPolicy?.value || "75", 75),
         sessionTimeout: timeoutFromMinutes(loadedConfig.sessionTimeoutMinutes),
         passwordExpiry: passwordExpiryPolicy?.value || "90 Days",
+        manualEntryEnabled: Boolean(loadedConfig.manualEntryEnabled),
       });
     } catch (loadError) {
       setError(
@@ -286,6 +270,7 @@ export default function SetPolicies() {
         sessionTimeoutMinutes: minutesFromTimeout(nextPolicies.sessionTimeout),
         strictMode: nextPolicies.mfaEnabled,
         biometricLockActive: nextPolicies.livenessDetection,
+        manualEntryEnabled: nextPolicies.manualEntryEnabled,
         // Keep real-time biometric verification enabled from this admin policy surface.
         realTimeValidation: true,
       }),
@@ -452,10 +437,22 @@ export default function SetPolicies() {
         <div className="flex gap-3">
           <button
             onClick={() => setShowAddModal(true)}
-            className="primary-button gap-2"
+            className="secondary-button gap-2"
           >
             <Plus className="w-4 h-4" />
             Register New Policy
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={isSaving || loading}
+            className="primary-button gap-2 min-w-[160px]"
+          >
+            {isSaving ? (
+              <RotateCcw className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            {isSaving ? "Saving..." : "Save All Changes"}
           </button>
         </div>
         {showSuccess && (
@@ -640,7 +637,7 @@ export default function SetPolicies() {
           </div>
         </div>
 
-        <div className="professional-card overflow-hidden">
+        <div className="professional-card overflow-hidden border-2 border-transparent hover:border-blue-100 transition-all">
           <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center gap-3">
             <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600">
               <Lock className="w-5 h-5" />
@@ -653,6 +650,43 @@ export default function SetPolicies() {
             </div>
           </div>
           <div className="p-6 md:p-8 space-y-6">
+            <div
+              onClick={() =>
+                setPolicies((current) => ({
+                  ...current,
+                  manualEntryEnabled: !current.manualEntryEnabled,
+                }))
+              }
+              className="flex items-center justify-between p-6 bg-amber-50/50 border border-amber-100 rounded-3xl hover:bg-amber-50 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center gap-5">
+                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-amber-600 shadow-sm border border-amber-100">
+                  <ShieldAlert className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-900">
+                    Manual Attendance Fallback
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Allow credential-based entry on terminals when biometric fails.
+                  </p>
+                </div>
+              </div>
+              <div
+                className={cn(
+                  "w-12 h-6 rounded-full relative transition-colors duration-200",
+                  policies.manualEntryEnabled ? "bg-amber-500" : "bg-slate-200",
+                )}
+              >
+                <div
+                  className={cn(
+                    "absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-200",
+                    policies.manualEntryEnabled ? "right-1" : "left-1",
+                  )}
+                ></div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">
@@ -668,6 +702,7 @@ export default function SetPolicies() {
                   }
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
                 >
+                  <option>1 Hour</option>
                   <option>4 Hours</option>
                   <option>8 Hours</option>
                   <option>12 Hours</option>
@@ -778,16 +813,11 @@ export default function SetPolicies() {
             className="primary-button gap-2 min-w-[160px] w-full sm:w-auto justify-center"
           >
             {isSaving ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                Saving...
-              </>
+              <RotateCcw className="w-4 h-4 animate-spin" />
             ) : (
-              <>
-                <Save className="w-4 h-4" />
-                Save Changes
-              </>
+              <Save className="w-4 h-4" />
             )}
+            {isSaving ? "Saving..." : "Save All Changes"}
           </button>
         </div>
       </div>
@@ -810,10 +840,10 @@ export default function SetPolicies() {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">
-                    {editingPolicyId ? "Update Policy" : "Register New Policy"}
+                    {editingUserId ? "Update Policy" : "Register New Policy"}
                   </h3>
                   <p className="text-xs text-slate-500">
-                    {editingPolicyId
+                    {editingUserId
                       ? "Adjust an existing custom system rule"
                       : "Define a custom system rule"}
                   </p>

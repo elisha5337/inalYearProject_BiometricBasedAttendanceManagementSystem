@@ -79,3 +79,12 @@ export function logoutUser() {
     method: 'POST',
   });
 }
+
+export async function changePassword(newPassword: string) {
+  await ensureCsrfCookie();
+  const response = await apiRequest<{ success: boolean; message: string }>('/accounts/api/change-password/', {
+    method: 'POST',
+    body: { new_password: newPassword },
+  });
+  return response.success;
+}

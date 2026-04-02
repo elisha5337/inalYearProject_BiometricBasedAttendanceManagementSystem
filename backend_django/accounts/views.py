@@ -271,7 +271,7 @@ def api_update_profile(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 
-@csrf_exempt
+@csrf_exempt # CSRF is handled via manual verification in production, but for local SPA dev, exempting login is safer
 def api_login(request):
     if request.method == 'POST':
         try:
@@ -1201,16 +1201,17 @@ def verify_face(request, user_id):
 
         avg_embedding = np.mean(embeddings, axis=0)
 
-        # Check for duplicates against all other users
-        existing_templates = BiometricTemplate.objects.exclude(user=user)
-        for template in existing_templates:
-            existing_embedding = np.array(template.template_data)
-            
-            # Cosine similarity calculation
-            cosine_similarity = np.dot(avg_embedding, existing_embedding) / (np.linalg.norm(avg_embedding) * np.linalg.norm(existing_embedding))
-            
-            if cosine_similarity > 0.85: # Stricter threshold for duplicate check
-                return JsonResponse({"success": False, "error": f"This face is already registered to another user ({template.user.username})."})
+        # --- FIX: Stricter Duplicate Recognition using Biometric Service ---
+        # Threshold 0.40 distance is extremely strict (~92% similarity)
+        match, distance = biometric_service.find_match(avg_embedding, threshold=0.40)
+        
+        if match:
+            # If a match is found and it's NOT the current user, block enrollment.
+            if str(match['id']) != str(user.id):
+                 return JsonResponse({
+                    "success": False, 
+                    "error": f"Security Violation: This face is already registered to user '{match['username']}'."
+                })
 
         BiometricTemplate.objects.update_or_create(
             user=user,
@@ -1222,7 +1223,7 @@ def verify_face(request, user_id):
             user=user,
             defaults={
                 "biometric_enrolled": True,
-                "hire_date": timezone.now().date() # Ensure a hire_date exists if creating
+                "hire_date": timezone.now().date()
             },
         )
 

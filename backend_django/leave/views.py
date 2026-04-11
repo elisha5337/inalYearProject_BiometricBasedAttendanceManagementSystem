@@ -8,6 +8,7 @@ from datetime import datetime
 
 # Unified Auth Helpers
 from hu_attendance_system.auth_utils import require_auth, require_staff, is_admin, is_hr
+from .utils import PolicyResolver
 
 # --- Employee-Facing Views ---
 
@@ -38,13 +39,13 @@ def submit_leave_request(request):
             'UNPAID': LeaveRequest.LeaveType.UNPAID,
         }
         
-        leave_type = type_mapping.get(raw_leave_type, LeaveRequest.LeaveType.ANNUAL)
+        leave_type_enum = type_mapping.get(raw_leave_type, LeaveRequest.LeaveType.ANNUAL)
         start_date_str = data.get('startDate', data.get('start_date'))
         end_date_str = data.get('endDate', data.get('end_date'))
         reason = data.get('reason', '')
         
         if not all([start_date_str, end_date_str]):
-            return JsonResponse({'error': 'Missing required fields'}, status=400)
+            return JsonResponse({'error': 'Missing required fields (start_date, end_date)'}, status=400)
 
         start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
         end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
@@ -52,9 +53,26 @@ def submit_leave_request(request):
         if start_date > end_date:
             return JsonResponse({'error': 'Start date cannot be after end date'}, status=400)
 
+        # --- LEAVE BALANCE GUARD ---
+        requested_days = (end_date - start_date).days + 1
+        
+        employee_detail = getattr(user, 'employeedetail', None)
+        dept_id = str(employee_detail.department.id) if employee_detail and employee_detail.department else None
+        
+        balance_info = PolicyResolver.calculate_leave_balance(user, dept_id)
+        
+        balance_key = leave_type_enum.lower()
+        if balance_key in balance_info:
+            remaining = balance_info[balance_key]
+            if requested_days > remaining:
+                return JsonResponse({
+                    'success': False, 
+                    'error': f'Insufficient Leave Balance. You requested {requested_days} days, but only have {int(remaining)} days remaining for {leave_type_enum.label}.'
+                }, status=400)
+
         leave_request = LeaveRequest.objects.create(
             user=user,
-            leave_type=leave_type,
+            leave_type=leave_type_enum,
             start_date=start_date,
             end_date=end_date,
             reason=reason,
@@ -64,7 +82,7 @@ def submit_leave_request(request):
 
         return JsonResponse({
             'success': True,
-            'message': 'Leave request submitted successfully.',
+            'message': f'Leave request for {requested_days} day(s) submitted successfully.',
             'request_id': str(leave_request.id)
         }, status=201)
 
@@ -82,29 +100,34 @@ def view_my_leave_requests(request):
     if auth_err: return auth_err
 
     try:
-        requests = LeaveRequest.objects.filter(user=user).order_by('-start_date')
-        data = [{
-            'id': str(req.id),
-            'leave_type': req.leave_type.lower(),
-            'start_date': str(req.start_date),
-            'end_date': str(req.end_date),
-            'reason': req.reason,
-            'status': req.status.lower(),
-            'attachment': request.build_absolute_uri(req.attachment.url) if req.attachment else None,
-            'approved_by': req.approved_by.username if req.approved_by else None
-        } for req in requests]
+        requests = LeaveRequest.objects.filter(user=user).order_by('-created_at')
+        data = []
+        for req in requests:
+            duration = (req.end_date - req.start_date).days + 1
+            data.append({
+                'id': str(req.id),
+                'leave_type': req.leave_type.lower(),
+                'start_date': str(req.start_date),
+                'end_date': str(req.end_date),
+                'days': duration,
+                'reason': req.reason,
+                'status': req.status.lower(),
+                'attachment': request.build_absolute_uri(req.attachment.url) if req.attachment else None,
+                'approved_by': req.approved_by.username if req.approved_by else None,
+                'requested_at': req.created_at.isoformat()
+            })
 
-        from .utils import PolicyResolver
         employee_detail = getattr(user, 'employeedetail', None)
         dept_id = str(employee_detail.department.id) if employee_detail and employee_detail.department else None
         
         balance_info = PolicyResolver.calculate_leave_balance(user, dept_id)
 
         summary = {
-            'annual_left': int(balance_info['annual']),
-            'sick_left': int(balance_info['sick']),
+            'annual_left': int(balance_info.get('annual', 0)),
+            'sick_left': int(balance_info.get('sick', 0)),
             'pending_count': requests.filter(status=LeaveRequest.LeaveStatus.PENDING).count(),
-            'approved_count': requests.filter(status=LeaveRequest.LeaveStatus.APPROVED).count()
+            'approved_count': requests.filter(status=LeaveRequest.LeaveStatus.APPROVED).count(),
+            'balances': balance_info
         }
 
         return JsonResponse({'success': True, 'leave_requests': data, 'summary': summary})
@@ -123,7 +146,6 @@ def list_all_leave_requests(request):
     if auth_err: return auth_err
 
     try:
-        from .utils import PolicyResolver
         status_filter = request.GET.get('status')
         query = LeaveRequest.objects.all().select_related('user', 'user__employeedetail__department')
         
@@ -140,13 +162,7 @@ def list_all_leave_requests(request):
             dept_id = str(employee_detail.department.id) if employee_detail and employee_detail.department else None
             
             balance_info = PolicyResolver.calculate_leave_balance(req.user, dept_id)
-            
-            if req.leave_type == LeaveRequest.LeaveType.ANNUAL:
-                current_balance = balance_info['annual']
-            elif req.leave_type == LeaveRequest.LeaveType.SICK:
-                current_balance = balance_info['sick']
-            else:
-                current_balance = balance_info['annual']
+            current_balance = balance_info.get(req.leave_type.lower(), 0)
             
             data.append({
                 'id': str(req.id),
@@ -215,11 +231,25 @@ def manage_leave_request(request, request_id):
             leave_request.status = LeaveRequest.LeaveStatus.APPROVED
             leave_request.approved_by = user
             leave_request.save()
+            
+            log_audit_event(
+                'LEAVE_APPROVED',
+                f'Approved {leave_request.leave_type} for {leave_request.user.username}.',
+                user=user,
+                request=request
+            )
             return JsonResponse({'success': True, 'message': 'Leave request approved.'})
         elif new_status == LeaveRequest.LeaveStatus.REJECTED:
             leave_request.status = LeaveRequest.LeaveStatus.REJECTED
             leave_request.approved_by = user
             leave_request.save()
+            
+            log_audit_event(
+                'LEAVE_REJECTED',
+                f'Rejected {leave_request.leave_type} for {leave_request.user.username}.',
+                user=user,
+                request=request
+            )
             return JsonResponse({'success': True, 'message': 'Leave request rejected.'})
         else:
             return JsonResponse({'error': 'Invalid status provided. Must be "APPROVED" or "REJECTED".'}, status=400)

@@ -2,6 +2,7 @@ import re
 import logging
 from typing import Any, List, Optional, Dict
 from django.utils import timezone
+from django.db.models import Q
 from .models import Policy
 
 logger = logging.getLogger(__name__)
@@ -18,7 +19,6 @@ class PolicyResolver:
         Fetches an active policy by name.
         Checks for department-specific policy first, then falls back to global (null department).
         """
-        # 1. Try Department-Specific Policy
         if department_id:
             dept_policy = Policy.objects.filter(
                 name__iexact=name, 
@@ -28,7 +28,6 @@ class PolicyResolver:
             if dept_policy:
                 return dept_policy
 
-        # 2. Fallback to Global Policy
         global_policy = Policy.objects.filter(
             name__iexact=name, 
             department__isnull=True, 
@@ -46,7 +45,6 @@ class PolicyResolver:
         if not policy_value:
             return 0.0
         
-        # Enhanced regex to handle decimals and integers
         match = re.search(r"(\d+(\.\d+)?)", str(policy_value))
         if match:
             return float(match.group(1))
@@ -73,8 +71,8 @@ class PolicyResolver:
     @staticmethod
     def calculate_leave_balance(user, department_id=None) -> Dict[str, Any]:
         """
-        Dynamically calculates remaining leave balances by matching 
-        LeaveRequest types to active Policy names.
+        Dynamically calculates remaining leave balances.
+        Subtracts both APPROVED and PENDING requests to prevent over-requesting.
         """
         from .models import LeaveRequest
         
@@ -83,38 +81,38 @@ class PolicyResolver:
             category=Policy.PolicyType.LEAVE,
             is_active=True
         ).filter(
-            models.Q(department_id=department_id) | models.Q(department__isnull=True)
-        ).order_by('department') # Dept specific takes precedence in dictionary override
+            Q(department_id=department_id) | Q(department__isnull=True)
+        ).order_by('department')
 
-        # Map policies into a dictionary for easy lookup (e.g., {'ANNUAL': 20.0})
+        # Map policies
         policy_map = {}
         for p in policies:
-            # Match the leave type enum naming convention (ANNUAL, SICK, etc)
-            # We assume policy names contain the leave type (e.g. "Annual Leave Policy")
             key = p.name.upper()
-            if 'ANNUAL' in key: key = 'ANNUAL'
-            elif 'SICK' in key or 'MEDICAL' in key: key = 'SICK'
-            elif 'MATERNITY' in key: key = 'MATERNITY'
-            elif 'PATERNITY' in key: key = 'PATERNITY'
-            elif 'COMPASSIONATE' in key: key = 'COMPASSIONATE'
+            if 'ANNUAL' in key: target_key = 'ANNUAL'
+            elif 'SICK' in key or 'MEDICAL' in key: target_key = 'SICK'
+            elif 'MATERNITY' in key: target_key = 'MATERNITY'
+            elif 'PATERNITY' in key: target_key = 'PATERNITY'
+            elif 'COMPASSIONATE' in key: target_key = 'COMPASSIONATE'
+            else: target_key = key
             
-            policy_map[key] = PolicyResolver.extract_numeric_value(p.value)
+            policy_map[target_key] = PolicyResolver.extract_numeric_value(p.value)
 
-        # Fallbacks for critical institutional defaults
+        # Fallbacks
         if 'ANNUAL' not in policy_map: policy_map['ANNUAL'] = 20.0
         if 'SICK' not in policy_map: policy_map['SICK'] = 12.0
 
-        # 2. Sum up approved days per type
-        approved_leaves = LeaveRequest.objects.filter(
+        # 2. Sum up APPROVED and PENDING days per type
+        # We subtract pending requests so the UI shows "Available" balance correctly
+        active_leaves = LeaveRequest.objects.filter(
             user=user, 
-            status=LeaveRequest.LeaveStatus.APPROVED
+            status__in=[LeaveRequest.LeaveStatus.APPROVED, LeaveRequest.LeaveStatus.PENDING]
         )
         
         taken_map = {k: 0.0 for k in policy_map.keys()}
         
-        for r in approved_leaves:
+        for r in active_leaves:
             days = (r.end_date - r.start_date).days + 1
-            l_type = r.leave_type # Enum value (ANNUAL, SICK, etc)
+            l_type = r.leave_type
             if l_type in taken_map:
                 taken_map[l_type] += float(days)
             else:
@@ -127,7 +125,7 @@ class PolicyResolver:
             balances[l_type.lower()] = max(0.0, quota - taken)
 
         return {
-            **balances, # includes 'annual', 'sick', 'maternity', etc.
+            **balances,
             'total_quota': {k.lower(): v for k, v in policy_map.items()}
         }
 

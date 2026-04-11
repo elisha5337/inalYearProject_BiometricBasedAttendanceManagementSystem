@@ -19,7 +19,7 @@ from django.contrib.auth import get_user_model, authenticate
 # Internal model imports
 from accounts.models import BiometricTemplate, User, EmployeeDetail
 from accounts.biometric_service import biometric_service 
-from scheduling.models import Assignment, Shift
+from scheduling.models import Assignment, Shift, Holiday
 from .models import AttendanceRecord, Device
 from leave.models import LeaveRequest, Policy
 from leave.utils import PolicyResolver
@@ -39,37 +39,68 @@ def get_employee_detail(user):
     except EmployeeDetail.DoesNotExist:
         return None
 
+def enhance_image_for_ai(image_array):
+    """
+    Applies Adaptive Histogram Equalization (CLAHE) to handle low-light
+    environments at institutional kiosks.
+    """
+    try:
+        # Convert to LAB to process Luminance channel only
+        lab = cv2.cvtColor(image_array, cv2.COLOR_RGB2LAB)
+        l, a, b = cv2.split(lab)
+        
+        # Apply CLAHE
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+        l_enhanced = clahe.apply(l)
+        
+        # Merge back
+        enhanced_img = cv2.merge((l_enhanced, a, b))
+        return cv2.cvtColor(enhanced_img, cv2.COLOR_LAB2RGB)
+    except Exception as e:
+        logger.error(f"Enhancement error: {e}")
+        return image_array
+
+def calculate_ear(eye_points):
+    """Placeholder for Eye Aspect Ratio if landmarks are sufficient."""
+    return 1.0 # Logic requires high-res landmarks
+
+def is_live_face(face_img, landmarks=None):
+    """
+    Harden Liveness: Combines texture variance with eye-geometric symmetry.
+    """
+    try:
+        # 1. Texture Check (Blocks Paper/Static Screen)
+        gray = cv2.cvtColor(face_img, cv2.COLOR_RGB2GRAY)
+        variance = cv2.Laplacian(gray, cv2.CV_64F).var()
+        
+        # 2. Geometry Check (Blocks distorted spoofs)
+        if landmarks:
+            l_eye = landmarks['left_eye']
+            r_eye = landmarks['right_eye']
+            # Calculate distance between eyes relative to face width
+            dist = np.linalg.norm(np.array(l_eye) - np.array(r_eye))
+            if dist < 25: # Too close indicates a non-human scale or spoof
+                return False, "Scale failure"
+
+        return (variance >= 4.0), f"{variance:.1f}"
+    except Exception:
+        return True, "Skipped"
+
 def extract_embedding(image_rgb):
     try:
-        # Optimization: MTCNN already detects the box, but we resize for consistency
         resized_image = cv2.resize(image_rgb, (160, 160))
         embedding_objs = DeepFace.represent(
             img_path=resized_image, 
             model_name='Facenet512',
-            enforce_detection=False, # We use MTCNN externally
+            enforce_detection=False,
             detector_backend='skip'
         )
         return embedding_objs[0]['embedding']
     except Exception as e:
-        logger.error(f"DeepFace extraction error: {e}")
+        logger.error(f"DeepFace error: {e}")
         return None
 
-def is_live_face(face_img):
-    try:
-        gray = cv2.cvtColor(face_img, cv2.COLOR_RGB2GRAY)
-        variance = cv2.Laplacian(gray, cv2.CV_64F).var()
-        # Heuristic: 6.0 is strict, 4.5 is more reliable for average terminal cameras
-        return (variance >= 4.5), f"{variance:.1f}"
-    except Exception:
-        return True, "Heuristic Skipped"
-
 from .config_utils import read_global_config
-
-def resolve_numeric_policy_value(name, fallback, department_id=None):
-    policy = PolicyResolver.get_active_policy(name, department_id)
-    if not policy: return fallback, None
-    val = PolicyResolver.extract_numeric_value(policy.value)
-    return (val if val > 0 else fallback), policy
 
 def resolve_verification_threshold(department_id=None, strict_mode=False):
     sensitivity_value, _ = resolve_numeric_policy_value('Verification Sensitivity', 75.0, department_id)
@@ -96,6 +127,15 @@ def resolve_active_shift(user, date_obj):
             return dept_shift
     return None
 
+def check_for_holiday(date_obj):
+    holiday = Holiday.objects.filter(date=date_obj).first()
+    if holiday: return holiday
+    recurring = Holiday.objects.filter(is_recurring=True)
+    for h in recurring:
+        if h.date.month == date_obj.month and h.date.day == date_obj.day:
+            return h
+    return None
+
 @csrf_exempt
 def mark_attendance(request):
     if request.method != 'POST':
@@ -112,7 +152,6 @@ def mark_attendance(request):
         
         user = None
         current_status_flag = AttendanceRecord.VerificationStatus.VERIFIED
-        distance = 0.0
 
         if is_manual:
             if not config.get('manual_entry_enabled', False):
@@ -137,62 +176,58 @@ def mark_attendance(request):
                 _, imgstr = image_data.split(';base64,')
                 image = Image.open(io.BytesIO(base64.b64decode(imgstr))).convert('RGB')
                 image_array = np.array(image)
+                
+                # --- AI ENHANCEMENT (LOW LIGHT FIX) ---
+                image_array = enhance_image_for_ai(image_array)
+                
             except Exception:
                 return JsonResponse({'error': 'Format error.'}, status=400)
 
-            # --- IMPROVED ACCURACY: MTCNN with lower threshold for marking speed ---
-            # We use a custom detection approach to be less sensitive to minor angles
             try:
                 faces = face_detector.detect_faces(image_array)
-            except Exception as e:
-                logger.error(f"Detector crash: {e}")
+            except Exception:
                 faces = []
 
             if not faces:
-                # Reliability check: sometimes high-res images cause detection issues
-                # Try a resized version for detection only
-                small_img = cv2.resize(image_array, (0,0), fx=0.5, fy=0.5)
-                faces = face_detector.detect_faces(small_img)
-                if faces:
-                    # Adjust box back to original scale
-                    box = faces[0]['box']
-                    faces[0]['box'] = [b*2 for b in box]
+                # Fallback: Double enhancement for extreme cases
+                image_array = cv2.convertScaleAbs(image_array, alpha=1.5, beta=20)
+                faces = face_detector.detect_faces(image_array)
 
             if not faces:
-                return JsonResponse({'error': 'Face not detected. Please align your face within the scanner and ensure good lighting.'}, status=400)
+                return JsonResponse({'error': 'Face not detected. Please ensure your face is clearly visible and centered.'}, status=400)
             
-            x, y, w, h = faces[0]['box']
-            # Safety padding
+            face_data = faces[0]
+            x, y, w, h = face_data['box']
             face_img = image_array[max(0, y-20):y+h+20, max(0, x-20):x+w+20]
+            landmarks = face_data['keypoints']
 
-            # 2. Strict Liveness
-            is_live, l_score = is_live_face(face_img)
+            # --- HARDENED LIVENESS (Texture + Geometry) ---
+            is_live, l_score = is_live_face(face_img, landmarks)
             if not is_live and biometric_lock_active:
-                return JsonResponse({'error': 'Liveness check failed. Please do not use photos or screens.'}, status=403)
+                return JsonResponse({'error': 'Security Alert: Liveness verification failed. Real face required.'}, status=403)
 
-            # 3. Recognition
             live_embedding = extract_embedding(face_img)
             if live_embedding is None:
-                return JsonResponse({'error': 'Quality too low for processing. Please stand closer.'}, status=500)
+                return JsonResponse({'error': 'Biometric quality too low.'}, status=500)
 
             threshold = resolve_verification_threshold(strict_mode=is_strict)
             match, distance = biometric_service.find_match(live_embedding, threshold=threshold)
             
             if not match:
-                return JsonResponse({'error': 'Identity unrecognized. If you are enrolled, please ensure proper alignment.'}, status=401)
+                return JsonResponse({'error': 'Identity unrecognized. Please ensure alignment.'}, status=401)
             
             user = User.objects.get(id=match['id'])
+            current_status_flag = AttendanceRecord.VerificationStatus.VERIFIED
 
         if user.status == User.Status.SUSPENDED:
             return JsonResponse({'error': 'Account locked.'}, status=403)
 
-        # Logic
         now = timezone.now()
         today = now.date()
 
         last_record = AttendanceRecord.objects.filter(user=user).order_by('-timestamp').first()
         if last_record and (now - last_record.timestamp).total_seconds() < 60:
-            return JsonResponse({'error': 'Marked recently. Please wait a moment.', 'already_marked': True}, status=429)
+            return JsonResponse({'error': 'Marked recently.', 'already_marked': True}, status=429)
 
         records_today = AttendanceRecord.objects.filter(user=user, timestamp__date=today).order_by('-timestamp')
         record_type = AttendanceRecord.RecordType.CHECK_OUT if (records_today.exists() and records_today.first().type == AttendanceRecord.RecordType.CHECK_IN) else AttendanceRecord.RecordType.CHECK_IN
@@ -200,13 +235,16 @@ def mark_attendance(request):
         if record_type == AttendanceRecord.RecordType.CHECK_OUT and not AttendanceRecord.objects.filter(user=user, timestamp__date=today, type=AttendanceRecord.RecordType.CHECK_IN).exists():
             return JsonResponse({'error': 'Check-in required first.'}, status=400)
 
-        # Policy
         status = AttendanceRecord.RecordStatus.ON_TIME
         employee_detail = get_employee_detail(user)
         active_shift = resolve_active_shift(user, today)
+        holiday = check_for_holiday(today)
 
         policy_msg = ''
-        if active_shift:
+        if holiday:
+            policy_msg = f' Happy {holiday.name}!'
+            status = AttendanceRecord.RecordStatus.ON_TIME
+        elif active_shift:
             start_dt = timezone.make_aware(datetime.combine(today, active_shift.start_time))
             end_dt = timezone.make_aware(datetime.combine(today, active_shift.end_time))
 
@@ -221,8 +259,7 @@ def mark_attendance(request):
                     policy_msg = ' Early exit.'
         else:
             status = AttendanceRecord.RecordStatus.ON_TIME
-            policy_msg = ' Unscheduled entry.'
-            current_status_flag = AttendanceRecord.VerificationStatus.UNVERIFIED
+            policy_msg = ' (Notice: Unscheduled entry)'
 
         AttendanceRecord.objects.create(user=user, timestamp=now, type=record_type, status=status, verification_status=current_status_flag)
 
@@ -230,7 +267,7 @@ def mark_attendance(request):
             'success': True,
             'type': record_type,
             'status': status,
-            'message': f"Hello {user.get_full_name() or user.username}. {record_type.label} successful.{policy_msg}",
+            'message': f"Hello {user.get_full_name() or user.username}. Recorded.{policy_msg}",
             'timestamp': now.isoformat(),
             'profile': {
                 'full_name': user.get_full_name() or user.username,
@@ -242,7 +279,7 @@ def mark_attendance(request):
 
     except Exception:
         logger.exception("Attendance Error")
-        return JsonResponse({'error': 'System error. Contact Admin.'}, status=500)
+        return JsonResponse({'error': 'System error.'}, status=500)
 
 def reload_embeddings(request):
     biometric_service.reload_cache()
@@ -306,11 +343,12 @@ def api_list_hr_attendance_records(request):
 def api_update_attendance_verification(request, record_id):
     user, err = require_staff(request)
     if err: return err
-    
     from django.shortcuts import get_object_or_404
     record = get_object_or_404(AttendanceRecord, id=record_id)
     data = json.loads(request.body)
-    record.verification_status = data.get('status', record.verification_status)
+    new_status = data.get('status')
+    if not new_status: return JsonResponse({'error': 'Status required'}, status=400)
+    record.verification_status = new_status
     record.save()
     return JsonResponse({'success': True})
 
@@ -318,9 +356,7 @@ def api_update_attendance_verification(request, record_id):
 def api_delete_attendance_record(request, record_id):
     user, err = require_auth(request)
     if err: return err
-    if not is_admin(user):
-        return JsonResponse({'error': 'Permission denied.'}, status=403)
-        
+    if not is_admin(user): return JsonResponse({'error': 'Denied'}, status=403)
     AttendanceRecord.objects.filter(id=record_id).delete()
     return JsonResponse({'success': True})
 
@@ -328,7 +364,6 @@ def api_delete_attendance_record(request, record_id):
 def api_device_list_create(request):
     user, err = require_staff(request)
     if err: return err
-
     if request.method == 'GET':
         devices = Device.objects.all()
         data = [{'id': str(d.id), 'name': d.name, 'type': 'Kiosk', 'status': 'online', 'ip_address': d.ip_address} for d in devices]

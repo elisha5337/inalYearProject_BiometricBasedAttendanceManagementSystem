@@ -17,7 +17,10 @@ import {
   FileText,
   Table as TableIcon,
   FileSpreadsheet,
-  RefreshCw
+  RefreshCw,
+    CalendarDays,
+  Gift,
+  Info
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Link } from 'react-router-dom';
@@ -47,13 +50,22 @@ interface Assignment {
   assigned_by: string;
 }
 
+interface Holiday {
+  id: string;
+  name: string;
+  date: string;
+  is_recurring: boolean;
+}
+
 export default function ManageShifts() {
   const [showModal, setShowModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showHolidayModal, setShowHolidayModal] = useState(false); // NEW
   const [exportFormat, setExportFormat] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [holidays, setHolidays] = useState<Holiday[]>([]); // NEW
   const [isLoading, setIsLoading] = useState(true);
   const [departments, setDepartments] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -74,6 +86,13 @@ export default function ManageShifts() {
     work_days: 'Mon - Fri'
   });
 
+  // New Holiday Form State
+  const [newHoliday, setNewHoliday] = useState({
+    name: '',
+    date: '',
+    is_recurring: false
+  });
+
   const [assignModal, setAssignModal] = useState({
     show: false,
     shiftId: '',
@@ -88,32 +107,28 @@ export default function ManageShifts() {
   const [editShiftId, setEditShiftId] = useState<string | null>(null);
 
   const fetchShifts = async () => {
-    setIsRefreshing(true);
     try {
       const response = await apiRequest<{ success: boolean; shifts: Shift[] }>('/api/scheduling/shifts/');
-      if (response.success) {
-        setShifts(response.shifts);
-      }
-    } catch (error) {
-      console.error('Failed to fetch shifts:', error);
-    } finally {
-      setIsRefreshing(false);
-      setIsLoading(false);
-    }
+      if (response.success) setShifts(response.shifts);
+    } catch (error) { console.error('Failed to fetch shifts:', error); }
   };
 
   const fetchAssignments = async () => {
     try {
       const response = await apiRequest<{ success: boolean; assignments: Assignment[] }>('/api/scheduling/assignments/');
-      if (response.success) {
-        setAssignments(response.assignments);
-      }
-    } catch (error) {
-      console.error('Failed to fetch assignments:', error);
-    }
+      if (response.success) setAssignments(response.assignments);
+    } catch (error) { console.error('Failed to fetch assignments:', error); }
+  };
+
+  const fetchHolidays = async () => {
+    try {
+      const response = await apiRequest<{ success: boolean; holidays: Holiday[] }>('/api/scheduling/holidays/');
+      if (response.success) setHolidays(response.holidays);
+    } catch (error) { console.error('Failed to fetch holidays:', error); }
   };
 
   const fetchInitialData = async () => {
+    setIsRefreshing(true);
     try {
       const [deptRes, userRes] = await Promise.all([
         apiRequest<{ success: boolean; departments: any[] }>('/accounts/api/departments/'),
@@ -121,20 +136,21 @@ export default function ManageShifts() {
       ]);
       if (deptRes.success) setDepartments(deptRes.departments);
       if (userRes.success) setEmployees(userRes.users);
+      await Promise.all([fetchShifts(), fetchAssignments(), fetchHolidays()]);
     } catch (error) {
       console.error('Failed to fetch initialization data:', error);
+    } finally {
+      setIsRefreshing(false);
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchShifts();
-    fetchAssignments();
     fetchInitialData();
   }, []);
 
   const handleRefresh = () => {
-    fetchShifts();
-    fetchAssignments();
+    fetchInitialData();
   };
 
   const handleSubmitShift = async () => {
@@ -170,6 +186,33 @@ export default function ManageShifts() {
       alert(error instanceof Error ? error.message : 'Failed to save shift');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleCreateHoliday = async () => {
+    if (!newHoliday.name || !newHoliday.date) return;
+    setIsSubmitting(true);
+    try {
+      await apiRequest('/api/scheduling/holidays/', {
+        method: 'POST',
+        body: newHoliday
+      });
+      setNewHoliday({ name: '', date: '', is_recurring: false });
+      fetchHolidays();
+    } catch (e) {
+      alert('Failed to add holiday.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteHoliday = async (id: string) => {
+    if (!confirm('Remove this holiday from the calendar?')) return;
+    try {
+      await apiRequest(`/api/scheduling/holidays/${id}/`, { method: 'DELETE' });
+      fetchHolidays();
+    } catch (e) {
+      alert('Error removing holiday.');
     }
   };
 
@@ -302,21 +345,22 @@ export default function ManageShifts() {
     return days;
   }, [currentDate]);
 
-  const getAssignmentsForDate = (dateStr: string) => {
-    return assignments.filter(assignment => {
+  const getDayDetails = (dateStr: string) => {
+    const dayAssignments = assignments.filter(assignment => {
       const from = new Date(assignment.from_date);
       const to = assignment.to_date ? new Date(assignment.to_date) : null;
       const target = new Date(dateStr);
-      
       from.setHours(0, 0, 0, 0);
       target.setHours(0, 0, 0, 0);
-      
       if (to) {
         to.setHours(0, 0, 0, 0);
         return target >= from && target <= to;
       }
       return target.getTime() === from.getTime();
     });
+
+    const dayHoliday = holidays.find(h => h.date === dateStr);
+    return { assignments: dayAssignments, holiday: dayHoliday };
   };
 
   const prevMonth = () => {
@@ -353,6 +397,14 @@ export default function ManageShifts() {
             title="Refresh Shifts"
           >
             <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
+          </button>
+          <button
+            onClick={() => setShowHolidayModal(true)}
+            className="secondary-button gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+            title="Manage Public Holidays"
+          >
+            <Gift className="w-4 h-4" />
+            <span className="hidden sm:inline">Public Holidays</span>
           </button>
           <button 
             onClick={() => setShowExportModal(true)}
@@ -502,7 +554,6 @@ export default function ManageShifts() {
                     <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Employee</th>
                     <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Shift</th>
                     <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Duration</th>
-                    <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Assigned By</th>
                     <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Action</th>
                   </tr>
                 </thead>
@@ -522,7 +573,6 @@ export default function ManageShifts() {
                       </td>
                       <td className="px-6 py-4 text-sm font-medium text-slate-700">{assignment.shiftName}</td>
                       <td className="px-6 py-4 text-xs text-slate-500">{assignment.from_date} to {assignment.to_date || 'Ongoing'}</td>
-                      <td className="px-6 py-4 text-xs text-slate-500">{assignment.assigned_by}</td>
                       <td className="px-6 py-4 text-right">
                         <button 
                           onClick={() => handleDeleteAssignment(assignment.id)}
@@ -555,25 +605,27 @@ export default function ManageShifts() {
                 <div key={day} className="bg-slate-50 py-2 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">{day}</div>
               ))}
               {calendarDays.map((item, idx) => {
-                const dateAssignments = item.date ? getAssignmentsForDate(item.date) : [];
+                const { assignments: dateAssignments, holiday } = item.date ? getDayDetails(item.date) : { assignments: [], holiday: null };
                 const isToday = item.date === new Date().toISOString().split('T')[0];
                 
                 return (
                   <div key={idx} className={cn(
-                    "min-h-[120px] bg-white p-2 group transition-colors",
-                    item.day ? "hover:bg-slate-50/50" : "bg-slate-50/30"
+                    "min-h-[120px] bg-white p-2 group transition-colors relative",
+                    item.day ? "hover:bg-slate-50/50" : "bg-slate-50/30",
+                    holiday && "bg-emerald-50/40 hover:bg-emerald-50/60"
                   )}>
                     {item.day && (
                       <div className="flex justify-between items-start mb-2">
                         <span className={cn(
-                          "text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full",
+                          "text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full z-10",
                           isToday ? "bg-blue-600 text-white" : "text-slate-500"
                         )}>{item.day}</span>
+                        {holiday && <div className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[7px] font-black rounded-full uppercase tracking-tighter shadow-sm border border-emerald-200">{holiday.name}</div>}
                       </div>
                     )}
                     <div className="space-y-1">
                       {dateAssignments.slice(0, 3).map(assign => (
-                        <div key={assign.id} className="text-[10px] p-1 bg-blue-50 text-blue-700 rounded border border-blue-100 truncate font-medium">
+                        <div key={assign.id} className="text-[10px] p-1 bg-blue-50 text-blue-700 rounded border border-blue-100 truncate font-medium shadow-sm">
                           {assign.employeeName.split(' ')[0]}: {assign.shiftName}
                         </div>
                       ))}
@@ -590,6 +642,79 @@ export default function ManageShifts() {
           </div>
         )}
       </div>
+
+      {/* NEW: PUBLIC HOLIDAY MODAL */}
+      {showHolidayModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600 shadow-lg shadow-emerald-200 border border-emerald-200"><Gift className="w-6 h-6" /></div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Institutional Holidays</h3>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Manage Official Closed Days</p>
+                </div>
+              </div>
+              <button onClick={() => setShowHolidayModal(false)} className="p-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"><X className="w-6 h-6" /></button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-8 grid md:grid-cols-2 gap-10">
+              <div className="space-y-6">
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] border-b pb-2">Add New Holiday</h4>
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Event Name</label>
+                    <input type="text" value={newHoliday.name} onChange={e => setNewHoliday({...newHoliday, name: e.target.value})} placeholder="e.g. Ethiopian New Year" className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Calendar Date</label>
+                    <input type="date" value={newHoliday.date} onChange={e => setNewHoliday({...newHoliday, date: e.target.value})} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-sm" />
+                  </div>
+                  <div onClick={() => setNewHoliday(p => ({...p, is_recurring: !p.is_recurring}))} className="flex items-center justify-between p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl cursor-pointer hover:bg-emerald-50 transition-colors group">
+                    <div>
+                      <p className="text-[10px] font-black text-emerald-900 uppercase">Recurring Yearly</p>
+                      <p className="text-[8px] font-bold text-emerald-600 uppercase tracking-tighter">Enable for fixed annual holidays</p>
+                    </div>
+                    <div className={cn("w-10 h-5 rounded-full relative transition-all", newHoliday.is_recurring ? "bg-emerald-500" : "bg-slate-300")}><div className={cn("absolute top-1 w-3 h-3 bg-white rounded-full transition-all shadow-sm", newHoliday.is_recurring ? "right-1" : "left-1")}></div></div>
+                  </div>
+                  <button onClick={handleCreateHoliday} disabled={isSubmitting} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-emerald-600 transition-all flex items-center justify-center gap-3">
+                    {isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Confirm Registration"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] border-b pb-2">Registered Holidays</h4>
+                <div className="space-y-3">
+                  {holidays.length > 0 ? holidays.map(h => (
+                    <div key={h.id} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl group hover:border-emerald-200 transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className="text-center bg-white w-10 h-10 rounded-xl flex flex-col items-center justify-center shadow-sm border border-slate-100">
+                          <p className="text-[7px] font-black text-slate-400 uppercase leading-none">{new Date(h.date).toLocaleString('default', { month: 'short' })}</p>
+                          <p className="text-sm font-black text-emerald-600 leading-none">{new Date(h.date).getDate()}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{h.name}</p>
+                          <div className="flex items-center gap-2">
+                            {h.is_recurring && <span className="text-[7px] font-black bg-emerald-100 text-emerald-700 px-1 rounded uppercase tracking-widest">Recurring</span>}
+                            <span className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">{new Date(h.date).getFullYear()}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <button onClick={() => handleDeleteHoliday(h.id)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  )) : (
+                    <div className="py-10 text-center space-y-3">
+                      <CalendarDays className="w-10 h-10 text-slate-200 mx-auto" />
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic">No holidays scheduled</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Shift Modal */}
       {showModal && (
@@ -615,7 +740,7 @@ export default function ManageShifts() {
                   type="text" 
                   value={newShift.name}
                   onChange={(e) => setNewShift({ ...newShift, name: e.target.value })}
-                  placeholder="e.g. Morning Shift, Night Shift..."
+                  placeholder="e.g. Morning Shift..."
                   className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
@@ -693,104 +818,50 @@ export default function ManageShifts() {
                   rows={2}
                   value={newShift.description}
                   onChange={(e) => setNewShift({ ...newShift, description: e.target.value })}
-                  placeholder="Additional details about this shift..."
+                  placeholder="Additional details..."
                   className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
                 ></textarea>
               </div>
             </div>
 
             <div className="p-6 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row justify-end gap-3 shrink-0">
-              <button 
-                onClick={() => setShowModal(false)}
-                disabled={isSubmitting}
-                className="w-full sm:w-auto px-6 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-all order-2 sm:order-1 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleSubmitShift}
-                disabled={isSubmitting}
-                className="w-full sm:w-auto px-6 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95 order-1 sm:order-2 flex items-center justify-center gap-2"
-              >
+              <button onClick={() => setShowModal(false)} disabled={isSubmitting} className="w-full sm:w-auto px-6 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-all order-2 sm:order-1 disabled:opacity-50">Cancel</button>
+              <button onClick={handleSubmitShift} disabled={isSubmitting} className="w-full sm:w-auto px-6 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95 order-1 sm:order-2 flex items-center justify-center gap-2">
                 {isSubmitting && <RefreshCw className="w-4 h-4 animate-spin" />}
-                {isSubmitting ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? 'Update Shift' : 'Create Shift')}
+                {isEditing ? 'Update Shift' : 'Create Shift'}
               </button>
             </div>
           </div>
         </div>
       )}
-      {/* Assign Employee Modal */}
+
+      {/* Assign Modal */}
       {assignModal.show && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Assign Employee</h2>
-                <p className="text-sm text-slate-500">Assign to {assignModal.shiftName}</p>
-              </div>
-              <button 
-                onClick={() => setAssignModal({ ...assignModal, show: false })}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-slate-400" />
-              </button>
+              <h2 className="text-xl font-bold">Assign to {assignModal.shiftName}</h2>
+              <button onClick={() => setAssignModal({ ...assignModal, show: false })} className="p-2 hover:bg-slate-100 rounded-lg transition-colors"><X className="w-5 h-5 text-slate-400" /></button>
             </div>
-
             <div className="p-6 space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">Select Employee</label>
-                <select 
-                  value={assignModal.userId}
-                  onChange={(e) => setAssignModal({ ...assignModal, userId: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                >
+                <select value={assignModal.userId} onChange={(e) => setAssignModal({ ...assignModal, userId: e.target.value })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="">Select an employee...</option>
-                  {employees.map(emp => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.first_name} {emp.last_name} (@{emp.username})
-                    </option>
-                  ))}
+                  {employees.map(emp => (<option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name} (@{emp.username})</option>))}
                 </select>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">From Date</label>
-                  <input 
-                    type="date" 
-                    value={assignModal.from_date}
-                    onChange={(e) => setAssignModal({ ...assignModal, from_date: e.target.value })}
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
+                  <input type="date" value={assignModal.from_date} onChange={(e) => setAssignModal({ ...assignModal, from_date: e.target.value })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">To Date (Optional)</label>
-                  <input 
-                    type="date" 
-                    value={assignModal.to_date}
-                    onChange={(e) => setAssignModal({ ...assignModal, to_date: e.target.value })}
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
+                  <label className="text-sm font-bold text-slate-700">To Date</label>
+                  <input type="date" value={assignModal.to_date} onChange={(e) => setAssignModal({ ...assignModal, to_date: e.target.value })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none" />
                 </div>
               </div>
-            </div>
-
-            <div className="p-6 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row gap-3">
-              <button 
-                onClick={() => setAssignModal({ ...assignModal, show: false })}
-                disabled={isSubmitting}
-                className="flex-1 py-3 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-all order-2 sm:order-1 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleCreateAssignment}
-                disabled={isSubmitting}
-                className="flex-1 py-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95 order-1 sm:order-2 flex items-center justify-center gap-2"
-              >
-                {isSubmitting && <RefreshCw className="w-4 h-4 animate-spin" />}
-                {isSubmitting ? 'Assigning...' : 'Confirm Assignment'}
-              </button>
+              <button onClick={handleCreateAssignment} disabled={isSubmitting} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold uppercase text-xs shadow-lg transition-all active:scale-95">Assign Staff</button>
             </div>
           </div>
         </div>
@@ -799,69 +870,20 @@ export default function ManageShifts() {
       {/* Export Modal */}
       {showExportModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Export Shift Data</h2>
-                <p className="text-sm text-slate-500">Select your preferred format</p>
-              </div>
-              <button 
-                onClick={() => setShowExportModal(false)}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-slate-400" />
-              </button>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold">Export Schedule</h2>
+              <button onClick={() => setShowExportModal(false)}><X className="w-5 h-5 text-slate-400" /></button>
             </div>
-
-            <div className="p-6">
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { id: 'pdf', label: 'PDF', icon: FileText, color: 'text-red-600', bg: 'bg-red-50' },
-                  { id: 'excel', label: 'Excel', icon: FileSpreadsheet, color: 'text-green-600', bg: 'bg-green-50' },
-                  { id: 'csv', label: 'CSV', icon: TableIcon, color: 'text-blue-600', bg: 'bg-blue-50' },
-                ].map((format) => (
-                  <button
-                    key={format.id}
-                    onClick={() => setExportFormat(format.id)}
-                    className={cn(
-                      "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all",
-                      exportFormat === format.id 
-                        ? "border-blue-600 bg-blue-50 shadow-sm" 
-                        : "border-slate-100 bg-white hover:border-slate-200"
-                    )}
-                  >
-                    <div className={cn("p-2 rounded-lg", format.bg, format.color)}>
-                      <format.icon className="w-5 h-5" />
-                    </div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">{format.label}</span>
-                  </button>
-                ))}
-              </div>
+            <div className="grid grid-cols-3 gap-3">
+              {['pdf', 'excel', 'csv'].map(fmt => (
+                <button key={fmt} onClick={() => setExportFormat(fmt)} className={cn("p-4 border-2 rounded-xl flex flex-col items-center gap-2", exportFormat === fmt ? "border-blue-600 bg-blue-50" : "border-slate-100")}>
+                  {fmt === 'pdf' ? <FileText className="text-red-500" /> : fmt === 'excel' ? <FileSpreadsheet className="text-green-500" /> : <TableIcon className="text-blue-500" />}
+                  <span className="text-[10px] font-bold uppercase">{fmt}</span>
+                </button>
+              ))}
             </div>
-
-            <div className="p-6 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row gap-3">
-              <button 
-                onClick={() => setShowExportModal(false)}
-                className="flex-1 py-3 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-all order-2 sm:order-1"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={() => {
-                  alert(`Exporting shift data as ${exportFormat.toUpperCase()}`);
-                  setShowExportModal(false);
-                }}
-                disabled={!exportFormat}
-                className={cn(
-                  "flex-1 py-3 text-sm font-bold text-white rounded-xl shadow-lg transition-all active:scale-95 order-1 sm:order-2",
-                  exportFormat 
-                    ? "bg-blue-600 hover:bg-blue-700 shadow-blue-600/20" 
-                    : "bg-slate-300 cursor-not-allowed shadow-none"
-                )}
-              >
-                Download
-              </button>
-            </div>
+            <button onClick={() => setShowExportModal(false)} className="w-full mt-6 py-3 bg-slate-900 text-white rounded-xl font-bold">Download</button>
           </div>
         </div>
       )}

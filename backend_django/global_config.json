@@ -1,8 +1,8 @@
 {
     "session_timeout_minutes": 60,
-    "strict_mode": true,
+    "strict_mode": false,
     "max_login_attempts": 3,
     "biometric_lock_active": true,
     "real_time_validation": true,
-    "manual_entry_enabled": false
+    "manual_entry_enabled": true
 }

@@ -1180,6 +1180,8 @@ def verify_face(request, user_id):
             return JsonResponse({"success": False, "error": "Insufficient biometric data"})
 
         embeddings = []
+        best_frame_b64 = sample_frames[0] # To be used as profile photo
+
         for f in sample_frames:
             img_bytes = base64.b64decode(f)
             img_np = cv2.imdecode(np.frombuffer(img_bytes, np.uint8), cv2.IMREAD_COLOR)
@@ -1200,17 +1202,20 @@ def verify_face(request, user_id):
             return JsonResponse({"success": False, "error": "Insufficient high-quality biometrics. Please recapture."})
 
         avg_embedding = np.mean(embeddings, axis=0)
+        # Unit normalization for robust duplicate check
+        avg_embedding = avg_embedding / np.linalg.norm(avg_embedding)
 
-        # --- FIX: Stricter Duplicate Recognition using Biometric Service ---
-        # Threshold 0.40 distance is extremely strict (~92% similarity)
-        match, distance = biometric_service.find_match(avg_embedding, threshold=0.40)
-        
-        if match:
-            # If a match is found and it's NOT the current user, block enrollment.
-            if str(match['id']) != str(user.id):
-                 return JsonResponse({
+        # --- HARDENED DUPLICATE CHECK ---
+        all_templates = BiometricTemplate.objects.all()
+        for template in all_templates:
+            if str(template.user_id) == str(user.id): continue
+            other_vec = np.array(template.template_data)
+            other_vec = other_vec / np.linalg.norm(other_vec)
+            distance = 1 - np.dot(avg_embedding, other_vec)
+            if distance < 0.55:
+                return JsonResponse({
                     "success": False, 
-                    "error": f"Security Violation: This face is already registered to user '{match['username']}'."
+                    "error": f"Registration Blocked: Face already enrolled to '{template.user.username}'."
                 })
 
         BiometricTemplate.objects.update_or_create(
@@ -1219,17 +1224,20 @@ def verify_face(request, user_id):
             defaults={"template_data": avg_embedding.tolist()},
         )
 
+        # --- [NEW] AUTOMATIC PROFILE PHOTO UPDATE ---
+        # We store the captured frame as the user's official profile photo
+        profile_photo_data = f"data:image/jpeg;base64,{best_frame_b64}"
+
         EmployeeDetail.objects.update_or_create(
             user=user,
             defaults={
                 "biometric_enrolled": True,
-                "hire_date": timezone.now().date()
+                "hire_date": timezone.now().date(),
+                "profile_photo": profile_photo_data
             },
         )
 
         request.session.pop("face_frames", None)
-        
-        # Reload unified cache
         biometric_service.reload_cache()
 
         return JsonResponse({

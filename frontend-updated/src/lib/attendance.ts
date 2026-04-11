@@ -77,14 +77,8 @@ function formatDuration(totalSeconds: number) {
 }
 
 function formatClock(value?: string) {
-  if (!value) {
-    return '--:--';
-  }
-
-  return new Date(value).toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  if (!value) return '--:--';
+  return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 export function fetchMyAttendanceHistory() {
@@ -110,47 +104,30 @@ export function buildDailyAttendanceRows(records: AttendanceHistoryRecord[]): Da
       const sorted = [...dayRecords].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
       let firstCheckIn: string | undefined;
       let lastCheckOut: string | undefined;
-      let activeCheckIn: string | undefined;
       let totalSeconds = 0;
       let derivedStatus: DailyAttendanceRow['status'] = 'on-time';
 
       sorted.forEach((record) => {
-        if (record.status_code === 'LATE') {
-          derivedStatus = 'late';
-        } else if (record.status_code === 'EARLY_EXIT' && derivedStatus !== 'late') {
-          derivedStatus = 'early-leave';
-        }
-
         if (record.type_code === 'CHECK_IN') {
-          activeCheckIn = record.timestamp;
-          firstCheckIn = firstCheckIn || record.timestamp;
+          if (!firstCheckIn) firstCheckIn = record.timestamp;
         }
-
         if (record.type_code === 'CHECK_OUT') {
           lastCheckOut = record.timestamp;
-          if (activeCheckIn) {
-            totalSeconds +=
-              (new Date(record.timestamp).getTime() - new Date(activeCheckIn).getTime()) / 1000;
-            activeCheckIn = undefined;
-          }
         }
+        if (record.status_code === 'LATE') derivedStatus = 'late';
       });
 
-      if (activeCheckIn) {
-        totalSeconds += (Date.now() - new Date(activeCheckIn).getTime()) / 1000;
+      if (firstCheckIn && lastCheckOut) {
+        totalSeconds = (new Date(lastCheckOut).getTime() - new Date(firstCheckIn).getTime()) / 1000;
       }
 
       return {
         rawDate,
-        date: new Date(rawDate).toLocaleDateString([], {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        }),
+        date: new Date(rawDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }),
         checkIn: formatClock(firstCheckIn),
         checkOut: formatClock(lastCheckOut),
         total: formatDuration(totalSeconds),
-        totalHours: totalSeconds / 3600,
+        totalHours: Math.max(0, totalSeconds / 3600),
         status: derivedStatus,
       };
     })
@@ -158,33 +135,33 @@ export function buildDailyAttendanceRows(records: AttendanceHistoryRecord[]): Da
 }
 
 export function buildWeeklyActivity(records: AttendanceHistoryRecord[]) {
-  const rows = buildDailyAttendanceRows(records).slice(0, 7).reverse();
+  // 1. Get the last 7 days of dates
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(d.toISOString().slice(0, 10));
+  }
 
-  return rows.map((row) => ({
-    name: new Date(row.rawDate).toLocaleDateString([], { weekday: 'short' }),
-    hours: Number(row.totalHours.toFixed(1)),
-  }));
+  // 2. Map existing records to these dates
+  const dailyRows = buildDailyAttendanceRows(records);
+  
+  return days.map(dateStr => {
+    const row = dailyRows.find(r => r.rawDate === dateStr);
+    return {
+      name: new Date(dateStr).toLocaleDateString([], { weekday: 'short' }),
+      hours: row ? Number(row.totalHours.toFixed(1)) : 0
+    };
+  });
 }
 
 export function buildRecentAttendanceActivity(records: AttendanceHistoryRecord[]) {
   const sorted = [...records].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-
   return sorted.slice(0, 5).map((record) => ({
     id: record.id,
-    date: new Date(record.timestamp).toLocaleDateString([], {
-      month: 'short',
-      day: 'numeric',
-    }),
-    time: new Date(record.timestamp).toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-    }),
+    date: new Date(record.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' }),
+    time: new Date(record.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     type: record.type,
-    status:
-      record.status_code === 'LATE'
-        ? 'late'
-        : record.status_code === 'EARLY_EXIT'
-          ? 'early-leave'
-          : 'on-time',
+    status: record.status_code === 'LATE' ? 'late' : record.status_code === 'EARLY_EXIT' ? 'early-leave' : 'on-time',
   }));
 }

@@ -12,6 +12,8 @@ import subprocess
 import os
 import json
 import csv
+import io
+import hashlib
 
 # Unified Auth & Utilities
 from hu_attendance_system.auth_utils import require_auth, require_staff, is_admin, is_hr
@@ -194,6 +196,104 @@ def attendance_report_export(request):
 
     return resp
 
+@csrf_exempt
+def export_attendance_pdf(request):
+    """Generates a formal institutional PDF Attendance Report with strict data safety and MD5 Patch."""
+    user, auth_error = require_staff(request)
+    if auth_error: return auth_error
+
+    try:
+        # --- MONKEY PATCH FOR REPORTLAB MD5 BUG ---
+        try:
+            hashlib.md5(usedforsecurity=False)
+        except TypeError:
+            original_md5 = hashlib.md5
+            def md5_patch(*args, **kwargs):
+                kwargs.pop('usedforsecurity', None)
+                return original_md5(*args, **kwargs)
+            hashlib.md5 = md5_patch
+
+        start_date_str = request.GET.get('start_date')
+        end_date_str = request.GET.get('end_date')
+        if not start_date_str or not end_date_str:
+            return JsonResponse({'error': 'Start and End dates are required.'}, status=400)
+
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import letter, landscape
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=18)
+        elements = []
+        styles = getSampleStyleSheet()
+
+        title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], alignment=1, fontSize=18, spaceAfter=12)
+        elements.append(Paragraph("HAWASSA UNIVERSITY - INSTITUTE OF TECHNOLOGY", title_style))
+        elements.append(Paragraph(f"Official Attendance Summary Report: {start_date} to {end_date}", styles['Heading2']))
+        elements.append(Spacer(1, 12))
+
+        records = AttendanceRecord.objects.filter(
+            timestamp__date__range=[start_date, end_date]
+        ).select_related('user', 'user__employeedetail__department').order_by('timestamp')
+        
+        data = [['Employee ID', 'Dept', 'Date', 'Event', 'Time', 'Status', 'Verification']]
+        
+        for r in records:
+            try:
+                dept_name = 'N/A'
+                if hasattr(r.user, 'employeedetail') and r.user.employeedetail.department:
+                    dept_name = r.user.employeedetail.department.name[:15]
+            except:
+                dept_name = 'Unassigned'
+
+            data.append([
+                r.user.username,
+                dept_name,
+                str(r.timestamp.date()),
+                r.get_type_display(),
+                r.timestamp.strftime('%H:%M'),
+                r.get_status_display(),
+                r.get_verification_status_display()
+            ])
+
+        if len(data) == 1:
+            elements.append(Paragraph("No attendance records found for the selected period.", styles['Italic']))
+        else:
+            table = Table(data, repeatRows=1)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.blue),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.lightgrey])
+            ]))
+            elements.append(table)
+
+        elements.append(Spacer(1, 30))
+        elements.append(Paragraph(f"Report Generated: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
+        elements.append(Spacer(1, 40))
+        elements.append(Paragraph("__________________________", styles['Normal']))
+        elements.append(Paragraph("HR Directorate Approval Signature", styles['Normal']))
+
+        doc.build(elements)
+        buffer.seek(0)
+        
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="HU_Attendance_Report_{start_date_str}.pdf"'
+        return response
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': f'PDF Generation Failed: {str(e)}'}, status=500)
+
 
 @csrf_exempt
 def leave_summary_export(request):
@@ -224,7 +324,6 @@ def leave_summary_export(request):
 
 @csrf_exempt
 def overtime_report_export(request):
-    """DYNAMIC: Calculates overtime based on actual assigned shift duration."""
     user, auth_error = require_staff(request)
     if auth_error: return auth_error
 
@@ -267,7 +366,6 @@ def overtime_report_export(request):
 
 @csrf_exempt
 def tardiness_report_export(request):
-    """DYNAMIC: Calculates lateness based on actual assigned shift start times."""
     user, auth_error = require_staff(request)
     if auth_error: return auth_error
 
@@ -300,26 +398,18 @@ def tardiness_report_export(request):
 
 
 def generate_system_notifications_for_user(user):
-    """
-    AUTOMATED & ROLE-FILTERED NOTIFICATIONS
-    Ensures that Admin, HR, and Employees only see notifications relevant to their tasks.
-    """
     from leave.models import LeaveRequest
     today = timezone.now().date()
 
-    # --- 1. HR OFFICER Dashboard Notifications ---
     if is_hr(user):
-        # Notify HR about pending leave requests they need to process
         pending_leaves = LeaveRequest.objects.filter(status=LeaveRequest.LeaveStatus.PENDING).count()
         if pending_leaves > 0:
             Notification.objects.get_or_create(
-                user=user, 
-                title='Pending Leave Reviews',
+                user=user, title='Pending Leave Reviews',
                 message=f'Action Required: There are {pending_leaves} staff leave applications awaiting your approval.',
                 defaults={'type': 'WARNING'}
             )
         
-        # Notify HR about manual/unverified attendance records from today
         unverified_logs = AttendanceRecord.objects.filter(
             timestamp__date=today,
             verification_status=AttendanceRecord.VerificationStatus.UNVERIFIED
@@ -332,9 +422,7 @@ def generate_system_notifications_for_user(user):
                 defaults={'type': 'INFO'}
             )
 
-    # --- 2. ADMINISTRATOR Dashboard Notifications ---
     if is_admin(user):
-        # Notify Admin about enrollment gaps (security & infrastructure focus)
         unenrolled_count = User.objects.filter(employeedetail__biometric_enrolled=False, is_superuser=False).count()
         if unenrolled_count > 0:
             Notification.objects.get_or_create(
@@ -344,7 +432,6 @@ def generate_system_notifications_for_user(user):
                 defaults={'type': 'ERROR'}
             )
         
-        # Notify Admin about system health (Simulated heartbeat)
         Notification.objects.get_or_create(
             user=user,
             title='System Integrity Check',
@@ -352,9 +439,7 @@ def generate_system_notifications_for_user(user):
             defaults={'type': 'SUCCESS'}
         )
 
-    # --- 3. EMPLOYEE Dashboard Notifications ---
     if not is_admin(user) and not is_hr(user):
-        # Notify Employee about their own Leave Request updates (from last 3 days)
         processed_leaves = LeaveRequest.objects.filter(
             user=user, 
             updated_at__date__gte=today - timedelta(days=3)
@@ -368,7 +453,6 @@ def generate_system_notifications_for_user(user):
                 defaults={'type': 'SUCCESS' if req.status == 'APPROVED' else 'WARNING'}
             )
 
-        # Notify Employee about today's assigned shift
         current_shift = resolve_active_shift(user, today)
         if current_shift:
             Notification.objects.get_or_create(
@@ -418,11 +502,19 @@ def delete_notification(request, notification_id):
 
 @csrf_exempt
 def get_audit_logs(request):
+    """DYNAMIC: Allows filtering by action type."""
     user, auth_error = require_staff(request)
     if auth_error: return auth_error
     if not is_admin(user): return JsonResponse({'error': 'Admin required'}, status=403)
 
-    logs = AuditLog.objects.all().select_related('user').order_by('-timestamp')[:100]
+    action_filter = request.GET.get('action')
+    logs = AuditLog.objects.all().select_related('user').order_by('-timestamp')
+    
+    if action_filter:
+        logs = logs.filter(action__icontains=action_filter)
+
+    logs = logs[:100] # Limit to 100 results for performance
+
     data = [{
         'id': str(log.id), 'user': log.user.username if log.user else 'System',
         'action': log.action, 'description': log.description,

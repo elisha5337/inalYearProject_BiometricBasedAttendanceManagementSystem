@@ -1,7 +1,10 @@
 import re
-from typing import Any, List, Optional
+import logging
+from typing import Any, List, Optional, Dict
 from django.utils import timezone
 from .models import Policy
+
+logger = logging.getLogger(__name__)
 
 class PolicyResolver:
     """
@@ -43,6 +46,7 @@ class PolicyResolver:
         if not policy_value:
             return 0.0
         
+        # Enhanced regex to handle decimals and integers
         match = re.search(r"(\d+(\.\d+)?)", str(policy_value))
         if match:
             return float(match.group(1))
@@ -56,13 +60,10 @@ class PolicyResolver:
         if not check_in_time or not shift_start_time:
             return False
 
-        # Calculate base delay in minutes
         delay = (check_in_time - shift_start_time).total_seconds() / 60.0
-
         if delay <= 0:
             return False
 
-        # Apply Grace Period if policy exists
         grace_minutes = 0.0
         if grace_period_policy:
             grace_minutes = PolicyResolver.extract_numeric_value(grace_period_policy.value)
@@ -70,42 +71,64 @@ class PolicyResolver:
         return delay > grace_minutes
 
     @staticmethod
-    def calculate_leave_balance(user, department_id=None):
+    def calculate_leave_balance(user, department_id=None) -> Dict[str, Any]:
         """
-        Calculates remaining leave for a user based on active policies and approved requests.
+        Dynamically calculates remaining leave balances by matching 
+        LeaveRequest types to active Policy names.
         """
         from .models import LeaveRequest
         
-        # 1. Fetch Allowances
-        annual_policy = PolicyResolver.get_active_policy('Annual Leave', department_id)
-        medical_policy = PolicyResolver.get_active_policy('Medical/Sick Leave', department_id)
-        
-        annual_quota = PolicyResolver.extract_numeric_value(annual_policy.value) if annual_policy else 20.0
-        sick_quota = PolicyResolver.extract_numeric_value(medical_policy.value) if medical_policy else 12.0
-        
-        # 2. Sum up approved days
+        # 1. Identify all active leave-related policies
+        policies = Policy.objects.filter(
+            category=Policy.PolicyType.LEAVE,
+            is_active=True
+        ).filter(
+            models.Q(department_id=department_id) | models.Q(department__isnull=True)
+        ).order_by('department') # Dept specific takes precedence in dictionary override
+
+        # Map policies into a dictionary for easy lookup (e.g., {'ANNUAL': 20.0})
+        policy_map = {}
+        for p in policies:
+            # Match the leave type enum naming convention (ANNUAL, SICK, etc)
+            # We assume policy names contain the leave type (e.g. "Annual Leave Policy")
+            key = p.name.upper()
+            if 'ANNUAL' in key: key = 'ANNUAL'
+            elif 'SICK' in key or 'MEDICAL' in key: key = 'SICK'
+            elif 'MATERNITY' in key: key = 'MATERNITY'
+            elif 'PATERNITY' in key: key = 'PATERNITY'
+            elif 'COMPASSIONATE' in key: key = 'COMPASSIONATE'
+            
+            policy_map[key] = PolicyResolver.extract_numeric_value(p.value)
+
+        # Fallbacks for critical institutional defaults
+        if 'ANNUAL' not in policy_map: policy_map['ANNUAL'] = 20.0
+        if 'SICK' not in policy_map: policy_map['SICK'] = 12.0
+
+        # 2. Sum up approved days per type
         approved_leaves = LeaveRequest.objects.filter(
             user=user, 
             status=LeaveRequest.LeaveStatus.APPROVED
         )
         
-        annual_taken = 0.0
-        sick_taken = 0.0
+        taken_map = {k: 0.0 for k in policy_map.keys()}
         
         for r in approved_leaves:
             days = (r.end_date - r.start_date).days + 1
-            if r.leave_type == LeaveRequest.LeaveType.ANNUAL:
-                annual_taken += days
-            elif r.leave_type == LeaveRequest.LeaveType.SICK:
-                sick_taken += days
-                
+            l_type = r.leave_type # Enum value (ANNUAL, SICK, etc)
+            if l_type in taken_map:
+                taken_map[l_type] += float(days)
+            else:
+                taken_map[l_type] = float(days)
+
+        # 3. Compile final balances
+        balances = {}
+        for l_type, quota in policy_map.items():
+            taken = taken_map.get(l_type, 0.0)
+            balances[l_type.lower()] = max(0.0, quota - taken)
+
         return {
-            'annual': max(0.0, annual_quota - annual_taken),
-            'sick': max(0.0, sick_quota - sick_taken),
-            'total_quota': {
-                'annual': annual_quota,
-                'sick': sick_quota
-            }
+            **balances, # includes 'annual', 'sick', 'maternity', etc.
+            'total_quota': {k.lower(): v for k, v in policy_map.items()}
         }
 
 def get_policy_rules(policy_name: str, department_id: Optional[str] = None) -> List[str]:

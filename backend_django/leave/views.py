@@ -6,29 +6,8 @@ from reporting.utils import log_audit_event
 import json
 from datetime import datetime
 
-# --- Authentication & Permission Helpers ---
-
-def get_user_from_request(request):
-    """
-    Helper to get user from request. In a production environment, 
-    this would use standard Django auth or a JWT-based system.
-    """
-    if request.user.is_authenticated:
-        return request.user
-    return None
-
-def is_admin_or_hr(user):
-    """
-    Checks if the user is a superuser or has the 'Administrator' or 'HR Officer' role.
-    """
-    if user.is_superuser:
-        return True
-    try:
-        admin_role = Role.objects.get(name=Role.ADMINISTRATOR)
-        hr_role = Role.objects.get(name=Role.HR_OFFICER)
-        return user.roles.filter(id__in=[admin_role.id, hr_role.id]).exists()
-    except Role.DoesNotExist:
-        return False
+# Unified Auth Helpers
+from hu_attendance_system.auth_utils import require_auth, require_staff, is_admin, is_hr
 
 # --- Employee-Facing Views ---
 
@@ -37,9 +16,8 @@ def submit_leave_request(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Invalid request method'}, status=405)
 
-    user = get_user_from_request(request)
-    if not user:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
+    user, auth_err = require_auth(request)
+    if auth_err: return auth_err
 
     try:
         if request.content_type and 'multipart/form-data' in request.content_type:
@@ -100,9 +78,8 @@ def view_my_leave_requests(request):
     if request.method != 'GET':
         return JsonResponse({'error': 'Invalid request method'}, status=405)
 
-    user = get_user_from_request(request)
-    if not user:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
+    user, auth_err = require_auth(request)
+    if auth_err: return auth_err
 
     try:
         requests = LeaveRequest.objects.filter(user=user).order_by('-start_date')
@@ -142,9 +119,8 @@ def list_all_leave_requests(request):
     if request.method != 'GET':
         return JsonResponse({'error': 'Invalid request method'}, status=405)
 
-    user = get_user_from_request(request)
-    if not user or not is_admin_or_hr(user):
-        return JsonResponse({'error': 'Permission denied. HR or Administrator role required.'}, status=403)
+    user, auth_err = require_staff(request)
+    if auth_err: return auth_err
 
     try:
         from .utils import PolicyResolver
@@ -197,9 +173,8 @@ def list_all_leave_requests(request):
 
 @csrf_exempt
 def manage_leave_request(request, request_id):
-    user = get_user_from_request(request)
-    if not user or not is_admin_or_hr(user):
-        return JsonResponse({'error': 'Permission denied. HR or Administrator role required.'}, status=403)
+    user, auth_err = require_staff(request)
+    if auth_err: return auth_err
 
     try:
         leave_request = LeaveRequest.objects.get(pk=request_id)
@@ -254,9 +229,8 @@ def manage_leave_request(request, request_id):
 
 @csrf_exempt
 def policy_list_create(request):
-    user = get_user_from_request(request)
-    if not user or not is_admin_or_hr(user):
-        return JsonResponse({'error': 'Permission denied. HR or Administrator role required.'}, status=403)
+    user, auth_err = require_staff(request)
+    if auth_err: return auth_err
 
     if request.method == 'GET':
         category_filter = request.GET.get('category')
@@ -302,9 +276,8 @@ def policy_list_create(request):
 
 @csrf_exempt
 def policy_detail(request, policy_id):
-    user = get_user_from_request(request)
-    if not user or not is_admin_or_hr(user):
-        return JsonResponse({'error': 'Permission denied. HR or Administrator role required.'}, status=403)
+    user, auth_err = require_staff(request)
+    if auth_err: return auth_err
 
     try:
         policy = Policy.objects.get(pk=policy_id)

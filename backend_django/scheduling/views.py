@@ -5,26 +5,16 @@ from accounts.models import User, Role, Department
 import json
 from datetime import datetime
 
-# --- Permission Helpers (Should be moved to a central utility module) ---
-
-def get_user_from_request(request):
-    if request.user.is_authenticated:
-        return request.user
-    return None
-
-# Forced reload at : 2026-03-27 10:20
-def can_manage_scheduling(user):
-    # Check if user has HR or Admin roles
-    if not user: return False
-    return user.is_hr_officer or user.is_administrator
+# Unified Auth Helpers
+from hu_attendance_system.auth_utils import require_auth, require_staff, is_admin, is_hr
+from reporting.utils import log_audit_event
 
 # --- Shift Management Views (CRUD) ---
 
 @csrf_exempt
 def shift_list_create(request):
-    user = get_user_from_request(request)
-    if not can_manage_scheduling(user):
-        return JsonResponse({'error': 'Permission denied'}, status=403)
+    user, err = require_staff(request)
+    if err: return err
 
     if request.method == 'GET':
         from django.db.models import Count
@@ -46,6 +36,9 @@ def shift_list_create(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
+            if not data.get('name') or not data.get('start_time') or not data.get('end_time'):
+                return JsonResponse({'error': 'Missing required fields (name, start_time, end_time)'}, status=400)
+
             department = Department.objects.get(id=data.get('department_id')) if data.get('department_id') else None
             
             shift = Shift.objects.create(
@@ -57,17 +50,24 @@ def shift_list_create(request):
                 grace_period=int(data.get('grace_period', 15)),
                 work_days=data.get('work_days', 'Mon - Fri')
             )
+
+            log_audit_event(
+                'SHIFT_CREATED',
+                f'Created shift "{shift.name}" ({shift.start_time}-{shift.end_time}) for department: {shift.department.name if shift.department else "Global"}.',
+                user=user,
+                request=request
+            )
+
             return JsonResponse({'success': True, 'message': 'Shift created successfully', 'shift_id': str(shift.id)}, status=201)
-        except (KeyError, Department.DoesNotExist):
-            return JsonResponse({'error': 'Invalid data provided'}, status=400)
+        except Department.DoesNotExist:
+            return JsonResponse({'error': 'Specified department not found'}, status=400)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
 def shift_detail(request, shift_id):
-    user = get_user_from_request(request)
-    if not can_manage_scheduling(user):
-        return JsonResponse({'error': 'Permission denied'}, status=403)
+    user, err = require_staff(request)
+    if err: return err
 
     try:
         shift = Shift.objects.get(pk=shift_id)
@@ -90,6 +90,7 @@ def shift_detail(request, shift_id):
     if request.method == 'PUT':
         try:
             data = json.loads(request.body)
+            old_name = shift.name
             shift.name = data.get('name', shift.name)
             shift.description = data.get('description', shift.description)
             shift.start_time = data.get('start_time', shift.start_time)
@@ -100,6 +101,14 @@ def shift_detail(request, shift_id):
             if 'department_id' in data:
                 shift.department = Department.objects.get(id=data['department_id']) if data['department_id'] else None
             shift.save()
+
+            log_audit_event(
+                'SHIFT_UPDATED',
+                f'Updated shift "{old_name}" (ID: {shift.id}). New name: {shift.name}.',
+                user=user,
+                request=request
+            )
+
             return JsonResponse({'success': True, 'message': 'Shift updated successfully'})
         except (KeyError, Department.DoesNotExist):
             return JsonResponse({'error': 'Invalid data provided'}, status=400)
@@ -107,16 +116,22 @@ def shift_detail(request, shift_id):
             return JsonResponse({'error': str(e)}, status=500)
 
     if request.method == 'DELETE':
+        shift_name = shift.name
         shift.delete()
-        return JsonResponse({'success': True, 'message': 'Shift deleted successfully'}, status=204)
+        log_audit_event(
+            'SHIFT_DELETED',
+            f'Deleted shift "{shift_name}" (ID: {shift_id}).',
+            user=user,
+            request=request
+        )
+        return JsonResponse({'success': True, 'message': 'Shift deleted successfully'}, status=200)
 
 # --- Assignment Management Views ---
 
 @csrf_exempt
 def assignment_list_create(request):
-    user = get_user_from_request(request)
-    if not can_manage_scheduling(user):
-        return JsonResponse({'error': 'Permission denied'}, status=403)
+    user, err = require_staff(request)
+    if err: return err
 
     if request.method == 'GET':
         assignments = Assignment.objects.all().select_related('user', 'shift').order_by('-from_date')
@@ -144,17 +159,24 @@ def assignment_list_create(request):
                 to_date=data.get('to_date'),
                 assigned_by=user
             )
-            return JsonResponse({'success': True, 'message': 'Assignment created successfully', 'assignment_id': assignment.id}, status=201)
+
+            log_audit_event(
+                'ASSIGNMENT_CREATED',
+                f'Assigned employee "{employee.username}" to shift "{shift.name}" starting {assignment.from_date}.',
+                user=user,
+                request=request
+            )
+
+            return JsonResponse({'success': True, 'message': 'Assignment created successfully', 'assignment_id': str(assignment.id)}, status=201)
         except (KeyError, User.DoesNotExist, Shift.DoesNotExist):
-            return JsonResponse({'error': 'Invalid data provided'}, status=400)
+            return JsonResponse({'error': 'Invalid data provided. User or Shift not found.'}, status=400)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
 def assignment_detail(request, assignment_id):
-    user = get_user_from_request(request)
-    if not can_manage_scheduling(user):
-        return JsonResponse({'error': 'Permission denied'}, status=403)
+    user, err = require_staff(request)
+    if err: return err
 
     try:
         assignment = Assignment.objects.get(pk=assignment_id)
@@ -162,21 +184,27 @@ def assignment_detail(request, assignment_id):
         return JsonResponse({'error': 'Assignment not found'}, status=404)
 
     if request.method == 'DELETE':
+        details = f'Removed assignment for user {assignment.user.username} from shift {assignment.shift.name}.'
         assignment.delete()
-        return JsonResponse({'success': True, 'message': 'Assignment deleted successfully'}, status=204)
+        log_audit_event(
+            'ASSIGNMENT_DELETED',
+            details,
+            user=user,
+            request=request
+        )
+        return JsonResponse({'success': True, 'message': 'Assignment deleted successfully'}, status=200)
     
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 @csrf_exempt
 def my_assignments(request):
-    user = get_user_from_request(request)
-    if not user:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
+    user, err = require_auth(request)
+    if err: return err
         
     if request.method == 'GET':
         assignments = Assignment.objects.filter(user=user).select_related('shift')
         data = [{
-            'id': assignment.id,
+            'id': str(assignment.id),
             'shift': assignment.shift.name,
             'time': f"{assignment.shift.start_time.strftime('%I:%M %p')} - {assignment.shift.end_time.strftime('%I:%M %p')}",
             'from_date': assignment.from_date,

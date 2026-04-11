@@ -1,0 +1,39 @@
+I have carefully audited your system across the Accounts, Attendance, Leave, and Scheduling modules. Overall, the architecture is solid, but I have identified several areas that are not fully dynamic or have functional gaps that could impact a production-ready system.
+1. Hardcoded Role and Policy Mappings
+•
+Role Logic: In several views (e.g., backend_django/accounts/views.py), role-based logic is tied to hardcoded strings like 'admin', 'hr', or 'employee'. If you rename a role in the database, these checks will fail.
+◦
+Recommendation: Always use the Role.ADMINISTRATOR, Role.HR_OFFICER constants defined in your models.
+•
+Leave Type Mappings: In backend_django/leave/views.py, the submit_leave_request function uses a hardcoded dictionary to map strings to Enum values. This means if you add a new leave type (e.g., "Educational Leave"), you have to manually update the view code.
+2. Static Policy Calculations
+•
+Leave Balances: The leave balance calculation in backend_django/leave/utils.py (and views) uses a standard "Annual" and "Sick" logic. However, the system allows creating custom Policies. Currently, these custom policies (like "Maternity Leave duration") aren't fully integrated into the balance deduction logic. It mostly only respects the hardcoded categories.
+3. Authentication Inconsistency
+•
+Helper Functions: You have multiple versions of get_user_from_request and require_authenticated_user scattered across attendance, leave, scheduling, and reporting.
+◦
+Issue: Some use request.user.is_authenticated, while others are prepared for manual ID passing. This inconsistency makes it hard to switch the whole system to a new auth method (like JWT).
+◦
+Recommendation: Move these to a single backend_django/utils/auth_helpers.py.
+4. Scheduling & Attendance "Disconnect"
+•
+Shift Enforcement: The mark_attendance logic in backend_django/attendance/views.py tries to find a shift for the user. If a user is not assigned to a shift via the Scheduling module, the system defaults them to an "8 AM to 5 PM" logic.
+◦
+Issue: This isn't fully dynamic. If an employee has no shift, the system should ideally reject the check-in or flag it for HR review, rather than making a "best guess."
+•
+Shift Overlaps: The system doesn't currently check for overlapping assignments (e.g., assigning a user to two different shifts on the same day).
+5. Frontend-Backend Data Sync
+•
+UUID Handling: Your frontend (React) uses _id in many places (likely from a previous MongoDB-style setup), while the Django backend returns id. In auth.ts, you have a mapping function mapBackendUser that handles this, but if you add new API endpoints, you must remember to manually map id to _id every time.
+•
+Enums: Status strings (like PENDING, APPROVED, ACTIVE) are strings in both ends. If the backend changes a status name to PROCESSED, the frontend UI will stop showing the correct labels/colors because they are hardcoded in the React components.
+6. Security Gaps
+•
+Admin Singleton Policy: You have a great signal in backend_django/accounts/models.py to protect admin and elsa. However, the api_delete_user and api_update_user views also have manual checks for these usernames.
+◦
+Issue: Having security logic in both the Model and the View is good for "defense-in-depth," but if you add a third "System Admin" account, you'll have to update code in 3-4 different files.
+7. Missing "Audit Trail" for some modules
+•
+Scheduling & Leave: While accounts and attendance have audit logging, the Scheduling module (creating shifts/assignments) is currently missing log_audit_event calls in its views.py. This means if a manager changes someone's shift secretly, there is no record of who did it.
+Summary: The system is "functional" for a demo, but to make it "fully dynamic," you should focus on centralizing your permission helpers and linking the custom Policy engine more deeply into the Leave and Attendance calculation logic.

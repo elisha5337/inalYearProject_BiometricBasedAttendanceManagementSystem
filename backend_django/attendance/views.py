@@ -60,9 +60,12 @@ def enhance_image_for_ai(image_array):
         logger.error(f"Enhancement error: {e}")
         return image_array
 
-def calculate_ear(eye_points):
-    """Placeholder for Eye Aspect Ratio if landmarks are sufficient."""
-    return 1.0 # Logic requires high-res landmarks
+def resolve_numeric_policy_value(name, fallback, department_id=None):
+    """Restored helper to fetch numeric values from institutional policies."""
+    policy = PolicyResolver.get_active_policy(name, department_id)
+    if not policy: return fallback, None
+    val = PolicyResolver.extract_numeric_value(policy.value)
+    return (val if val > 0 else fallback), policy
 
 def is_live_face(face_img, landmarks=None):
     """
@@ -77,9 +80,8 @@ def is_live_face(face_img, landmarks=None):
         if landmarks:
             l_eye = landmarks['left_eye']
             r_eye = landmarks['right_eye']
-            # Calculate distance between eyes relative to face width
             dist = np.linalg.norm(np.array(l_eye) - np.array(r_eye))
-            if dist < 25: # Too close indicates a non-human scale or spoof
+            if dist < 25: 
                 return False, "Scale failure"
 
         return (variance >= 4.0), f"{variance:.1f}"
@@ -176,10 +178,7 @@ def mark_attendance(request):
                 _, imgstr = image_data.split(';base64,')
                 image = Image.open(io.BytesIO(base64.b64decode(imgstr))).convert('RGB')
                 image_array = np.array(image)
-                
-                # --- AI ENHANCEMENT (LOW LIGHT FIX) ---
                 image_array = enhance_image_for_ai(image_array)
-                
             except Exception:
                 return JsonResponse({'error': 'Format error.'}, status=400)
 
@@ -189,22 +188,20 @@ def mark_attendance(request):
                 faces = []
 
             if not faces:
-                # Fallback: Double enhancement for extreme cases
                 image_array = cv2.convertScaleAbs(image_array, alpha=1.5, beta=20)
                 faces = face_detector.detect_faces(image_array)
 
             if not faces:
-                return JsonResponse({'error': 'Face not detected. Please ensure your face is clearly visible and centered.'}, status=400)
+                return JsonResponse({'error': 'Face not detected. Please align.'}, status=400)
             
             face_data = faces[0]
             x, y, w, h = face_data['box']
             face_img = image_array[max(0, y-20):y+h+20, max(0, x-20):x+w+20]
             landmarks = face_data['keypoints']
 
-            # --- HARDENED LIVENESS (Texture + Geometry) ---
             is_live, l_score = is_live_face(face_img, landmarks)
             if not is_live and biometric_lock_active:
-                return JsonResponse({'error': 'Security Alert: Liveness verification failed. Real face required.'}, status=403)
+                return JsonResponse({'error': 'Security Alert: Liveness verification failed.'}, status=403)
 
             live_embedding = extract_embedding(face_img)
             if live_embedding is None:
@@ -214,7 +211,7 @@ def mark_attendance(request):
             match, distance = biometric_service.find_match(live_embedding, threshold=threshold)
             
             if not match:
-                return JsonResponse({'error': 'Identity unrecognized. Please ensure alignment.'}, status=401)
+                return JsonResponse({'error': 'Identity unrecognized.'}, status=401)
             
             user = User.objects.get(id=match['id'])
             current_status_flag = AttendanceRecord.VerificationStatus.VERIFIED
@@ -267,7 +264,7 @@ def mark_attendance(request):
             'success': True,
             'type': record_type,
             'status': status,
-            'message': f"Hello {user.get_full_name() or user.username}. Recorded.{policy_msg}",
+            'message': f"Hello {user.get_full_name() or user.username}. Recorded successfully.{policy_msg}",
             'timestamp': now.isoformat(),
             'profile': {
                 'full_name': user.get_full_name() or user.username,

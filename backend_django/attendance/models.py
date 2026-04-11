@@ -30,7 +30,14 @@ class AttendanceRecord(models.Model):
         PENDING = 'PENDING', 'Pending Validation'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, db_column='_id')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='userId')
+    
+    # [INSTITUTIONAL INTEGRITY] 
+    # Use SET_NULL instead of CASCADE to preserve history if a user is deleted
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, db_column='userId')
+    
+    # Store username/metadata as a string backup for deleted users
+    employee_name_snapshot = models.CharField(max_length=255, null=True, blank=True, help_text="Permanent backup of name for audit.")
+    
     device = models.ForeignKey(Device, on_delete=models.SET_NULL, null=True, blank=True, db_column='deviceId')
     timestamp = models.DateTimeField()
     type = models.CharField(max_length=50, choices=RecordType.choices)
@@ -40,3 +47,13 @@ class AttendanceRecord(models.Model):
         choices=VerificationStatus.choices, 
         default=VerificationStatus.VERIFIED
     )
+
+    def save(self, *args, **kwargs):
+        # Capture the name snapshot automatically on first save
+        if self.user and not self.employee_name_snapshot:
+            self.employee_name_snapshot = self.user.get_full_name() or self.user.username
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        name = self.employee_name_snapshot or "Unknown User"
+        return f"{name} - {self.get_type_display()} at {self.timestamp}"

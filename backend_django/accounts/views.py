@@ -220,7 +220,7 @@ def api_profile(request):
     enforce_password_expiry(request.user)
     return JsonResponse({
         'success': True,
-        'profile': serialize_profile_for_frontend(request.user),
+        'profile': serialize_profile_for_frontend(user),
     })
 
 
@@ -1048,6 +1048,13 @@ def capture_face(request, user_id):
             faces = detector.detect_faces(
                 img_np
             )
+
+            # --- [STRICT ENROLLMENT] Reject if multiple faces detected ---
+            if len(faces) > 1:
+                return JsonResponse({
+                    "success": False,
+                    "error": "Security Alert: Multiple faces detected in frame. Enrollment requires only one person to be visible."
+                })
 
             if len(faces) != 1:
                 continue

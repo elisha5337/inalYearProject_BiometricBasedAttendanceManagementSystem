@@ -157,32 +157,6 @@ export default function Login({ onLogin }: LoginProps) {
     { id: 'admin', label: 'Administrator', icon: Shield },
   ];
 
-  // const demoCredentials: Array<{
-  //   role: UserRole;
-  //   label: string;
-  //   username: string;
-  //   password: string;
-  // }> = [
-  //   {
-  //     role: 'admin',
-  //     label: 'Admin',
-  //     username: 'elsa',
-  //     password: 'Admin@123',
-  //   },
-  //   {
-  //     role: 'hr',
-  //     label: 'HR',
-  //     username: 'hr_demo',
-  //     password: 'Hr@12345',
-  //   },
-  //   {
-  //     role: 'employee',
-  //     label: 'Employee',
-  //     username: 'employee_demo',
-  //     password: 'Employee@123',
-  //   },
-  // ];
-
   return (
     <div className="h-screen w-screen bg-slate-50 flex flex-col md:flex-row overflow-hidden relative">
       {forcePasswordReset && resettingUser && (
@@ -329,33 +303,33 @@ export default function Login({ onLogin }: LoginProps) {
             className="w-full h-full object-cover"
             referrerPolicy="no-referrer"
           />
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"></div>
+          <div className="absolute inset-0 bg-slate-900/30"></div>
         </div>
 
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-12">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/20">
-              <Fingerprint className="w-8 h-8" />
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight">BBE AMS-HU IOT</h1>
-          </div>
+        {/*<div className="relative z-10">*/}
+        {/*  <div className="flex items-center gap-3 mb-12">*/}
+        {/*    <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/20">*/}
+        {/*      <Fingerprint className="w-8 h-8" />*/}
+        {/*    </div>*/}
+        {/*    <h1 className="text-2xl font-bold tracking-tight">BBE AMS-HU IOT</h1>*/}
+        {/*  </div>*/}
 
-          <div className="space-y-6 max-w-md">
-            <h2 className="text-5xl font-bold leading-tight">Secure Attendance Management</h2>
-            <p className="text-blue-50 text-lg leading-relaxed font-medium">
-              Login to access your dashboard, view reports, and manage your profile. Our biometric
-              systems ensure accuracy and security for all HU-IOT employees.
-            </p>
-          </div>
-        </div>
+        {/*  <div className="space-y-6 max-w-md">*/}
+        {/*    <h2 className="text-5xl font-bold leading-tight">Secure Attendance Management</h2>*/}
+        {/*    <p className="text-blue-50 text-lg leading-relaxed font-medium">*/}
+        {/*      Login to access your dashboard, view reports, and manage your profile. Our biometric*/}
+        {/*      systems ensure accuracy and security for all HU-IOT employees.*/}
+        {/*    </p>*/}
+        {/*  </div>*/}
+        {/*</div>*/}
 
-        <div className="relative z-10 flex items-center gap-4 text-sm text-blue-100">
-          <span>(c) 2026 Hawassa University</span>
-          <span className="w-1 h-1 bg-blue-300 rounded-full"></span>
-          <button className="hover:underline">Privacy Policy</button>
-          <span className="w-1 h-1 bg-blue-300 rounded-full"></span>
-          <button className="hover:underline">Support</button>
-        </div>
+        {/*<div className="relative z-10 flex items-center gap-4 text-sm text-blue-100">*/}
+        {/*  <span>(c) 2026 Hawassa University</span>*/}
+        {/*  <span className="w-1 h-1 bg-blue-300 rounded-full"></span>*/}
+        {/*  <button className="hover:underline">Privacy Policy</button>*/}
+        {/*  <span className="w-1 h-1 bg-blue-300 rounded-full"></span>*/}
+        {/*  <button className="hover:underline">Support</button>*/}
+        {/*</div>*/}
 
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
       </div>
@@ -394,32 +368,6 @@ export default function Login({ onLogin }: LoginProps) {
               </button>
             ))}
           </div>
-
-          {/*<div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4 space-y-3">*/}
-          {/*  <p className="text-xs font-bold text-slate-900 uppercase tracking-widest opacity-60 text-center">Sample Credentials</p>*/}
-          {/*  <div className="space-y-2">*/}
-          {/*    {demoCredentials.map((credential) => (*/}
-          {/*      <button*/}
-          {/*        key={credential.role}*/}
-          {/*        type="button"*/}
-          {/*        disabled={isLoading}*/}
-          {/*        onClick={() => {*/}
-          {/*          setRole(credential.role);*/}
-          {/*          setUsername(credential.username);*/}
-          {/*          setPassword(credential.password);*/}
-          {/*          setError('');*/}
-          {/*        }}*/}
-          {/*        className="w-full rounded-xl border border-white bg-white/80 px-4 py-2 text-left transition hover:border-blue-200 hover:bg-white disabled:opacity-60"*/}
-          {/*      >*/}
-          {/*        <div className="flex items-center justify-between">*/}
-          {/*          <span className="text-xs font-bold text-slate-700">{credential.label}</span>*/}
-          {/*          <span className="text-[10px] font-bold text-blue-600">AUTO-FILL</span>*/}
-          {/*        </div>*/}
-          {/*        <p className="text-[10px] text-slate-400 font-mono mt-0.5">{credential.username} / {credential.password}</p>*/}
-          {/*      </button>*/}
-          {/*    ))}*/}
-          {/*  </div>*/}
-          {/*</div>*/}
 
           {error && (
             <div className="p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-3 text-xs font-bold text-rose-600 animate-in fade-in slide-in-from-top-2">

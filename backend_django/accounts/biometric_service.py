@@ -1,5 +1,6 @@
 import logging
 import numpy as np
+import cv2
 from threading import Lock
 from .models import BiometricTemplate, User
 
@@ -29,6 +30,47 @@ class BiometricRegistry:
         self.load_lock = Lock()
         self.reload_cache()
         self._initialized = True
+
+    @staticmethod
+    def enhance_image(image_array):
+        """Standardized CLAHE enhancement for institutional environments."""
+        try:
+            lab = cv2.cvtColor(image_array, cv2.COLOR_RGB2LAB)
+            l, a, b = cv2.split(lab)
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+            l_enhanced = clahe.apply(l)
+            enhanced_img = cv2.merge((l_enhanced, a, b))
+            return cv2.cvtColor(enhanced_img, cv2.COLOR_LAB2RGB)
+        except Exception as e:
+            logger.error(f"Enhancement error: {e}")
+            return image_array
+
+    @staticmethod
+    def preprocess_face(image_array, box, padding=20):
+        """
+        Unified face preprocessing: Crop with padding, enhance, and resize.
+        This provides parity between Enrollment and Verification.
+        """
+        try:
+            x, y, w, h = box
+            # Apply padding while respecting image boundaries
+            y1 = max(0, y - padding)
+            y2 = min(image_array.shape[0], y + h + padding)
+            x1 = max(0, x - padding)
+            x2 = min(image_array.shape[1], x + w + padding)
+            
+            face_img = image_array[y1:y2, x1:x2]
+            
+            # 1. Enhance
+            face_img = BiometricRegistry.enhance_image(face_img)
+            
+            # 2. Resize to FaceNet standard
+            face_img = cv2.resize(face_img, (160, 160))
+            
+            return face_img
+        except Exception as e:
+            logger.error(f"Preprocessing error: {e}")
+            return None
 
     def reload_cache(self):
         """Reloads and pre-normalizes all active face templates."""

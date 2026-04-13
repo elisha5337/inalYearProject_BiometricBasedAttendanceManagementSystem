@@ -1107,26 +1107,6 @@ def capture_face(request, user_id):
         )
 
         # ==========
-        # LIVENESS
-        # ==========
-
-        if challenge == "left" and move < 15:
-            return JsonResponse(
-                {
-                    "success": False,
-                    "error": "Incomplete turn. Please turn your head clearly to the left.",
-                }
-            )
-
-        if challenge == "right" and move > -15:
-            return JsonResponse(
-                {
-                    "success": False,
-                    "error": "Incomplete turn. Please turn your head clearly to the right.",
-                }
-            )
-
-        # ==========
         # STORE
         # ==========
 
@@ -1136,9 +1116,8 @@ def capture_face(request, user_id):
         face_data = []
 
         for f in valid_frames:
-            x, y, w, h = f["box"]
-            face = f["image"][y:y + h, x:x + w]
-            face = cv2.resize(face, (160, 160))
+            face = biometric_service.preprocess_face(f["image"], f["box"], padding=20)
+            if face is None: continue
 
             _, buf = cv2.imencode(
                 ".jpg",

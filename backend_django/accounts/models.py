@@ -2,7 +2,7 @@ import uuid
 import logging
 from django.contrib.auth.models import AbstractUser, UserManager, Permission, Group
 from django.db import models
-from django.db.models.signals import m2m_changed
+from django.db.models.signals import m2m_changed, post_save, post_delete
 from django.dispatch import receiver
 
 logger = logging.getLogger(__name__)
@@ -203,3 +203,32 @@ def enforce_admin_singleton_policy(sender, instance, action, pk_set, **kwargs):
                     instance.groups.remove(hr_group)
         except Exception as e:
             logger.error(f"Signal enforcement error: {e}")
+
+# --- BIOMETRIC LIVE SYNC ---
+
+@receiver([post_save, post_delete], sender=BiometricTemplate)
+def sync_biometric_registry_on_template_change(sender, instance, **kwargs):
+    """
+    Ensures the BiometricRegistry (AI search cache) remains in sync 
+    with the database when templates are added or removed.
+    """
+    try:
+        from .biometric_service import biometric_service
+        biometric_service.reload_cache()
+        logger.info(f"BiometricRegistry: Live-synchronized after change to {instance.user.username}'s template.")
+    except Exception as e:
+        logger.error(f"BiometricRegistry Sync Error: {e}")
+
+@receiver(post_save, sender=User)
+def sync_biometric_registry_on_user_status_change(sender, instance, created, **kwargs):
+    """
+    Reloads the registry if a user is suspended or activated, 
+    as the registry only includes ACTIVE users.
+    """
+    if not created: # Only for updates
+        try:
+            from .biometric_service import biometric_service
+            biometric_service.reload_cache()
+            logger.info(f"BiometricRegistry: Live-synchronized after status change for {instance.username}.")
+        except Exception as e:
+            logger.error(f"BiometricRegistry User Sync Error: {e}")

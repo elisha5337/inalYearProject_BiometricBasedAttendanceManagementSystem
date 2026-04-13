@@ -89,7 +89,7 @@ export default function BiometricTerminal() {
     setStatus('scanning');
     if (mode === 'fingerprint') {
       setStatus('error');
-      setFeedback('FINGERPRINT HARDWARE OFFLINE. USE FACIAL RECOGNITION.');
+      setFeedback('FINGERPRINT HARDWARE OFFLINE. USE FACIAL ID.');
       setTimeout(() => setStatus('idle'), 2500);
       return;
     }
@@ -172,8 +172,8 @@ export default function BiometricTerminal() {
           <button 
             onClick={() => setIsDarkMode(!isDarkMode)}
             className={cn(
-              "p-2 rounded-lg border transition-all active:scale-95",
-              isDarkMode ? "bg-white/5 border-white/10 text-yellow-400" : "bg-slate-100 border-slate-200 text-blue-600 shadow-sm"
+              "p-2 rounded-lg border transition-all active:scale-95 flex items-center justify-center",
+              isDarkMode ? "bg-white/5 border-white/10 text-yellow-400 hover:bg-white/10" : "bg-slate-100 border-slate-200 text-blue-600 hover:bg-slate-200 shadow-sm"
             )}
           >
             {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -198,16 +198,16 @@ export default function BiometricTerminal() {
       </header>
 
       {/* 2. Compact Workspace */}
-      <main className="flex-1 overflow-hidden p-4 md:p-8 relative z-10 flex flex-col items-center justify-center">
+      <main className="flex-1 min-h-0 p-4 md:p-8 relative z-10 flex flex-col items-center justify-center overflow-hidden">
         <div className="w-full max-w-5xl grid lg:grid-cols-2 gap-8 items-center h-full max-h-[600px]">
           
-          {/* Left: Dynamic Content */}
-          <div className="space-y-6 text-center lg:text-left flex flex-col justify-center">
+          <div className="space-y-6 text-center lg:text-left flex flex-col justify-center shrink-0">
             <div className="space-y-2">
-              <h2 className={cn("text-4xl md:text-5xl font-black tracking-tighter uppercase italic", isDarkMode ? "text-white" : "text-slate-900")}>
-                Biometric <br />Verification
+              <h2 className={cn("text-4xl md:text-5xl font-black tracking-tighter uppercase italic leading-none", isDarkMode ? "text-white" : "text-slate-900")}>
+                Biometric <br className="hidden lg:block" />Verification
               </h2>
-             </div>
+              <p className="text-blue-600 font-black text-xs uppercase tracking-[0.3em]">Hawassa University IoT</p>
+            </div>
 
             <div className="grid gap-3 max-w-md mx-auto lg:mx-0">
               <div className={cn(
@@ -217,16 +217,25 @@ export default function BiometricTerminal() {
                 <div className="w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center shrink-0">
                   <Camera className="w-4 h-4 text-blue-600" />
                 </div>
-                <p className={cn("text-[10px] font-bold uppercase leading-tight", isDarkMode ? "text-slate-300" : "text-slate-600")}>
+                <p className={cn("text-[10px] font-bold uppercase leading-tight text-left", isDarkMode ? "text-slate-300" : "text-slate-600")}>
                   Center face in the <span className={isDarkMode ? "text-white" : "text-blue-900"}>scanning zone</span>
                 </p>
               </div>
-
+              <div className={cn(
+                "p-4 rounded-xl border flex items-center gap-4 transition-colors",
+                isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-slate-200 shadow-sm"
+              )}>
+                <div className="w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center shrink-0">
+                  <MonitorSmartphone className="w-4 h-4 text-blue-600" />
+                </div>
+                <p className={cn("text-[10px] font-bold uppercase leading-tight text-left", isDarkMode ? "text-slate-300" : "text-slate-600")}>
+                  Wait for <span className={isDarkMode ? "text-white" : "text-blue-900"}>confirmation</span>
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Right Content: Scanner (Shrink-compatible) */}
-          <div className="flex flex-col items-center justify-center min-h-0">
+          <div className="flex flex-col items-center justify-center min-h-0 w-full">
             {!showManual ? (
               <div className="relative group p-4 scale-90 md:scale-100 transition-transform">
                 <div className="absolute top-0 left-0 w-12 h-12 border-t-2 border-l-2 border-blue-600 rounded-tl-2xl z-20"></div>
@@ -241,12 +250,12 @@ export default function BiometricTerminal() {
                   <AnimatePresence mode="wait">
                     {status === 'idle' && (
                       <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 flex flex-col items-center justify-center gap-6">
-                        <div className={cn("p-6 rounded-full border transition-colors", isDarkMode ? "bg-blue-600/10 border-blue-500/20" : "bg-white border-slate-200")}>
+                        <div className={cn("p-6 rounded-full border transition-colors", isDarkMode ? "bg-blue-600/10 border-blue-500/20" : "bg-white border-slate-200 shadow-inner")}>
                           <Scan className="w-16 h-16 text-blue-600" />
                         </div>
                         <button onClick={handleScan} className={cn(
                           "px-8 py-4 rounded-xl text-[10px] font-black tracking-[0.2em] transition-all transform active:scale-95 shadow-lg",
-                          isDarkMode ? "bg-blue-600 text-white hover:bg-white hover:text-blue-600" : "bg-slate-900 text-white hover:bg-blue-600"
+                          isDarkMode ? "bg-blue-600 text-white hover:bg-white hover:text-blue-600" : "bg-slate-900 text-white hover:bg-blue-600 shadow-slate-400/20"
                         )}>
                           INITIATE IDENTITY SCAN
                         </button>
@@ -272,14 +281,14 @@ export default function BiometricTerminal() {
                     {status === 'success' && (
                       <motion.div key="success" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="absolute inset-0 bg-emerald-500 z-50 flex flex-col items-center justify-center gap-3">
                         <CheckCircle2 className="w-16 h-16 text-white" />
-                        <p className="text-white font-black text-sm tracking-[0.3em] uppercase italic">Verified</p>
+                        <p className="text-white font-black text-sm tracking-[0.3em] uppercase italic text-center">Identity Confirmed</p>
                       </motion.div>
                     )}
 
                     {status === 'error' && (
                       <motion.div key="error" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="absolute inset-0 bg-rose-600 z-50 flex flex-col items-center justify-center gap-3 p-6 text-center text-white">
                         <XCircle className="w-16 h-16" />
-                        <p className="font-black text-sm tracking-[0.3em] uppercase italic">Denied</p>
+                        <p className="font-black text-sm tracking-[0.3em] uppercase italic">Access Denied</p>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -300,21 +309,21 @@ export default function BiometricTerminal() {
                     <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 ml-2">Username</label>
                     <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className={cn(
                       "w-full border rounded-xl px-4 py-3 text-xs outline-none focus:border-blue-500 transition-all font-bold",
-                      isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900"
+                      isDarkMode ? "bg-white/5 border-white/10 text-white focus:bg-white/10" : "bg-slate-50 border-slate-200 text-slate-900"
                     )} placeholder="Employee ID" />
                   </div>
                   <div className="space-y-1 text-left">
                     <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 ml-2">Password</label>
                     <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={cn(
                       "w-full border rounded-xl px-4 py-3 text-xs outline-none focus:border-blue-500 transition-all font-bold",
-                      isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900"
+                      isDarkMode ? "bg-white/5 border-white/10 text-white focus:bg-white/10" : "bg-slate-50 border-slate-200 text-slate-900"
                     )} placeholder="••••••••" />
                   </div>
                   <button disabled={isManualLoading} className={cn(
                     "w-full py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-all shadow-lg flex items-center justify-center gap-3",
                     isDarkMode ? "bg-white text-slate-950 hover:bg-blue-600 hover:text-white" : "bg-slate-900 text-white hover:bg-blue-700"
                   )}>
-                    {isManualLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "EXECUTE VERIFICATION"}
+                    {isManualLoading ? <Loader2 className="w-4 h-4 animate-spin text-blue-600" /> : "EXECUTE VERIFICATION"}
                   </button>
                 </form>
               </motion.div>
@@ -322,8 +331,7 @@ export default function BiometricTerminal() {
           </div>
         </div>
 
-        {/* Compact Feedback Console */}
-        <div className="mt-4 w-full max-w-lg shrink-0">
+        <div className="mt-4 w-full max-w-lg shrink-0 h-12 flex items-center justify-center">
           <AnimatePresence>
             {feedback && (
               <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className={cn(
@@ -343,8 +351,8 @@ export default function BiometricTerminal() {
         isDarkMode ? "bg-slate-950 border-white/5" : "bg-white border-slate-200"
       )}>
         <div className="flex gap-3">
-          <button disabled={status === 'scanning'} onClick={() => setMode('face')} className={cn("px-4 py-2 rounded-lg text-[8px] font-black tracking-widest transition-all", mode === 'face' ? "bg-blue-600 text-white shadow-md" : isDarkMode ? "bg-white/5 text-slate-500" : "bg-slate-100 text-slate-400")}>FACIAL ID</button>
-          <button disabled={status === 'scanning'} onClick={() => setMode('fingerprint')} className={cn("px-4 py-2 rounded-lg text-[8px] font-black tracking-widest transition-all", mode === 'fingerprint' ? "bg-blue-600 text-white shadow-md" : isDarkMode ? "bg-white/5 text-slate-500" : "bg-slate-100 text-slate-400")}>FINGERPRINT</button>
+          <button disabled={status === 'scanning'} onClick={() => setMode('face')} className={cn("px-4 py-2 rounded-lg text-[8px] font-black tracking-widest transition-all", mode === 'face' ? "bg-blue-600 text-white shadow-md shadow-blue-600/30" : isDarkMode ? "bg-white/5 text-slate-500" : "bg-slate-100 text-slate-400 shadow-inner")}>FACIAL ID</button>
+          <button disabled={status === 'scanning'} onClick={() => setMode('fingerprint')} className={cn("px-4 py-2 rounded-lg text-[8px] font-black tracking-widest transition-all", mode === 'fingerprint' ? "bg-blue-600 text-white shadow-md shadow-blue-600/30" : isDarkMode ? "bg-white/5 text-slate-500" : "bg-slate-100 text-slate-400 shadow-inner")}>FINGERPRINT</button>
         </div>
 
         <div className="flex items-center gap-6 text-[8px] font-black tracking-[0.2em] text-slate-500">

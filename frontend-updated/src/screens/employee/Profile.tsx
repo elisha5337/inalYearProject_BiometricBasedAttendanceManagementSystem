@@ -4,8 +4,8 @@ import {
   Mail, 
   Phone, 
   Building2, 
-  Shield, 
-  Fingerprint, 
+  Shield,
+  Fingerprint,
   Key, 
   Camera,
   CheckCircle2,
@@ -94,8 +94,8 @@ export default function Profile({ user }: { user: UserType }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">Full Name</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   disabled={!isEditing}
                   defaultValue={user.name}
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
@@ -103,8 +103,8 @@ export default function Profile({ user }: { user: UserType }) {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">Employee ID</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   disabled
                   defaultValue="HU-IOT-2024-0486"
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none opacity-60"
@@ -112,8 +112,8 @@ export default function Profile({ user }: { user: UserType }) {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">Work Email</label>
-                <input 
-                  type="email" 
+                <input
+                  type="email"
                   disabled
                   defaultValue={user.email}
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none opacity-60"
@@ -121,8 +121,8 @@ export default function Profile({ user }: { user: UserType }) {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">Phone Number</label>
-                <input 
-                  type="tel" 
+                <input
+                  type="tel"
                   disabled={!isEditing}
                   defaultValue="+251 911 234 567"
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"

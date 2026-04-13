@@ -39,26 +39,7 @@ def get_employee_detail(user):
     except EmployeeDetail.DoesNotExist:
         return None
 
-def enhance_image_for_ai(image_array):
-    """
-    Applies Adaptive Histogram Equalization (CLAHE) to handle low-light
-    environments at institutional kiosks.
-    """
-    try:
-        # Convert to LAB to process Luminance channel only
-        lab = cv2.cvtColor(image_array, cv2.COLOR_RGB2LAB)
-        l, a, b = cv2.split(lab)
-        
-        # Apply CLAHE
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-        l_enhanced = clahe.apply(l)
-        
-        # Merge back
-        enhanced_img = cv2.merge((l_enhanced, a, b))
-        return cv2.cvtColor(enhanced_img, cv2.COLOR_LAB2RGB)
-    except Exception as e:
-        logger.error(f"Enhancement error: {e}")
-        return image_array
+# enhancement moved to biometric_service.BiometricRegistry.enhance_image
 
 def resolve_numeric_policy_value(name, fallback, department_id=None):
     """Restored helper to fetch numeric values from institutional policies."""
@@ -178,7 +159,7 @@ def mark_attendance(request):
                 _, imgstr = image_data.split(';base64,')
                 image = Image.open(io.BytesIO(base64.b64decode(imgstr))).convert('RGB')
                 image_array = np.array(image)
-                image_array = enhance_image_for_ai(image_array)
+                # Global enhancement removed in favor of per-face enhancement in preprocess_face
             except Exception:
                 return JsonResponse({'error': 'Format error.'}, status=400)
 
@@ -195,8 +176,10 @@ def mark_attendance(request):
                 return JsonResponse({'error': 'Face not detected. Please align.'}, status=400)
             
             face_data = faces[0]
-            x, y, w, h = face_data['box']
-            face_img = image_array[max(0, y-20):y+h+20, max(0, x-20):x+w+20]
+            face_img = biometric_service.preprocess_face(image_array, face_data['box'], padding=20)
+            if face_img is None:
+                return JsonResponse({'error': 'Biometric quality too low.'}, status=500)
+            
             landmarks = face_data['keypoints']
 
             is_live, l_score = is_live_face(face_img, landmarks)

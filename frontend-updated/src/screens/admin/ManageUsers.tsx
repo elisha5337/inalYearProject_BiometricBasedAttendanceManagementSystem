@@ -308,6 +308,7 @@ export default function ManageUsers() {
         position: formState.position,
         hireDate: formState.hireDate,
         departmentId: formState.departmentId,
+        password: `${username}123`, // AUTOMATICALLY SET DEFAULT PASSWORD
       };
 
       if (editingUserId) {
@@ -323,12 +324,6 @@ export default function ManageUsers() {
 
         setSuccessMessage('User updated successfully.');
       } else {
-        if (!payload.password?.trim()) {
-          setError('A password is required when creating a new user.');
-          setSaving(false);
-          return;
-        }
-
         await createUser(payload);
         const refreshedUsers = await fetchUsers();
         setUsers(refreshedUsers);
@@ -538,10 +533,12 @@ export default function ManageUsers() {
                     <option value="employee">Employee</option>
                   </select>
                 </label>
-                <label className="space-y-1.5">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Password</span>
-                  <input type="password" value={formState.password ?? ''} onChange={(event) => setFormState((current) => ({ ...current, password: event.target.value }))} placeholder={editingUserId ? 'Leave blank' : 'Required'} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white" />
-                </label>
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Auto-Password</span>
+                  <div className="w-full px-4 py-2 bg-blue-50 border border-blue-100 rounded-xl text-[10px] font-bold text-blue-700 leading-tight uppercase">
+                    Credential will be <br /> <span className="font-black underline text-blue-900">[USERNAME]123</span>
+                  </div>
+                </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2 pt-2">

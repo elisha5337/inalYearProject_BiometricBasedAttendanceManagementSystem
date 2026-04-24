@@ -19,6 +19,10 @@ urlpatterns = [
     path('api/departments/', views.api_list_departments, name='api_department_list'),
     path('api/positions/', views.api_list_positions, name='api_position_list'),
     
+    # Password Reset
+    path('api/password-reset/request/', views.api_forgot_password_request, name='api_forgot_password_request'),
+    path('api/password-reset/confirm/<str:uidb64>/<str:token>/', views.api_reset_password_confirm, name='api_reset_password_confirm'),
+
     # Workflow API
     path('api/workflows/', views.api_list_workflows, name='api_workflow_list'),
     path('api/workflows/create/', views.api_create_workflow, name='api_workflow_create'),

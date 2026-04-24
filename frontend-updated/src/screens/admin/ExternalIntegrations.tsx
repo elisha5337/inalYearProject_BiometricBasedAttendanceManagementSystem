@@ -1,4 +1,4 @@
-import {
+﻿import {
   CheckCircle2,
   AlertTriangle,
   Settings2,
@@ -177,7 +177,7 @@ export default function ExternalIntegrations() {
       </div>
 
       {error ? (
-        <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
+        <div className="rounded-2xl border border-rose-100 bg-red-50 px-5 py-4 text-sm font-medium text-rose-700">
           {error}
         </div>
       ) : null}
@@ -188,16 +188,16 @@ export default function ExternalIntegrations() {
         ) : filteredIntegrations.map((integration) => {
           const Icon = getIntegrationIcon(integration.type);
           return (
-            <div key={integration.id} className="professional-card group hover:border-blue-200 transition-all">
+            <div key={integration.id} className="professional-card group hover:border-indigo-200 transition-all">
               <div className="p-6">
                 <div className="flex items-start justify-between mb-6">
                   <div
                     className={cn(
-                      'w-12 h-12 rounded-xl flex items-center justify-center transition-colors',
+                      'w-12 h-12 rounded-2xl flex items-center justify-center transition-colors',
                       integration.status === 'connected'
-                        ? 'bg-green-50 text-green-600'
+                        ? 'bg-green-50 text-emerald-600'
                         : integration.status === 'error'
-                          ? 'bg-red-50 text-red-600'
+                          ? 'bg-red-50 text-rose-600'
                           : 'bg-slate-50 text-slate-600',
                     )}
                   >
@@ -205,12 +205,12 @@ export default function ExternalIntegrations() {
                   </div>
                   <div className="flex items-center gap-2">
                     {integration.status === 'connected' ? (
-                      <span className="flex items-center gap-1 text-[10px] font-bold text-green-600 uppercase tracking-widest bg-green-50 px-2 py-1 rounded-full">
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 uppercase tracking-widest bg-green-50 px-2 py-1 rounded-full">
                         <CheckCircle2 className="w-3 h-3" />
                         Active
                       </span>
                     ) : integration.status === 'error' ? (
-                      <span className="flex items-center gap-1 text-[10px] font-bold text-red-600 uppercase tracking-widest bg-red-50 px-2 py-1 rounded-full">
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-rose-600 uppercase tracking-widest bg-red-50 px-2 py-1 rounded-full">
                         <AlertTriangle className="w-3 h-3" />
                         Error
                       </span>
@@ -234,14 +234,14 @@ export default function ExternalIntegrations() {
                     <button
                       onClick={() => handleSync(integration.id)}
                       disabled={isSyncing === integration.id}
-                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all disabled:opacity-50"
+                      className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all disabled:opacity-50"
                       title="Sync Now"
                     >
                       <RefreshCw className={cn('w-4 h-4', isSyncing === integration.id && 'animate-spin')} />
                     </button>
                     <button
                       onClick={() => setShowConfigureModal(integration.id)}
-                      className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
+                      className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-2xl transition-all"
                       title="Configure"
                     >
                       <Settings2 className="w-4 h-4" />
@@ -255,9 +255,9 @@ export default function ExternalIntegrations() {
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 hover:border-blue-400 hover:bg-blue-50/50 transition-all group"
+          className="border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 hover:border-indigo-400 hover:bg-indigo-50/50 transition-all group"
         >
-          <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+          <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
             <Plus className="w-6 h-6" />
           </div>
           <div className="text-center">
@@ -277,7 +277,7 @@ export default function ExternalIntegrations() {
               placeholder="Search logs..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 bg-slate-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 w-64"
+              className="pl-9 pr-4 py-2 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500/20 w-64"
             />
           </div>
         </div>
@@ -303,9 +303,9 @@ export default function ExternalIntegrations() {
                       className={cn(
                         'text-[10px] font-bold uppercase tracking-widest',
                         log.status === 'Success' || log.status === 'Connected'
-                          ? 'text-green-600'
+                          ? 'text-emerald-600'
                           : log.status === 'Error'
-                            ? 'text-red-600'
+                            ? 'text-rose-600'
                             : 'text-slate-500',
                       )}
                     >
@@ -326,7 +326,7 @@ export default function ExternalIntegrations() {
           <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
               <h3 className="text-lg font-bold text-slate-900">Add Integration</h3>
-              <button onClick={() => setShowAddModal(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
+              <button onClick={() => setShowAddModal(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-2xl transition-all">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -339,7 +339,7 @@ export default function ExternalIntegrations() {
                   type="text"
                   value={newIntegration.name}
                   onChange={(e) => setNewIntegration((current) => ({ ...current, name: e.target.value }))}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
@@ -348,7 +348,7 @@ export default function ExternalIntegrations() {
                 <select
                   value={newIntegration.type}
                   onChange={(e) => setNewIntegration((current) => ({ ...current, type: e.target.value }))}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="HR_SYSTEM">HR System</option>
                   <option value="PAYROLL">Payroll</option>
@@ -364,7 +364,7 @@ export default function ExternalIntegrations() {
                   rows={3}
                   value={newIntegration.description}
                   onChange={(e) => setNewIntegration((current) => ({ ...current, description: e.target.value }))}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                 />
               </div>
 
@@ -387,7 +387,7 @@ export default function ExternalIntegrations() {
           <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
               <h3 className="text-lg font-bold text-slate-900">Configure Integration</h3>
-              <button onClick={() => setShowConfigureModal(null)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
+              <button onClick={() => setShowConfigureModal(null)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-2xl transition-all">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -399,7 +399,7 @@ export default function ExternalIntegrations() {
                   type="text"
                   value={configState.endpointUrl}
                   onChange={(e) => setConfigState((current) => ({ ...current, endpointUrl: e.target.value }))}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
@@ -409,12 +409,12 @@ export default function ExternalIntegrations() {
                   type="password"
                   value={configState.apiKey}
                   onChange={(e) => setConfigState((current) => ({ ...current, apiKey: e.target.value }))}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
               <div className="flex gap-3 pt-4 sticky bottom-0 bg-white pb-2">
-                <button onClick={() => handleDeleteIntegration(selectedIntegration.id)} className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Delete Integration">
+                <button onClick={() => handleDeleteIntegration(selectedIntegration.id)} className="p-3 text-rose-600 hover:bg-red-50 rounded-2xl transition-all" title="Delete Integration">
                   <Trash2 className="w-5 h-5" />
                 </button>
                 <button type="button" onClick={() => handleToggle(selectedIntegration.id)} className="secondary-button flex-1 py-3">

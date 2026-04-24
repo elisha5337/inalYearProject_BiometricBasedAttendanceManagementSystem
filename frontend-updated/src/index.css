@@ -1,49 +1,73 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
+/* 1. Define Standard CSS Variables with Theme Logic */
+:root {
+  --surface-bg: #F8FAFC;
+  --surface-card: #FFFFFF;
+  --surface-text: #0F172A;
+  --surface-muted: #64748B;
+  --surface-border: #E2E8F0;
+  
+  color-scheme: light;
+}
+
+.dark {
+  --surface-bg: #020617;
+  --surface-card: #0F172A;
+  --surface-text: #F8FAFC;
+  --surface-muted: #94A3B8;
+  --surface-border: #1E293B;
+  
+  color-scheme: dark;
+}
+
+/* 2. Map Variables to Tailwind v4 Theme Tokens */
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
-  --color-primary: #2563eb;
-  --color-primary-foreground: #ffffff;
-  --color-secondary: #f1f5f9;
-  --color-secondary-foreground: #0f172a;
-  --color-accent: #3b82f6;
-  --color-accent-foreground: #ffffff;
-  --color-destructive: #ef4444;
-  --color-destructive-foreground: #ffffff;
-  --color-muted: #f8fafc;
-  --color-muted-foreground: #64748b;
-  --color-border: #e2e8f0;
-  --color-input: #e2e8f0;
-  --color-ring: #3b82f6;
+  --color-surface-bg: var(--surface-bg);
+  --color-surface-card: var(--surface-card);
+  --color-surface-text: var(--surface-text);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-border: var(--surface-border);
+
+  --color-primary: #4F46E5;
+  --color-indigo-600: #4F46E5;
+  --color-indigo-50: #EEF2FF;
 }
 
 @layer base {
-  * {
-    @apply border-border;
+  html, body, #root {
+    @apply h-full transition-colors duration-300;
   }
+
   body {
-    @apply bg-slate-50 text-slate-900 font-sans antialiased;
+    background-color: var(--surface-bg);
+    color: var(--surface-text);
+    @apply font-sans antialiased;
   }
 }
 
 @layer components {
   .professional-card {
-    @apply bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden;
+    background-color: var(--surface-card);
+    @apply rounded-[20px] border border-surface-border shadow-sm transition-all overflow-hidden;
   }
 
   .primary-button {
-    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90;
-  }
-
-  .secondary-button {
-    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground hover:bg-secondary/80;
-  }
-
-  .ghost-button {
-    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-slate-100 text-slate-600;
+    @apply inline-flex items-center justify-center rounded-2xl px-5 py-2.5 text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-all active:scale-95;
   }
 }
 
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background-color: var(--surface-bg);
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--surface-border);
+  @apply rounded-full hover:bg-surface-muted transition-colors;
+}

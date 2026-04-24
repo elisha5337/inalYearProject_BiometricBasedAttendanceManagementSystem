@@ -4,9 +4,9 @@ from accounts.models import User # Import User to check roles
 
 @admin.register(Device)
 class DeviceAdmin(admin.ModelAdmin):
-    list_display = ('name', 'device_serial', 'ip_address', 'port', 'location', 'status')
+    list_display = ('name', 'type', 'device_serial', 'ip_address', 'port', 'location', 'status')
     search_fields = ('name', 'device_serial', 'ip_address')
-    list_filter = ('status',)
+    list_filter = ('type', 'status')
 
     def get_readonly_fields(self, request, obj=None):
         if request.user.is_administrator:

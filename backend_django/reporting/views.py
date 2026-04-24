@@ -440,9 +440,10 @@ def generate_system_notifications_for_user(user):
         )
 
     if not is_admin(user) and not is_hr(user):
+        leave_timestamp_field = 'updated_at' if any(field.name == 'updated_at' for field in LeaveRequest._meta.fields) else 'created_at'
         processed_leaves = LeaveRequest.objects.filter(
-            user=user, 
-            updated_at__date__gte=today - timedelta(days=3)
+            user=user,
+            **{f'{leave_timestamp_field}__date__gte': today - timedelta(days=3)}
         ).exclude(status=LeaveRequest.LeaveStatus.PENDING)
         
         for req in processed_leaves:

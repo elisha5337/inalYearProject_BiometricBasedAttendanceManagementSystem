@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+﻿import { useEffect, useState, useMemo } from 'react';
 import { 
   Clock, 
   Plus, 
@@ -379,7 +379,7 @@ export default function ManageShifts() {
         <div className="flex items-center gap-4">
           <Link 
             to="/hr" 
-            className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-600 transition-all"
+            className="p-2 hover:bg-slate-100 rounded-2xl text-slate-400 hover:text-slate-600 transition-all"
             title="Back to Dashboard"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -442,17 +442,17 @@ export default function ManageShifts() {
             <p className="text-sm font-bold">Loading Schedules...</p>
           </div>
         ) : shifts.length === 0 ? (
-          <div className="col-span-full flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-dashed border-slate-200">
+          <div className="col-span-full flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-slate-200">
             <Clock className="w-12 h-12 text-slate-300 mb-4" />
             <h3 className="text-lg font-bold text-slate-900">No Shifts Defined</h3>
             <p className="text-sm text-slate-500">Create a shift to start managing attendance.</p>
           </div>
         ) : (
           shifts.map((shift) => (
-            <div key={shift.id} className="professional-card group hover:border-blue-300 transition-all">
+            <div key={shift.id} className="professional-card group hover:border-indigo-300 transition-all">
               <div className="p-6">
                 <div className="flex justify-between items-start mb-6">
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
+                  <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600">
                     <Clock className="w-6 h-6" />
                   </div>
                   <button className="p-1 hover:bg-slate-100 rounded transition-colors">
@@ -484,14 +484,14 @@ export default function ManageShifts() {
                 <div className="mt-8 pt-6 border-t border-slate-100 grid grid-cols-2 gap-2">
                   <button 
                     onClick={() => handleEditShift(shift)}
-                    className="py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 rounded-lg border border-slate-100 transition-colors flex items-center justify-center gap-1.5"
+                    className="py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 rounded-2xl border border-slate-100 transition-colors flex items-center justify-center gap-1.5"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                     Edit
                   </button>
                   <button 
                     onClick={() => setAssignModal({ ...assignModal, show: true, shiftId: shift.id, shiftName: shift.name })}
-                    className="py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 rounded-lg border border-blue-100 transition-colors flex items-center justify-center gap-1.5"
+                    className="py-2 text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-2xl border border-indigo-100 transition-colors flex items-center justify-center gap-1.5"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     Assign
@@ -499,7 +499,7 @@ export default function ManageShifts() {
                   <button 
                     onClick={() => handleDeleteShift(shift.id)}
                     disabled={isDeleting === shift.id}
-                    className="col-span-2 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg border border-red-50 transition-colors flex items-center justify-center gap-1.5 mt-1 opacity-60 hover:opacity-100 disabled:opacity-30"
+                    className="col-span-2 py-2 text-xs font-bold text-rose-600 hover:bg-red-50 rounded-2xl border border-red-50 transition-colors flex items-center justify-center gap-1.5 mt-1 opacity-60 hover:opacity-100 disabled:opacity-30"
                   >
                     {isDeleting === shift.id ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                     {isDeleting === shift.id ? 'Deleting...' : 'Delete Shift'}
@@ -516,7 +516,7 @@ export default function ManageShifts() {
           <h3 className="text-lg font-bold text-slate-900">Shift Assignments</h3>
           <div className="flex items-center gap-4">
             {viewMode === 'calendar' && (
-              <div className="flex items-center bg-slate-100 rounded-lg p-1">
+              <div className="flex items-center bg-slate-100 rounded-2xl p-1">
                 <button onClick={prevMonth} className="p-1 hover:bg-white rounded transition-colors"><ChevronLeft className="w-4 h-4" /></button>
                 <span className="px-3 text-xs font-bold text-slate-700 min-w-[100px] text-center">{monthName} {currentDate.getFullYear()}</span>
                 <button onClick={nextMonth} className="p-1 hover:bg-white rounded transition-colors"><ChevronRight className="w-4 h-4" /></button>
@@ -526,8 +526,8 @@ export default function ManageShifts() {
               <button 
                 onClick={() => setViewMode('calendar')}
                 className={cn(
-                  "py-1.5 px-4 text-xs font-bold rounded-lg transition-all",
-                  viewMode === 'calendar' ? "bg-blue-600 text-white shadow-md shadow-blue-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  "py-1.5 px-4 text-xs font-bold rounded-2xl transition-all",
+                  viewMode === 'calendar' ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 )}
               >
                 Calendar View
@@ -535,8 +535,8 @@ export default function ManageShifts() {
               <button 
                 onClick={() => setViewMode('list')}
                 className={cn(
-                  "py-1.5 px-4 text-xs font-bold rounded-lg transition-all",
-                  viewMode === 'list' ? "bg-blue-600 text-white shadow-md shadow-blue-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  "py-1.5 px-4 text-xs font-bold rounded-2xl transition-all",
+                  viewMode === 'list' ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 )}
               >
                 List View
@@ -562,7 +562,7 @@ export default function ManageShifts() {
                     <tr key={assignment.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
+                          <div className="w-8 h-8 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs">
                             {assignment.employeeName.charAt(0)}
                           </div>
                           <div>
@@ -577,7 +577,7 @@ export default function ManageShifts() {
                         <button 
                           onClick={() => handleDeleteAssignment(assignment.id)}
                           disabled={isDeleting === assignment.id}
-                          className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-colors disabled:opacity-30"
+                          className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-rose-500 rounded-2xl transition-colors disabled:opacity-30"
                         >
                           {isDeleting === assignment.id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                         </button>
@@ -600,7 +600,7 @@ export default function ManageShifts() {
           )
         ) : (
           <div className="p-6">
-            <div className="grid grid-cols-7 gap-px bg-slate-100 border border-slate-100 rounded-xl overflow-hidden">
+            <div className="grid grid-cols-7 gap-px bg-slate-100 border border-slate-100 rounded-2xl overflow-hidden">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
                 <div key={day} className="bg-slate-50 py-2 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">{day}</div>
               ))}
@@ -618,14 +618,14 @@ export default function ManageShifts() {
                       <div className="flex justify-between items-start mb-2">
                         <span className={cn(
                           "text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full z-10",
-                          isToday ? "bg-blue-600 text-white" : "text-slate-500"
+                          isToday ? "bg-indigo-600 text-white" : "text-slate-500"
                         )}>{item.day}</span>
                         {holiday && <div className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[7px] font-black rounded-full uppercase tracking-tighter shadow-sm border border-emerald-200">{holiday.name}</div>}
                       </div>
                     )}
                     <div className="space-y-1">
                       {dateAssignments.slice(0, 3).map(assign => (
-                        <div key={assign.id} className="text-[10px] p-1 bg-blue-50 text-blue-700 rounded border border-blue-100 truncate font-medium shadow-sm">
+                        <div key={assign.id} className="text-[10px] p-1 bg-indigo-50 text-indigo-700 rounded border border-indigo-100 truncate font-medium shadow-sm">
                           {assign.employeeName.split(' ')[0]}: {assign.shiftName}
                         </div>
                       ))}
@@ -655,7 +655,7 @@ export default function ManageShifts() {
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Manage Official Closed Days</p>
                 </div>
               </div>
-              <button onClick={() => setShowHolidayModal(false)} className="p-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"><X className="w-6 h-6" /></button>
+              <button onClick={() => setShowHolidayModal(false)} className="p-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"><X className="w-6 h-6" /></button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-8 grid md:grid-cols-2 gap-10">
@@ -689,7 +689,7 @@ export default function ManageShifts() {
                   {holidays.length > 0 ? holidays.map(h => (
                     <div key={h.id} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl group hover:border-emerald-200 transition-all">
                       <div className="flex items-center gap-4">
-                        <div className="text-center bg-white w-10 h-10 rounded-xl flex flex-col items-center justify-center shadow-sm border border-slate-100">
+                        <div className="text-center bg-white w-10 h-10 rounded-2xl flex flex-col items-center justify-center shadow-sm border border-slate-100">
                           <p className="text-[7px] font-black text-slate-400 uppercase leading-none">{new Date(h.date).toLocaleString('default', { month: 'short' })}</p>
                           <p className="text-sm font-black text-emerald-600 leading-none">{new Date(h.date).getDate()}</p>
                         </div>
@@ -701,7 +701,7 @@ export default function ManageShifts() {
                           </div>
                         </div>
                       </div>
-                      <button onClick={() => handleDeleteHoliday(h.id)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => handleDeleteHoliday(h.id)} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-red-50 rounded-2xl transition-all opacity-0 group-hover:opacity-100"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   )) : (
                     <div className="py-10 text-center space-y-3">
@@ -727,7 +727,7 @@ export default function ManageShifts() {
               </div>
               <button 
                 onClick={() => setShowModal(false)}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-slate-100 rounded-2xl transition-colors"
               >
                 <X className="w-5 h-5 text-slate-400" />
               </button>
@@ -741,7 +741,7 @@ export default function ManageShifts() {
                   value={newShift.name}
                   onChange={(e) => setNewShift({ ...newShift, name: e.target.value })}
                   placeholder="e.g. Morning Shift..."
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                 />
               </div>
 
@@ -750,7 +750,7 @@ export default function ManageShifts() {
                 <select 
                   value={newShift.department_id}
                   onChange={(e) => setNewShift({ ...newShift, department_id: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                 >
                   <option value="">Select Department (Optional)</option>
                   {departments.map(dept => (
@@ -768,7 +768,7 @@ export default function ManageShifts() {
                       type="time" 
                       value={newShift.start_time}
                       onChange={(e) => setNewShift({ ...newShift, start_time: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                     />
                   </div>
                 </div>
@@ -780,7 +780,7 @@ export default function ManageShifts() {
                       type="time" 
                       value={newShift.end_time}
                       onChange={(e) => setNewShift({ ...newShift, end_time: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                     />
                   </div>
                 </div>
@@ -794,7 +794,7 @@ export default function ManageShifts() {
                     value={newShift.grace_period}
                     onChange={(e) => setNewShift({ ...newShift, grace_period: parseInt(e.target.value) })}
                     placeholder="15"
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                   />
                 </div>
                 <div className="space-y-2">
@@ -802,7 +802,7 @@ export default function ManageShifts() {
                   <select 
                     value={newShift.work_days}
                     onChange={(e) => setNewShift({ ...newShift, work_days: e.target.value })}
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                   >
                     <option>Mon - Fri</option>
                     <option>Mon - Sat</option>
@@ -819,14 +819,14 @@ export default function ManageShifts() {
                   value={newShift.description}
                   onChange={(e) => setNewShift({ ...newShift, description: e.target.value })}
                   placeholder="Additional details..."
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
                 ></textarea>
               </div>
             </div>
 
             <div className="p-6 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row justify-end gap-3 shrink-0">
-              <button onClick={() => setShowModal(false)} disabled={isSubmitting} className="w-full sm:w-auto px-6 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-all order-2 sm:order-1 disabled:opacity-50">Cancel</button>
-              <button onClick={handleSubmitShift} disabled={isSubmitting} className="w-full sm:w-auto px-6 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95 order-1 sm:order-2 flex items-center justify-center gap-2">
+              <button onClick={() => setShowModal(false)} disabled={isSubmitting} className="w-full sm:w-auto px-6 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-2xl transition-all order-2 sm:order-1 disabled:opacity-50">Cancel</button>
+              <button onClick={handleSubmitShift} disabled={isSubmitting} className="w-full sm:w-auto px-6 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-2xl shadow-lg shadow-indigo-600/20 transition-all active:scale-95 order-1 sm:order-2 flex items-center justify-center gap-2">
                 {isSubmitting && <RefreshCw className="w-4 h-4 animate-spin" />}
                 {isEditing ? 'Update Shift' : 'Create Shift'}
               </button>
@@ -841,12 +841,12 @@ export default function ManageShifts() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <h2 className="text-xl font-bold">Assign to {assignModal.shiftName}</h2>
-              <button onClick={() => setAssignModal({ ...assignModal, show: false })} className="p-2 hover:bg-slate-100 rounded-lg transition-colors"><X className="w-5 h-5 text-slate-400" /></button>
+              <button onClick={() => setAssignModal({ ...assignModal, show: false })} className="p-2 hover:bg-slate-100 rounded-2xl transition-colors"><X className="w-5 h-5 text-slate-400" /></button>
             </div>
             <div className="p-6 space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">Select Employee</label>
-                <select value={assignModal.userId} onChange={(e) => setAssignModal({ ...assignModal, userId: e.target.value })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                <select value={assignModal.userId} onChange={(e) => setAssignModal({ ...assignModal, userId: e.target.value })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
                   <option value="">Select an employee...</option>
                   {employees.map(emp => (<option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name} (@{emp.username})</option>))}
                 </select>
@@ -854,14 +854,14 @@ export default function ManageShifts() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">From Date</label>
-                  <input type="date" value={assignModal.from_date} onChange={(e) => setAssignModal({ ...assignModal, from_date: e.target.value })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none" />
+                  <input type="date" value={assignModal.from_date} onChange={(e) => setAssignModal({ ...assignModal, from_date: e.target.value })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">To Date</label>
-                  <input type="date" value={assignModal.to_date} onChange={(e) => setAssignModal({ ...assignModal, to_date: e.target.value })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none" />
+                  <input type="date" value={assignModal.to_date} onChange={(e) => setAssignModal({ ...assignModal, to_date: e.target.value })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none" />
                 </div>
               </div>
-              <button onClick={handleCreateAssignment} disabled={isSubmitting} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold uppercase text-xs shadow-lg transition-all active:scale-95">Assign Staff</button>
+              <button onClick={handleCreateAssignment} disabled={isSubmitting} className="w-full py-3 bg-indigo-600 text-white rounded-2xl font-bold uppercase text-xs shadow-lg transition-all active:scale-95">Assign Staff</button>
             </div>
           </div>
         </div>
@@ -877,13 +877,13 @@ export default function ManageShifts() {
             </div>
             <div className="grid grid-cols-3 gap-3">
               {['pdf', 'excel', 'csv'].map(fmt => (
-                <button key={fmt} onClick={() => setExportFormat(fmt)} className={cn("p-4 border-2 rounded-xl flex flex-col items-center gap-2", exportFormat === fmt ? "border-blue-600 bg-blue-50" : "border-slate-100")}>
-                  {fmt === 'pdf' ? <FileText className="text-red-500" /> : fmt === 'excel' ? <FileSpreadsheet className="text-green-500" /> : <TableIcon className="text-blue-500" />}
+                <button key={fmt} onClick={() => setExportFormat(fmt)} className={cn("p-4 border-2 rounded-2xl flex flex-col items-center gap-2", exportFormat === fmt ? "border-indigo-600 bg-indigo-50" : "border-slate-100")}>
+                  {fmt === 'pdf' ? <FileText className="text-rose-500" /> : fmt === 'excel' ? <FileSpreadsheet className="text-emerald-500" /> : <TableIcon className="text-indigo-500" />}
                   <span className="text-[10px] font-bold uppercase">{fmt}</span>
                 </button>
               ))}
             </div>
-            <button onClick={() => setShowExportModal(false)} className="w-full mt-6 py-3 bg-slate-900 text-white rounded-xl font-bold">Download</button>
+            <button onClick={() => setShowExportModal(false)} className="w-full mt-6 py-3 bg-slate-900 text-white rounded-2xl font-bold">Download</button>
           </div>
         </div>
       )}

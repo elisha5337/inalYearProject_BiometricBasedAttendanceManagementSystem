@@ -1,4 +1,4 @@
-import { apiRequest, ensureCsrfCookie } from './api';
+﻿import { apiRequest, ensureCsrfCookie } from './api';
 import type { AppUserRole, User } from '../types';
 
 type BackendUser = {
@@ -87,4 +87,20 @@ export async function changePassword(newPassword: string) {
     body: { new_password: newPassword },
   });
   return response.success;
+}
+
+export async function requestPasswordReset(email: string) {
+  await ensureCsrfCookie();
+  return apiRequest<{ success: boolean; message: string }>('/accounts/api/password-reset/request/', {
+    method: 'POST',
+    body: { email },
+  });
+}
+
+export async function confirmPasswordReset(uidb64: string, token: string, newPassword: string) {
+  await ensureCsrfCookie();
+  return apiRequest<{ success: boolean; message: string }>(`/accounts/api/password-reset/confirm/${uidb64}/${token}/`, {
+    method: 'POST',
+    body: { new_password: newPassword },
+  });
 }

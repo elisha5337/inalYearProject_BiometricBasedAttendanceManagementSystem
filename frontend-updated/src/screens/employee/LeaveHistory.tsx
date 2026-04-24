@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 
 import { ApiError } from '../../lib/api';
 import { fetchMyLeaveRequests, type LeaveRequestRecord } from '../../lib/leave';
@@ -129,7 +129,7 @@ export default function LeaveHistory() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-2">
             <p className="text-sm font-medium uppercase tracking-[0.22em] text-slate-500">
@@ -169,7 +169,7 @@ export default function LeaveHistory() {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_220px_220px]">
           <label className="space-y-2">
             <span className="text-sm font-medium text-slate-700">Search requests</span>
@@ -218,12 +218,12 @@ export default function LeaveHistory() {
       </section>
 
       {error ? (
-        <section className="rounded-3xl border border-rose-200 bg-rose-50 p-6 shadow-sm">
+        <section className="rounded-2xl border border-rose-200 bg-rose-50 p-6 shadow-sm">
           <p className="text-sm font-medium text-rose-700">{error}</p>
         </section>
       ) : null}
 
-      <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 px-6 py-5">
           <h2 className="text-lg font-semibold text-slate-900">Request Timeline</h2>
           <p className="mt-1 text-sm text-slate-600">

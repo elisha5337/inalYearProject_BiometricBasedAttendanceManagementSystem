@@ -1,4 +1,6 @@
-from django.test import TestCase
+import json
+
+from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from .models import Department, Position, Role, EmployeeDetail, UserRole
 from django.db.utils import IntegrityError
@@ -63,3 +65,44 @@ class BiometricRegistryTest(TestCase):
         from .biometric_service import BiometricRegistry
         another_registry = BiometricRegistry()
         self.assertIs(self.registry, another_registry)
+
+
+class ProfileApiAuthTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(
+            username="profile_user",
+            password="password123",
+            email="profile_user@example.com",
+        )
+
+    def test_profile_returns_json_and_unauthenticated_requests_are_rejected(self):
+        unauthenticated_calls = [
+            self.client.get('/accounts/api/profile/'),
+            self.client.post(
+                '/accounts/api/profile/update/',
+                data=json.dumps({'first_name': 'Updated'}),
+                content_type='application/json',
+            ),
+            self.client.post(
+                '/accounts/api/change-password/',
+                data=json.dumps({'new_password': 'newpassword123'}),
+                content_type='application/json',
+            ),
+        ]
+
+        for response in unauthenticated_calls:
+            self.assertEqual(response.status_code, 401)
+            payload = response.json()
+            self.assertFalse(payload['success'])
+            self.assertEqual(payload['error'], 'Authentication required')
+
+    def test_profile_endpoint_returns_profile_for_authenticated_user(self):
+        self.client.force_login(self.user)
+        response = self.client.get('/accounts/api/profile/')
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload['success'])
+        self.assertEqual(payload['profile']['username'], self.user.username)
+        self.assertEqual(payload['profile']['email'], self.user.email)

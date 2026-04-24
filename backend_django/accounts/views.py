@@ -16,10 +16,14 @@ from django.urls import reverse
 from django.http import JsonResponse
 from django.contrib.auth import get_user_model, authenticate, login, logout
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
-from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
-
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils import timezone
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.core.mail import send_mail
+from django.conf import settings
+
 from .models import EmployeeDetail, BiometricTemplate, Department, Role, UserRole, Workflow, ExternalIntegration, Position
 from .utils import PayrollSyncService
 from .biometric_service import biometric_service # Unified Service
@@ -27,6 +31,7 @@ from attendance.config_utils import read_global_config
 from leave.utils import PolicyResolver
 from reporting.models import AuditLog
 from reporting.utils import log_audit_event
+from hu_attendance_system.auth_utils import require_auth, require_staff, is_admin, is_hr
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -215,18 +220,20 @@ def api_me(request):
     })
 
 
-@login_required
 def api_profile(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
     enforce_password_expiry(request.user)
     return JsonResponse({
         'success': True,
-        'profile': serialize_profile_for_frontend(user),
+        'profile': serialize_profile_for_frontend(request.user),
     })
 
 
 @csrf_exempt
-@login_required
 def api_update_profile(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
     if request.method not in ['POST', 'PATCH']:
         return JsonResponse({'error': 'POST or PATCH required'}, status=405)
 
@@ -399,8 +406,9 @@ def api_login(request):
 
 
 @csrf_exempt
-@login_required
 def api_change_password(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -447,6 +455,9 @@ def api_logout(request):
 
 def api_list_users(request):
     """Returns a list of all users for enrollment selection."""
+    user, err = require_staff(request)
+    if err:
+        return err
     users = User.objects.all().select_related('employeedetail__department')
     user_list = []
     for u in users:
@@ -491,12 +502,18 @@ def api_list_users(request):
 
 
 def api_list_departments(request):
+    user, err = require_staff(request)
+    if err:
+        return err
     departments = Department.objects.all().values('id', 'name')
     # Convert UUIDs to strings explicitly
     data = [{'id': str(d['id']), 'name': d['name']} for d in departments]
     return JsonResponse({'success': True, 'departments': data})
 
 def api_list_positions(request):
+    user, err = require_staff(request)
+    if err:
+        return err
     department_id = request.GET.get('departmentId')
     if department_id:
         positions = Position.objects.filter(department_id=department_id).values('id', 'name').order_by('name')
@@ -510,6 +527,9 @@ def api_list_positions(request):
 
 @csrf_exempt
 def api_create_user(request):
+    user, err = require_staff(request)
+    if err:
+        return err
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
     
@@ -528,7 +548,7 @@ def api_create_user(request):
         if User.objects.filter(username=username).exists():
             return JsonResponse({'success': False, 'error': 'Username already exists'})
             
-        user = User.objects.create_user(
+        new_user = User.objects.create_user(
             username=username,
             password=password,
             email=email,
@@ -538,9 +558,9 @@ def api_create_user(request):
         )
         if 'is_active' in data:
             is_active = bool(data.get('is_active'))
-            user.status = User.Status.ACTIVE if is_active else User.Status.SUSPENDED
-            user.is_active = is_active
-        user.save()
+            new_user.status = User.Status.ACTIVE if is_active else User.Status.SUSPENDED
+            new_user.is_active = is_active
+        new_user.save()
         
         # Assign Role
         # Security Policy: Only admin and elsa can have the Administrator role
@@ -548,11 +568,11 @@ def api_create_user(request):
             return JsonResponse({'success': False, 'error': 'Only designated system accounts can hold the Administrator role.'}, status=403)
 
         role, _ = Role.objects.get_or_create(name=role_name)
-        UserRole.objects.create(user=user, role=role)
+        UserRole.objects.create(user=new_user, role=role)
         
         # Create EmployeeDetail
         EmployeeDetail.objects.create(
-            user=user,
+            user=new_user,
             department_id=dept_id,
             position=position_name,
             hire_date=hire_date,
@@ -566,6 +586,9 @@ def api_create_user(request):
 
 @csrf_exempt
 def api_update_user(request, user_id):
+    logged_in_user, err = require_staff(request)
+    if err:
+        return err
     user = get_object_or_404(User, id=user_id)
     if request.method in ['PATCH', 'POST']:
         # Security Policy: Designated superusers (admin, elsa) cannot be edited or suspended
@@ -624,8 +647,10 @@ def api_update_user(request, user_id):
 
 
 @csrf_exempt
-@login_required
 def api_delete_user(request, user_id):
+    logged_in_user, err = require_staff(request)
+    if err:
+        return err
     if request.method == 'DELETE':
         try:
             user = get_object_or_404(User, id=user_id)
@@ -649,6 +674,9 @@ from .models import Workflow
 
 @csrf_exempt
 def api_list_workflows(request):
+    user, err = require_staff(request)
+    if err:
+        return err
     if request.method != 'GET':
         return JsonResponse({'error': 'GET required'}, status=405)
     workflows = Workflow.objects.all()
@@ -663,6 +691,9 @@ def api_list_workflows(request):
 
 @csrf_exempt
 def api_create_workflow(request):
+    user, err = require_staff(request)
+    if err:
+        return err
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
     try:
@@ -677,6 +708,9 @@ def api_create_workflow(request):
 
 @csrf_exempt
 def api_update_workflow(request, workflow_id):
+    user, err = require_staff(request)
+    if err:
+        return err
     if request.method != 'PATCH':
         return JsonResponse({'error': 'PATCH required'}, status=405)
     try:
@@ -695,6 +729,9 @@ def api_update_workflow(request, workflow_id):
 
 @csrf_exempt
 def api_delete_workflow(request, workflow_id):
+    user, err = require_staff(request)
+    if err:
+        return err
     if request.method != 'DELETE':
         return JsonResponse({'error': 'DELETE required'}, status=405)
     try:
@@ -708,8 +745,9 @@ def api_delete_workflow(request, workflow_id):
 @csrf_exempt
 def api_list_integrations(request):
     """Returns all third-party integrations, initializing defaults if empty."""
-    if not request.user.is_authenticated or not request.user.is_staff:
-        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    user, err = require_staff(request)
+    if err:
+        return err
         
     # Auto-initialize some defaults if table is empty
     if ExternalIntegration.objects.count() == 0:
@@ -752,8 +790,9 @@ def api_list_integrations(request):
 @csrf_exempt
 def api_toggle_integration(request, integration_id):
     """Toggles the connection status and updates last_sync if connecting."""
-    if not request.user.is_authenticated or not request.user.is_staff:
-        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    user, err = require_staff(request)
+    if err:
+        return err
         
     integration = get_object_or_404(ExternalIntegration, id=integration_id)
     
@@ -774,8 +813,9 @@ def api_toggle_integration(request, integration_id):
 @csrf_exempt
 def api_update_integration_config(request, integration_id):
     """Updates the endpoint URL and API Key for an integration."""
-    if not request.user.is_authenticated or not request.user.is_staff:
-        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    user, err = require_staff(request)
+    if err:
+        return err
         
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
@@ -797,8 +837,9 @@ def api_update_integration_config(request, integration_id):
 @csrf_exempt
 def api_sync_integration(request, integration_id):
     """Triggers a real-time data synchronization to the external system."""
-    if not request.user.is_authenticated or not request.user.is_staff:
-        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    user, err = require_staff(request)
+    if err:
+        return err
         
     integration = get_object_or_404(ExternalIntegration, id=integration_id)
     
@@ -819,9 +860,9 @@ def api_sync_integration(request, integration_id):
 @csrf_exempt
 def api_create_integration(request):
     """Creates a new external integration connector."""
-    print(f"[DEBUG] api_create_integration: {request.method} {request.path} (User: {request.user})")
-    if not request.user.is_authenticated or not request.user.is_staff:
-        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    user, err = require_staff(request)
+    if err:
+        return err
         
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
@@ -859,8 +900,9 @@ def api_create_integration(request):
 @csrf_exempt
 def api_delete_integration(request, integration_id):
     """Deletes an existing external integration connector."""
-    if not request.user.is_authenticated or not request.user.is_staff:
-        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    user, err = require_staff(request)
+    if err:
+        return err
         
     if request.method != 'DELETE' and request.method != 'POST':
         # Support both for UI flexibility
@@ -1227,11 +1269,102 @@ def verify_face(request, user_id):
         biometric_service.reload_cache()
 
         return JsonResponse({
-            "success": True,
-            "completed": True,
-            "redirect": reverse("admin:accounts_user_change", args=[user.pk]),
+            'success': True,
+            'completed': True,
+            'redirect': reverse('admin:accounts_user_change', args=[user.pk]),
         })
 
     except Exception as e:
         logger.exception(e)
         return JsonResponse({"success": False, "error": str(e)})
+
+# =====================================
+# PASSWORD RESET Endpoints
+# =====================================
+
+class AccountPasswordResetTokenGenerator(PasswordResetTokenGenerator):
+    def _make_hash_value(self, user, timestamp):
+        # Ensure the hash is unique enough
+        return (
+            force_str(user.pk) + force_str(user.password) + force_str(user.last_login) + force_str(timestamp)
+        )
+
+password_reset_token_generator = AccountPasswordResetTokenGenerator()
+
+@csrf_exempt
+def api_forgot_password_request(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            email = data.get('email', '').strip()
+
+            if not email:
+                return JsonResponse({'success': False, 'error': 'Email is required.'}, status=400)
+
+            user = User.objects.filter(email__iexact=email).first()
+
+            if user:
+                token = password_reset_token_generator.make_token(user)
+                uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+                # Frontend URL for password reset
+                reset_link = f"http://localhost:3000/reset-password/{uid}/{token}"
+                logger.info(f"Password reset link for {user.email}: {reset_link}")
+
+                # Send real email
+                subject = 'HU-IOT BBEAMS Password Reset'
+                message = f'Greetings,\n\nYou requested a password reset for your HU-IOT BBEAMS account. Click the link below to set a new password:\n\n{reset_link}\n\nThis link will expire in 24 hours.\n\nIf you did not request this, please ignore this email.'
+                
+                try:
+                    send_mail(
+                        subject,
+                        message,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [user.email],
+                        fail_silently=False,
+                    )
+                    return JsonResponse({'success': True, 'message': 'A password reset link has been sent to your university email.'})
+                except Exception as mail_err:
+                    logger.error(f"Mail delivery failed: {mail_err}")
+                    return JsonResponse({'success': False, 'error': 'System could not deliver reset email. Please contact support.'}, status=500)
+            else:
+                # Proper error message for non-existing emails as requested
+                return JsonResponse({'success': False, 'error': 'No account found with this institutional email address.'}, status=404)
+        except Exception as e:
+            logger.exception("Forgot password request failed")
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    return JsonResponse({'error': 'POST required'}, status=405)
+
+@csrf_exempt
+def api_reset_password_confirm(request, uidb64, token):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            new_password = data.get('new_password')
+
+            if not new_password or len(new_password) < 8:
+                return JsonResponse({'success': False, 'error': 'Password must be at least 8 characters long.'}, status=400)
+
+            try:
+                uid = force_str(urlsafe_base64_decode(uidb64))
+                user = User.objects.get(pk=uid)
+            except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+                user = None
+
+            if user is not None and password_reset_token_generator.check_token(user, token):
+                user.set_password(new_password)
+                user.must_change_password = False
+                user.save()
+                log_audit_event(
+                    'PASSWORD_RESET',
+                    f'Password reset successfully for "{user.username}" via reset link.',
+                    user=user,
+                    request=request,
+                )
+                return JsonResponse({'success': True, 'message': 'Password has been reset successfully.'})
+            else:
+                return JsonResponse({'success': False, 'error': 'The reset link is invalid or has expired.'}, status=400)
+        except Exception as e:
+            logger.exception("Password reset confirmation failed")
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    return JsonResponse({'error': 'POST required'}, status=405)

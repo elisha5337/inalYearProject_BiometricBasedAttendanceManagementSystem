@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Fingerprint,
@@ -294,9 +294,9 @@ export default function EnrollBiometrics() {
                 className={cn(
                   "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300",
                   isActive
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-200 scale-110"
+                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-110"
                     : isPast
-                      ? "bg-green-500 text-white"
+                      ? "bg-emerald-500 text-white"
                       : "bg-white border-2 border-slate-200 text-slate-400",
                 )}
               >
@@ -310,9 +310,9 @@ export default function EnrollBiometrics() {
                 className={cn(
                   "text-[10px] font-bold uppercase tracking-wider",
                   isActive
-                    ? "text-blue-600"
+                    ? "text-indigo-600"
                     : isPast
-                      ? "text-green-600"
+                      ? "text-emerald-600"
                       : "text-slate-400",
                 )}
               >
@@ -332,19 +332,19 @@ export default function EnrollBiometrics() {
               placeholder="Search employee by name, username, or email..."
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+              className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
             />
           </div>
 
           {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="rounded-2xl border border-rose-200 bg-red-50 px-4 py-3 text-sm text-rose-700">
               {error}
             </div>
           )}
 
           <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
             {loading ? (
-              <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
                 Loading users from the backend...
               </div>
             ) : filteredEmployees.length > 0 ? (
@@ -352,10 +352,10 @@ export default function EnrollBiometrics() {
                 <div
                   key={employee.id}
                   onClick={() => selectEmployee(employee)}
-                  className="flex items-center justify-between p-4 border border-slate-100 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-all cursor-pointer group"
+                  className="flex items-center justify-between p-4 border border-slate-100 rounded-2xl hover:bg-indigo-50 hover:border-indigo-200 transition-all cursor-pointer group"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
                       {employee.name.charAt(0)}
                     </div>
                     <div>
@@ -369,21 +369,21 @@ export default function EnrollBiometrics() {
                   </div>
                   <div className="flex items-center gap-3">
                     {employee.enrolled ? (
-                      <span className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-600 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                      <span className="flex items-center gap-1 px-2 py-1 bg-green-50 text-emerald-600 rounded-2xl text-[10px] font-bold uppercase tracking-wider">
                         <ShieldCheck className="w-3 h-3" />
                         Enrolled
                       </span>
                     ) : (
-                      <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                      <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded-2xl text-[10px] font-bold uppercase tracking-wider">
                         Not Enrolled
                       </span>
                     )}
-                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-400 transition-colors" />
+                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-400 transition-colors" />
                   </div>
                 </div>
               ))
             ) : (
-              <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
                 No users matched your search.
               </div>
             )}
@@ -409,12 +409,12 @@ export default function EnrollBiometrics() {
             <div
               className={cn(
                 "absolute inset-0 rounded-full border-4 border-slate-100 transition-all duration-500",
-                (captureWindowOpened || refreshing) && "border-blue-100",
+                (captureWindowOpened || refreshing) && "border-indigo-100",
               )}
             ></div>
             <div
               className={cn(
-                "absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 transition-all duration-300",
+                "absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-600 transition-all duration-300",
                 refreshing && "animate-spin",
               )}
               style={{ opacity: refreshing ? 1 : 0 }}
@@ -425,18 +425,18 @@ export default function EnrollBiometrics() {
                 className={cn(
                   "w-20 h-20 transition-all duration-500",
                   captureWindowOpened || refreshing
-                    ? "text-blue-600 scale-110"
+                    ? "text-indigo-600 scale-110"
                     : "text-slate-300",
                 )}
               />
 
               {(captureWindowOpened || refreshing) && (
-                <div className="absolute inset-0 bg-blue-600/10 animate-pulse"></div>
+                <div className="absolute inset-0 bg-indigo-600/10 animate-pulse"></div>
               )}
             </div>
 
             {progress > 0 && (
-              <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg">
+              <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg">
                 {progress}%
               </div>
             )}
@@ -478,9 +478,9 @@ export default function EnrollBiometrics() {
                         setError(null);
                       }}
                       className={cn(
-                        "flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all",
+                        "flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all",
                         enrollmentMode === mode.id
-                          ? "border-blue-600 bg-blue-50 text-blue-600 shadow-sm"
+                          ? "border-indigo-600 bg-indigo-50 text-indigo-600 shadow-sm"
                           : "border-slate-100 bg-white text-slate-400 hover:border-slate-200",
                         !mode.supported && "cursor-not-allowed opacity-60",
                       )}
@@ -502,7 +502,7 @@ export default function EnrollBiometrics() {
             <div className="space-y-2">
               <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-blue-600 transition-all duration-300"
+                  className="h-full bg-indigo-600 transition-all duration-300"
                   style={{ width: `${progress}%` }}
                 ></div>
               </div>
@@ -512,7 +512,7 @@ export default function EnrollBiometrics() {
             </div>
 
             {error && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-left text-xs text-red-700">
+              <div className="rounded-2xl border border-rose-200 bg-red-50 px-4 py-3 text-left text-xs text-rose-700">
                 {error}
               </div>
             )}
@@ -524,7 +524,7 @@ export default function EnrollBiometrics() {
                   onClick={
                     captureWindowOpened ? checkEnrollmentStatus : startCapture
                   }
-                  className="primary-button w-full py-4 text-base shadow-xl shadow-blue-200"
+                  className="primary-button w-full py-4 text-base shadow-xl shadow-indigo-200"
                 >
                   {captureWindowOpened
                     ? "Check Enrollment Status"
@@ -534,7 +534,7 @@ export default function EnrollBiometrics() {
                   <button
                     type="button"
                     onClick={startCapture}
-                    className="text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors flex items-center justify-center gap-2"
+                    className="text-sm font-bold text-indigo-600 hover:text-indigo-700 transition-colors flex items-center justify-center gap-2"
                   >
                     <ExternalLink className="w-4 h-4" />
                     Reopen Capture Window
@@ -552,7 +552,7 @@ export default function EnrollBiometrics() {
             )}
           </div>
 
-          <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 flex items-start gap-3 text-left">
+          <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-start gap-3 text-left">
             <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div className="space-y-1">
               <p className="text-xs font-bold text-amber-900">Important Note</p>
@@ -569,7 +569,7 @@ export default function EnrollBiometrics() {
 
       {step === "success" && selectedEmployee && (
         <div className="professional-card p-10 text-center space-y-8 animate-in fade-in zoom-in-95">
-          <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+          <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle2 className="w-10 h-10" />
           </div>
 
@@ -595,7 +595,7 @@ export default function EnrollBiometrics() {
               <span className="text-xs font-bold text-slate-900">Pending</span>
             </div>
             <div className="flex flex-col items-center gap-1 border-l border-slate-200">
-              <UserCheck className="w-5 h-5 text-green-600" />
+              <UserCheck className="w-5 h-5 text-emerald-600" />
               <span className="text-[10px] font-bold text-slate-400 uppercase">
                 Face ID
               </span>

@@ -1,4 +1,4 @@
-import {
+﻿import {
   Calendar,
   Search,
   Filter,
@@ -117,21 +117,21 @@ export default function LeaveManagement() {
       </div>
 
       {error ? (
-        <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
+        <div className="rounded-2xl border border-rose-100 bg-red-50 px-5 py-4 text-sm font-medium text-rose-700">
           {error}
         </div>
       ) : null}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[
-          { label: 'Total Requests', value: stats.total, icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'Total Requests', value: stats.total, icon: Calendar, color: 'text-indigo-600', bg: 'bg-indigo-50' },
           { label: 'Pending Approval', value: stats.pending, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
-          { label: 'Approved', value: stats.approved, icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50' },
-          { label: 'Rejected', value: stats.rejected, icon: XCircle, color: 'text-red-600', bg: 'bg-red-50' },
+          { label: 'Approved', value: stats.approved, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-green-50' },
+          { label: 'Rejected', value: stats.rejected, icon: XCircle, color: 'text-rose-600', bg: 'bg-red-50' },
         ].map((stat, index) => (
           <div key={index} className="professional-card p-6">
             <div className="flex items-center gap-4">
-              <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center', stat.bg, stat.color)}>
+              <div className={cn('w-12 h-12 rounded-2xl flex items-center justify-center', stat.bg, stat.color)}>
                 <stat.icon className="w-6 h-6" />
               </div>
               <div>
@@ -150,7 +150,7 @@ export default function LeaveManagement() {
             <input
               type="text"
               placeholder="Search by name or username..."
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20"
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500/20"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -158,7 +158,7 @@ export default function LeaveManagement() {
           <div className="flex items-center gap-3">
             <Filter className="w-4 h-4 text-slate-400" />
             <select
-              className="bg-slate-50 border-none rounded-xl text-sm py-2 px-4 focus:ring-2 focus:ring-blue-500/20"
+              className="bg-slate-50 border-none rounded-2xl text-sm py-2 px-4 focus:ring-2 focus:ring-indigo-500/20"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
             >
@@ -220,9 +220,9 @@ export default function LeaveManagement() {
                       className={cn(
                         'px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
                         request.status === 'Approved'
-                          ? 'bg-green-100 text-green-700'
+                          ? 'bg-emerald-100 text-emerald-700'
                           : request.status === 'Rejected'
-                            ? 'bg-red-100 text-red-700'
+                            ? 'bg-rose-100 text-rose-700'
                             : request.status === 'Cancelled'
                               ? 'bg-slate-100 text-slate-700'
                               : 'bg-amber-100 text-amber-700',
@@ -232,7 +232,7 @@ export default function LeaveManagement() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button onClick={() => setSelectedRequest(request)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="View Details">
+                    <button onClick={() => setSelectedRequest(request)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all" title="View Details">
                       <Eye className="w-5 h-5" />
                     </button>
                   </td>
@@ -249,7 +249,7 @@ export default function LeaveManagement() {
           <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white">
+                <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white">
                   <UserCircle className="w-7 h-7" />
                 </div>
                 <div>
@@ -261,7 +261,7 @@ export default function LeaveManagement() {
                   </div>
                 </div>
               </div>
-              <button onClick={() => setSelectedRequest(null)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
+              <button onClick={() => setSelectedRequest(null)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-2xl transition-all">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -291,9 +291,9 @@ export default function LeaveManagement() {
                       className={cn(
                         'inline-flex px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider',
                         selectedRequest.status === 'Approved'
-                          ? 'bg-green-100 text-green-700'
+                          ? 'bg-emerald-100 text-emerald-700'
                           : selectedRequest.status === 'Rejected'
-                            ? 'bg-red-100 text-red-700'
+                            ? 'bg-rose-100 text-rose-700'
                             : selectedRequest.status === 'Cancelled'
                               ? 'bg-slate-100 text-slate-700'
                               : 'bg-amber-100 text-amber-700',
@@ -323,7 +323,7 @@ export default function LeaveManagement() {
                     href={selectedRequest.attachment}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-4 rounded-2xl border border-blue-100 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors w-fit"
+                    className="flex items-center gap-3 p-4 rounded-2xl border border-indigo-100 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors w-fit"
                   >
                     <FileText className="w-5 h-5" />
                     <span className="text-sm font-bold">View Attachment</span>
@@ -337,14 +337,14 @@ export default function LeaveManagement() {
                 <button
                   disabled={processing}
                   onClick={() => handleProcessRequest(selectedRequest.id, 'REJECTED')}
-                  className="px-6 py-2.5 rounded-xl border-2 border-red-200 text-red-600 text-sm font-bold hover:bg-red-50 transition-all disabled:opacity-50"
+                  className="px-6 py-2.5 rounded-2xl border-2 border-rose-200 text-rose-600 text-sm font-bold hover:bg-red-50 transition-all disabled:opacity-50"
                 >
                   Reject Request
                 </button>
                 <button
                   disabled={processing}
                   onClick={() => handleProcessRequest(selectedRequest.id, 'APPROVED')}
-                  className="px-6 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all disabled:opacity-50"
+                  className="px-6 py-2.5 rounded-2xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 transition-all disabled:opacity-50"
                 >
                   Approve Leave
                 </button>

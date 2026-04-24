@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
 
@@ -24,7 +24,7 @@ export default function SkeletonLoader({ className, rows = 5, type = 'card' }: S
                 <div className="h-3 bg-slate-50 rounded w-1/4 animate-pulse"></div>
               </div>
               <div className="h-6 w-20 bg-slate-100 rounded-full animate-pulse"></div>
-              <div className="h-8 w-8 bg-slate-100 rounded-lg animate-pulse"></div>
+              <div className="h-8 w-8 bg-slate-100 rounded-2xl animate-pulse"></div>
             </div>
           ))}
         </div>
@@ -61,7 +61,7 @@ export default function SkeletonLoader({ className, rows = 5, type = 'card' }: S
          <div className="h-4 bg-slate-100 rounded w-4/5 animate-pulse"></div>
       </div>
       <div className="pt-4 flex justify-end">
-         <div className="h-10 w-28 bg-slate-200 rounded-xl animate-pulse"></div>
+         <div className="h-10 w-28 bg-slate-200 rounded-2xl animate-pulse"></div>
       </div>
     </motion.div>
   );

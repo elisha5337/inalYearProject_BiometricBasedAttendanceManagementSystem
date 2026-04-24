@@ -1,8 +1,9 @@
-import { useLocation, useNavigate } from 'react-router-dom';
+﻿import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import { CheckCircle2, XCircle, Clock, User, Building2, Briefcase } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, User, Building2, Briefcase, Calendar } from 'lucide-react';
 import { motion } from 'motion/react';
 import type { AttendanceMarkResponse } from '../../lib/attendance';
+import { cn } from '../../lib/utils';
 
 export default function VerificationStatus() {
   const location = useLocation();
@@ -25,32 +26,42 @@ export default function VerificationStatus() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 font-sans">
+    <div className="min-h-screen bg-surface-bg flex items-center justify-center p-4 md:p-6 font-sans">
       <motion.div 
-        initial={{ opacity: 0, scale: 0.9 }}
+        initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-white/10"
+        className="w-full max-w-xl bg-surface-card rounded-[3rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] overflow-hidden border border-white/10"
       >
-        <div className={success ? "bg-emerald-500 p-10 text-center" : "bg-rose-500 p-10 text-center"}>
+        <div className={success ? "bg-emerald-500 p-8 md:p-12 text-center relative overflow-hidden" : "bg-rose-500 p-8 md:p-12 text-center relative overflow-hidden"}>
+          <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-surface-card blur-3xl"></div>
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-surface-card blur-3xl"></div>
+          </div>
+          
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', damping: 12, stiffness: 200, delay: 0.2 }}
-            className="flex justify-center"
+            initial={{ scale: 0, rotate: -45 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', damping: 15, stiffness: 300, delay: 0.1 }}
+            className="flex justify-center relative z-10"
           >
             {success ? (
-              <CheckCircle2 className="w-20 h-20 text-white" />
+              <div className="bg-surface-card/20 p-4 rounded-full backdrop-blur-md">
+                <CheckCircle2 className="w-16 h-16 md:w-20 md:h-20 text-white" />
+              </div>
             ) : (
-              <XCircle className="w-20 h-20 text-white" />
+              <div className="bg-surface-card/20 p-4 rounded-full backdrop-blur-md">
+                <XCircle className="w-16 h-16 md:w-20 md:h-20 text-white" />
+              </div>
             )}
           </motion.div>
-          <h2 className="text-3xl font-black text-white mt-6 uppercase tracking-tight">
+          
+          <h2 className="text-3xl md:text-4xl font-black text-white mt-6 uppercase tracking-tighter italic relative z-10">
             {success
-              ? `${result?.type === 'CHECK_OUT' ? 'Check-out' : 'Check-in'} Successful`
-              : "Verification Failed"}
+              ? (result?.type === 'CHECK_OUT' ? 'Check-out Successful' : 'Check-in Successful')
+              : "Access Denied"}
           </h2>
-          <p className="text-white/80 font-bold text-xs uppercase tracking-[0.2em] mt-2">
-            {success ? "Attendance Recorded Securely" : "Security Protocol Denied"}
+          <p className="text-white/90 font-black text-[10px] uppercase tracking-[0.3em] mt-3 bg-black/10 inline-block px-4 py-1.5 rounded-full backdrop-blur-sm relative z-10">
+            {success ? "Attendance Protocol Verified" : "Identity Mismatch Detected"}
           </p>
         </div>
 
@@ -58,8 +69,8 @@ export default function VerificationStatus() {
           {success ? (
             <>
               {/* Profile Card */}
-              <div className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-slate-50 rounded-3xl border border-slate-100 relative">
-                <div className="shrink-0 w-24 h-24 rounded-2xl overflow-hidden bg-blue-100 border-2 border-white shadow-md">
+              <div className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-surface-bg rounded-[2rem] border border-slate-100 relative group transition-all hover:bg-slate-100/50">
+                <div className="shrink-0 w-28 h-28 rounded-2xl overflow-hidden bg-indigo-100 border-4 border-white shadow-xl rotate-[-2deg] group-hover:rotate-0 transition-transform duration-500">
                   {result?.profile?.profile_photo ? (
                     <img 
                       src={result.profile.profile_photo} 
@@ -67,20 +78,21 @@ export default function VerificationStatus() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-blue-600">
-                      <User className="w-12 h-12" />
+                    <div className="w-full h-full flex items-center justify-center text-indigo-600 bg-gradient-to-br from-indigo-50 to-indigo-200">
+                      <User className="w-14 h-14" />
                     </div>
                   )}
                 </div>
-                <div className="text-center sm:text-left space-y-1">
-                  <h3 className="text-2xl font-black text-slate-900 leading-tight">{result?.profile?.full_name}</h3>
-                  <div className="flex flex-wrap justify-center sm:justify-start gap-3 pt-1">
-                    <span className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      <Building2 className="w-3.5 h-3.5 text-blue-500" />
+                <div className="text-center sm:text-left flex-1 min-w-0">
+                  <p className="text-[9px] font-black text-indigo-600 uppercase tracking-[0.25em] mb-1">Identified Personnel</p>
+                  <h3 className="text-3xl font-black text-surface-text leading-none truncate mb-3 tracking-tighter">{result?.profile?.full_name}</h3>
+                  <div className="flex flex-wrap justify-center sm:justify-start gap-2">
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-card rounded-2xl text-[10px] font-black text-slate-600 uppercase tracking-wider border border-slate-200 shadow-sm">
+                      <Building2 className="w-3 h-3 text-indigo-500" />
                       {result?.profile?.department}
                     </span>
-                    <span className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      <Briefcase className="w-3.5 h-3.5 text-blue-500" />
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-card rounded-2xl text-[10px] font-black text-slate-600 uppercase tracking-wider border border-slate-200 shadow-sm">
+                      <Briefcase className="w-3 h-3 text-indigo-500" />
                       {result?.profile?.position}
                     </span>
                   </div>
@@ -88,64 +100,82 @@ export default function VerificationStatus() {
               </div>
 
               {/* Data Grid */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-5 bg-blue-50 rounded-2xl border border-blue-100">
-                  <p className="text-[10px] text-blue-600 font-black uppercase tracking-widest">Marked At</p>
-                  <p className="text-xl font-mono font-black text-blue-900 mt-1">
-                    {result ? new Date(result.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--'}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-6 bg-surface-bg rounded-[1.5rem] border border-slate-200/60 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                    <Clock className="w-12 h-12 text-surface-text" />
+                  </div>
+                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest relative z-10">Time Registry</p>
+                  <p className="text-2xl font-mono font-black text-surface-text mt-2 relative z-10 tracking-tighter">
+                    {result ? new Date(result.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : '--:--:--'}
+                  </p>
+                  <p className="text-[9px] font-bold text-slate-400 mt-1 flex items-center gap-1 relative z-10 uppercase tracking-tighter">
+                    <Calendar className="w-2.5 h-2.5" />
+                    {new Date().toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
                   </p>
                 </div>
-                <div className="p-5 bg-emerald-50 rounded-2xl border border-emerald-100">
-                  <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest">Entry Status</p>
-                  <p className="text-xl font-black text-emerald-900 mt-1 uppercase tracking-tighter">{result?.status || 'On Time'}</p>
+
+                <div className="p-6 bg-surface-bg rounded-[1.5rem] border border-slate-200/60 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                    <CheckCircle2 className="w-12 h-12 text-emerald-600" />
+                  </div>
+                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest relative z-10">Compliance Status</p>
+                  <p className={cn(
+                    "text-2xl font-black mt-2 relative z-10 uppercase tracking-tighter italic",
+                    result?.status?.toLowerCase().includes('late') ? "text-amber-600" : "text-emerald-600"
+                  )}>
+                    {result?.status || 'On Time'}
+                  </p>
+                  <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tighter relative z-10">Standard Protocol</p>
                 </div>
               </div>
 
-              <div className="p-5 bg-slate-900 rounded-2xl shadow-lg shadow-slate-200">
-                <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">Verification Method</p>
-                <div className="flex items-center justify-between mt-3">
-                  <span className="text-white font-bold tracking-tight">{result?.verification_status || 'BIOMETRIC_MATCH'}</span>
-                  <div className="flex items-center gap-1 text-[10px] font-black text-emerald-400">
-                    <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
-                    SECURE
+              <div className="p-5 bg-slate-900 rounded-[1.5rem] shadow-xl shadow-slate-200/50 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.25em]">Security Fingerprint</p>
+                <div className="flex items-center justify-between mt-3 relative z-10">
+                  <span className="text-white text-sm font-black tracking-widest font-mono opacity-80">{result?.verification_status || 'BIOMETRIC_3D_FACE'}</span>
+                  <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 rounded-md border border-emerald-500/20 text-[8px] font-black text-emerald-400 uppercase tracking-widest">
+                    <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse"></div>
+                    Encrypted
                   </div>
                 </div>
               </div>
             </>
           ) : (
             <div className="text-center space-y-8 py-4">
-              <div className="space-y-3">
-                <p className="text-slate-900 text-xl font-black tracking-tight leading-tight">
-                  {error || "Authentication could not be completed at this time."}
-                </p>
-                <p className="text-slate-500 text-sm font-medium leading-relaxed px-4">
-                  Please ensure you are within the frame and looking directly at the camera.
+              <div className="space-y-4">
+                <h3 className="text-surface-text text-2xl font-black tracking-tight leading-tight uppercase italic">
+                  {error || "Verification Denied"}
+                </h3>
+                <p className="text-slate-500 text-sm font-medium leading-relaxed px-6 max-w-sm mx-auto">
+                  The biometric scanner could not confirm your identity. Please reset and try again.
                 </p>
               </div>
               
-              <div className="grid gap-3 max-w-sm mx-auto">
-                <div className="flex items-center gap-4 p-4 bg-rose-50 rounded-2xl text-left border border-rose-100">
-                  <div className="w-8 h-8 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center shrink-0 font-black text-xs">01</div>
-                  <p className="text-xs font-bold text-rose-900 uppercase tracking-tight">Ensure stable lighting conditions</p>
+              <div className="grid gap-3 max-w-xs mx-auto">
+                <div className="flex items-center gap-4 p-4 bg-surface-bg rounded-2xl text-left border border-slate-100 transition-transform hover:scale-[1.02]">
+                  <div className="w-8 h-8 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shrink-0 font-black text-xs shadow-lg shadow-indigo-200">01</div>
+                  <p className="text-[10px] font-black text-surface-text uppercase tracking-tight">Check Lighting</p>
                 </div>
-                <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl text-left border border-slate-100">
-                  <div className="w-8 h-8 bg-slate-200 text-slate-600 rounded-xl flex items-center justify-center shrink-0 font-black text-xs">02</div>
-                  <p className="text-xs font-bold text-slate-700 uppercase tracking-tight">Center your face in the guide</p>
+                <div className="flex items-center gap-4 p-4 bg-surface-bg rounded-2xl text-left border border-slate-100 transition-transform hover:scale-[1.02]">
+                  <div className="w-8 h-8 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shrink-0 font-black text-xs shadow-lg shadow-indigo-200">02</div>
+                  <p className="text-[10px] font-black text-surface-text uppercase tracking-tight">Stay within Guide</p>
                 </div>
               </div>
             </div>
           )}
 
-          <div className="pt-8 flex flex-col items-center gap-6">
-            <div className="flex items-center gap-2 text-slate-400 text-[10px] font-black uppercase tracking-[0.3em]">
-              <Clock className="w-3.5 h-3.5" />
-              Resetting Terminal in 8s
+          <div className="pt-8 flex flex-col items-center gap-6 border-t border-slate-100">
+            <div className="flex items-center gap-2 text-slate-400 text-[10px] font-black uppercase tracking-[0.4em]">
+              <Clock className="w-3 h-3 animate-spin-slow" />
+              Auto Reset: 8s
             </div>
             <button 
               onClick={() => navigate('/terminal')}
-              className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all"
+              className="w-full py-5 bg-slate-900 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-[0.3em] shadow-[0_20px_40px_-12px_rgba(15,23,42,0.3)] active:scale-95 transition-all hover:bg-indigo-600 hover:shadow-indigo-200"
             >
-              Back to Scanner
+              Return to Core Terminal
             </button>
           </div>
         </div>

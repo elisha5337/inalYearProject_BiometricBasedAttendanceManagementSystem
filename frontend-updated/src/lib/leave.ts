@@ -1,4 +1,4 @@
-import { ApiError, apiRequest } from './api';
+﻿import { ApiError, apiRequest } from './api';
 
 export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
@@ -28,17 +28,19 @@ export interface LeaveBalanceSummary {
   sick_left?: number;
 }
 
+export interface LeaveSummary {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  balances: LeaveBalanceSummary;
+  annual_left: number;
+  sick_left: number;
+}
+
 export interface LeaveRequestsPayload {
   requests: LeaveRequestRecord[];
-  summary: {
-    total: number;
-    pending: number;
-    approved: number;
-    rejected: number;
-    balances: LeaveBalanceSummary;
-    annual_left: number;
-    sick_left: number;
-  };
+  summary: LeaveSummary;
 }
 
 export interface SubmitLeaveRequestPayload {

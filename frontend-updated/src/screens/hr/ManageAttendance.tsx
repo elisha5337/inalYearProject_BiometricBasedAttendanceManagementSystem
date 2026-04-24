@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Check, X, Loader2, Download, Search, RefreshCw, AlertCircle, ShieldAlert } from 'lucide-react';
 
@@ -104,7 +104,7 @@ export default function ManageAttendance() {
   return (
     <div className="space-y-6">
       {/* Header Stats */}
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="space-y-2">
             <p className="text-sm font-medium uppercase tracking-[0.22em] text-slate-500">HR Operations</p>
@@ -121,7 +121,7 @@ export default function ManageAttendance() {
       </section>
 
       {/* Filter Bar */}
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_220px_220px_auto]">
           <label className="space-y-2">
             <span className="text-sm font-medium text-slate-700">Search Employees</span>
@@ -150,7 +150,7 @@ export default function ManageAttendance() {
       {error && <div className="p-4 bg-rose-50 text-rose-700 rounded-2xl border border-rose-100 flex items-center gap-3"><AlertCircle className="w-5 h-5" /> {error}</div>}
 
       {/* Main Table */}
-      <section className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         {loading ? <SkeletonLoader type="table" rows={6} /> : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200">
@@ -173,8 +173,8 @@ export default function ManageAttendance() {
                       <td className="px-6 py-5">
                         <div>
                           <p className="font-bold text-slate-900">{record.employeeName}</p>
-                          <p className="text-[10px] text-slate-500 uppercase font-black">{record.employeeCode} • {record.department}</p>
-                          <p className="text-[10px] text-blue-600 font-bold mt-0.5">{record.assignment} // {record.location}</p>
+                          <p className="text-[10px] text-slate-500 uppercase font-black">{record.employeeCode} â€¢ {record.department}</p>
+                          <p className="text-[10px] text-indigo-600 font-bold mt-0.5">{record.assignment} // {record.location}</p>
                         </div>
                       </td>
                       <td className="px-6 py-5 text-sm font-medium text-slate-700">{formatDisplayDate(record.date)}</td>
@@ -192,10 +192,10 @@ export default function ManageAttendance() {
                       <td className="px-6 py-5 text-right">
                         {isUnverified ? (
                           <div className="flex gap-1 justify-end">
-                            <button onClick={() => handleVerifyAction(record.id, 'VERIFIED')} disabled={!!actionLoading} className="p-1.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 shadow-sm transition-all">
+                            <button onClick={() => handleVerifyAction(record.id, 'VERIFIED')} disabled={!!actionLoading} className="p-1.5 bg-emerald-500 text-white rounded-2xl hover:bg-emerald-600 shadow-sm transition-all">
                               {actionLoading === record.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                             </button>
-                            <button onClick={() => handleVerifyAction(record.id, 'UNVERIFIED')} disabled={!!actionLoading} className="p-1.5 bg-slate-100 text-slate-400 rounded-lg hover:bg-rose-50 hover:text-rose-500 transition-all">
+                            <button onClick={() => handleVerifyAction(record.id, 'UNVERIFIED')} disabled={!!actionLoading} className="p-1.5 bg-slate-100 text-slate-400 rounded-2xl hover:bg-rose-50 hover:text-rose-500 transition-all">
                               <X className="w-3.5 h-3.5" />
                             </button>
                           </div>

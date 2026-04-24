@@ -1,4 +1,4 @@
-import { ApiError, apiRequest } from './api';
+﻿import { ApiError, apiRequest } from './api';
 
 export interface HrAttendanceRecord {
   id: string; // Changed from number to string to support UUIDs

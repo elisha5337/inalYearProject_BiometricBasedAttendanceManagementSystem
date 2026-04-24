@@ -96,13 +96,13 @@ export default function AdminDashboard({ user }: { user: User }) {
       icon: Server,
       accent:
         overview.health.dbStatus === 'ERROR'
-          ? 'bg-red-500/20 text-red-400'
-          : 'bg-green-500/20 text-green-500',
+          ? 'bg-rose-500/20 text-rose-400'
+          : 'bg-emerald-500/20 text-emerald-500',
       rightIcon:
         overview.health.dbStatus === 'ERROR' ? (
-          <AlertTriangle className="w-5 h-5 text-red-400" />
+          <AlertTriangle className="w-5 h-5 text-rose-400" />
         ) : (
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
         ),
     },
     {
@@ -110,7 +110,7 @@ export default function AdminDashboard({ user }: { user: User }) {
       value: overview.health.dbStatus === 'ERROR' ? 'Disconnected' : 'Connected',
       extra: overview.health.apiLatency,
       icon: Database,
-      accent: 'bg-blue-500/20 text-blue-500',
+      accent: 'bg-indigo-500/20 text-indigo-500',
     },
     {
       label: 'Biometric Nodes',
@@ -126,8 +126,8 @@ export default function AdminDashboard({ user }: { user: User }) {
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">System Administration</h1>
-          <p className="text-slate-500 mt-1">
+          <h1 className="text-3xl font-bold text-surface-text">System Administration</h1>
+          <p className="text-surface-muted mt-1">
             Global system health, security monitoring and configuration
           </p>
         </div>
@@ -144,21 +144,21 @@ export default function AdminDashboard({ user }: { user: User }) {
       </div>
 
       {error ? (
-        <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
+        <div className="rounded-2xl border border-rose-100 bg-red-50 px-5 py-4 text-sm font-medium text-rose-700">
           {error}
         </div>
       ) : null}
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="professional-card p-6 bg-white border border-slate-200">
+        <div className="professional-card p-6 border border-surface-border">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600">
               <Users className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Users</p>
-              <h3 className="text-2xl font-bold text-slate-900">{loading ? '...' : overview.stats.totalEmployees}</h3>
+              <p className="text-xs font-bold text-surface-muted uppercase tracking-widest">Total Users</p>
+              <h3 className="text-2xl font-bold text-surface-text">{loading ? '...' : overview.stats.totalEmployees}</h3>
             </div>
           </div>
         </div>
@@ -175,26 +175,14 @@ export default function AdminDashboard({ user }: { user: User }) {
           </div>
         </div>
 
-        <div className="professional-card p-6 bg-white border border-slate-200">
+        <div className="professional-card p-6 border border-surface-border">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-600">
-              <UserX className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Suspended</p>
-              <h3 className="text-2xl font-bold text-slate-900">{loading ? '...' : overview.stats.suspendedEmployees}</h3>
-            </div>
-          </div>
-        </div>
-
-        <div className="professional-card p-6 bg-white border border-slate-200">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600">
+            <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-600">
               <Fingerprint className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Bio-Enrolled</p>
-              <h3 className="text-2xl font-bold text-slate-900">{loading ? '...' : overview.stats.faceEnrolled}</h3>
+              <p className="text-xs font-bold text-surface-muted uppercase tracking-widest">Bio-Enrolled</p>
+              <h3 className="text-2xl font-bold text-surface-text">{loading ? '...' : overview.stats.faceEnrolled}</h3>
             </div>
           </div>
         </div>
@@ -202,11 +190,11 @@ export default function AdminDashboard({ user }: { user: User }) {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {healthCards.map((card) => (
-          <div key={card.label} className="professional-card p-6 bg-slate-900 text-white">
+          <div key={card.label} className="professional-card p-6">
             <div className="flex items-center gap-4">
               <div
                 className={cn(
-                  'w-12 h-12 rounded-xl flex items-center justify-center',
+                  'w-12 h-12 rounded-2xl flex items-center justify-center',
                   card.accent,
                 )}
               >
@@ -216,7 +204,7 @@ export default function AdminDashboard({ user }: { user: User }) {
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
                   {card.label}
                 </p>
-                <h3 className="text-lg font-bold">{loading ? 'Loading...' : card.value}</h3>
+                <h3 className="text-lg font-bold text-surface-text">{loading ? 'Loading...' : card.value}</h3>
               </div>
               <div className="ml-auto text-xs font-mono text-slate-500">
                 {loading ? '--' : card.extra}
@@ -230,8 +218,8 @@ export default function AdminDashboard({ user }: { user: User }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 professional-card p-8">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <Activity className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-bold text-surface-text flex items-center gap-2">
+              <Activity className="w-5 h-5 text-indigo-600" />
               Authentication Load
             </h3>
             <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
@@ -281,26 +269,26 @@ export default function AdminDashboard({ user }: { user: User }) {
         </div>
 
         <div className="space-y-6">
-          <h3 className="text-lg font-bold text-slate-900">Administrative Tasks</h3>
+          <h3 className="text-lg font-bold text-surface-text">Administrative Tasks</h3>
           <div className="grid grid-cols-1 gap-4">
             {[
-              { label: 'Manage Users', icon: Users, color: 'bg-blue-50 text-blue-600', path: '/admin/users' },
+              { label: 'Manage Users', icon: Users, color: 'bg-indigo-50 text-indigo-600', path: '/admin/users' },
               { label: 'Enroll Biometrics', icon: Fingerprint, color: 'bg-purple-50 text-purple-600', path: '/admin/enroll' },
               { label: 'Configure Devices', icon: Cpu, color: 'bg-amber-50 text-amber-600', path: '/admin/devices' },
-              { label: 'Security Policies', icon: ShieldCheck, color: 'bg-green-50 text-green-600', path: '/admin/policies' },
+              { label: 'Security Policies', icon: ShieldCheck, color: 'bg-green-50 text-emerald-600', path: '/admin/policies' },
             ].map((action, index) => (
               <button
                 key={index}
                 onClick={() => navigate(action.path)}
-                className="professional-card p-4 flex items-center gap-4 hover:border-blue-200 transition-all group"
+                className="professional-card p-4 flex items-center gap-4 hover:border-indigo-200 transition-all group"
               >
-                <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center transition-colors', action.color)}>
+                <div className={cn('w-10 h-10 rounded-2xl flex items-center justify-center transition-colors', action.color)}>
                   <action.icon className="w-5 h-5" />
                 </div>
-                <span className="text-sm font-bold text-slate-700 group-hover:text-blue-600">
+                <span className="text-sm font-bold text-slate-700 group-hover:text-indigo-600">
                   {action.label}
                 </span>
-                <ArrowRight className="w-4 h-4 ml-auto text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+                <ArrowRight className="w-4 h-4 ml-auto text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
               </button>
             ))}
           </div>
@@ -309,8 +297,8 @@ export default function AdminDashboard({ user }: { user: User }) {
 
       <div className="professional-card">
         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-slate-900">Recent Audit Events</h3>
-          <Link to="/admin/audit" className="text-sm font-bold text-blue-600 hover:underline">
+          <h3 className="text-lg font-bold text-surface-text">Recent Audit Events</h3>
+          <Link to="/admin/audit" className="text-sm font-bold text-indigo-600 hover:underline">
             View Full Log
           </Link>
         </div>
@@ -323,22 +311,22 @@ export default function AdminDashboard({ user }: { user: User }) {
             overview.recentAuditLogs.slice(0, 3).map((log) => (
               <div
                 key={log.id}
-                className="flex items-start gap-4 p-4 hover:bg-slate-50 rounded-xl transition-colors"
+                className="flex items-start gap-4 p-4 hover:bg-slate-50 rounded-2xl transition-colors"
               >
-                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500 shrink-0">
+                <div className="w-10 h-10 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-500 shrink-0">
                   <History className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start">
-                    <p className="text-sm font-bold text-slate-900">{log.action}</p>
+                    <p className="text-sm font-bold text-surface-text">{log.action}</p>
                     <span className="text-xs text-slate-400 font-mono">{log.ip}</span>
                   </div>
                   <p className="text-xs text-slate-500 mt-1">{log.details}</p>
                   <div className="mt-2 flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">
+                    <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">
                       {log.user}
                     </span>
-                    <span className="text-[10px] text-slate-300">•</span>
+                    <span className="text-[10px] text-slate-300">â€¢</span>
                     <span className="text-[10px] text-slate-400">{formatRelativeTime(log.time)}</span>
                   </div>
                 </div>

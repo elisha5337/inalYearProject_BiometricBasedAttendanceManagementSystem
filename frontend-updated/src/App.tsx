@@ -6,8 +6,12 @@ import { cn } from './lib/utils';
 import { ApiError } from './lib/api';
 import { fetchCurrentUser, logoutUser } from './lib/auth';
 
-// Public Screens
+// Public Components
+import PublicNavbar from './components/PublicNavbar';
+
+import Landing, { AboutPage } from './screens/public/Landing';
 import Login from './screens/public/Login';
+import ResetPassword from './screens/public/ResetPassword';
 import BiometricTerminal from './screens/public/BiometricTerminal';
 import VerificationStatus from './screens/public/VerificationStatus';
 
@@ -42,6 +46,9 @@ import SystemOversight from './screens/admin/SystemOversight';
 import Notifications from './screens/Notifications';
 import Profile from './screens/Profile';
 import HelpCenter from './screens/HelpCenter';
+
+// Theme
+import { ThemeProvider } from './context/ThemeContext';
 
 // Layout Components
 import Sidebar from './components/Sidebar';
@@ -82,7 +89,7 @@ export default function App() {
     };
   }, []);
 
-  if (loading) return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  if (loading) return <div className="flex items-center justify-center h-screen bg-white font-sans font-black text-slate-900 uppercase tracking-[0.3em] text-xs">Synchronizing Core...</div>;
 
   const handleLogout = async () => {
     try {
@@ -95,72 +102,90 @@ export default function App() {
   };
 
   return (
-    <Router>
-      <Routes>
-        {/* Public Biometric Routes */}
-        <Route path="/terminal" element={<BiometricTerminal />} />
-        <Route path="/verification" element={<VerificationStatus />} />
-        
-        {/* Auth Route */}
-        <Route path="/login" element={user ? <Navigate to={`/${user.role}/dashboard`} /> : <Login onLogin={setUser} />} />
+    <ThemeProvider>
+      <Router>
+        <AppContent user={user} onLogin={setUser} onLogout={handleLogout} />
+      </Router>
+    </ThemeProvider>
+  );
+}
 
-        {/* Protected Routes */}
-        <Route path="/" element={user ? <Navigate to={`/${user.role}/dashboard`} /> : <Navigate to="/terminal" />} />
+function AppContent({ user, onLogin, onLogout }: { user: User | null, onLogin: (user: User) => void, onLogout: () => void }) {
+  const location = useLocation();
+  const publicPaths = ['/', '/terminal', '/login', '/verification', '/about'];
+  const isResetPath = location.pathname.startsWith('/reset-password');
+  const isPublicPage = publicPaths.includes(location.pathname) || isResetPath;
 
-        {/* Employee Routes */}
-        <Route path="/employee/*" element={user?.role === 'employee' ? (
-          <Layout user={user} onLogout={handleLogout}>
-            <Routes>
-              <Route path="dashboard" element={<EmployeeDashboard user={user} />} />
-              <Route path="attendance" element={<ViewAttendance user={user} />} />
-              <Route path="leave/submit" element={<SubmitLeave user={user} />} />
-              <Route path="leave/history" element={<LeaveHistory user={user} />} />
-              <Route path="profile" element={<Profile user={user} />} />
-              <Route path="notifications" element={<Notifications />} />
-              <Route path="help" element={<HelpCenter />} />
-            </Routes>
-          </Layout>
-        ) : <Navigate to="/login" />} />
+  return (
+    <>
+      {isPublicPage && !user && <PublicNavbar />}
+      <div className="relative">
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={user ? <Navigate to={`/${user.role}/dashboard`} /> : <Landing />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/terminal" element={<BiometricTerminal />} />
+          <Route path="/verification" element={<VerificationStatus />} />
+          
+          {/* Auth Routes */}
+          <Route path="/login" element={user ? <Navigate to={`/${user.role}/dashboard`} /> : <Login onLogin={onLogin} />} />
+          <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
 
-        {/* HR Routes */}
-        <Route path="/hr/*" element={user?.role === 'hr' ? (
-          <Layout user={user} onLogout={handleLogout}>
-            <Routes>
-              <Route path="dashboard" element={<HRDashboard user={user} />} />
-              <Route path="employees" element={<ManageEmployees />} />
-              <Route path="attendance" element={<ManageAttendance />} />
-              <Route path="leave" element={<ManageLeave />} />
-              <Route path="shifts" element={<ManageShifts />} />
-              <Route path="reports" element={<GenerateReports />} />
-              <Route path="profile" element={<Profile user={user} />} />
-              <Route path="notifications" element={<Notifications />} />
-              <Route path="help" element={<HelpCenter />} />
-            </Routes>
-          </Layout>
-        ) : <Navigate to="/login" />} />
+          {/* Employee Routes */}
+          <Route path="/employee/*" element={user?.role === 'employee' ? (
+            <Layout user={user} onLogout={onLogout}>
+              <Routes>
+                <Route path="dashboard" element={<EmployeeDashboard user={user} />} />
+                <Route path="attendance" element={<ViewAttendance user={user} />} />
+                <Route path="leave/submit" element={<SubmitLeave user={user} />} />
+                <Route path="leave/history" element={<LeaveHistory user={user} />} />
+                <Route path="profile" element={<Profile user={user} />} />
+                <Route path="notifications" element={<Notifications />} />
+                <Route path="help" element={<HelpCenter />} />
+              </Routes>
+            </Layout>
+          ) : <Navigate to="/login" />} />
 
-        {/* Admin Routes */}
-        <Route path="/admin/*" element={user?.role === 'admin' ? (
-          <Layout user={user} onLogout={handleLogout}>
-            <Routes>
-              <Route path="dashboard" element={<AdminDashboard user={user} />} />
-              <Route path="users" element={<ManageUsers />} />
-              <Route path="audit" element={<AuditLogView />} />
-              <Route path="policies" element={<SetPolicies />} />
-              <Route path="enroll" element={<EnrollBiometrics />} />
-              <Route path="devices" element={<ManageDevices />} />
-              <Route path="workflows" element={<ManageWorkflows />} />
-              <Route path="notifications" element={<AdminNotifications />} />
-              <Route path="integrations" element={<ExternalIntegrations />} />
-              <Route path="leave" element={<LeaveManagement />} />
-              <Route path="oversight" element={<SystemOversight />} />
-              <Route path="profile" element={<Profile user={user} />} />
-              <Route path="help" element={<HelpCenter />} />
-            </Routes>
-          </Layout>
-        ) : <Navigate to="/login" />} />
-      </Routes>
-    </Router>
+          {/* HR Routes */}
+          <Route path="/hr/*" element={user?.role === 'hr' ? (
+            <Layout user={user} onLogout={onLogout}>
+              <Routes>
+                <Route path="dashboard" element={<HRDashboard user={user} />} />
+                <Route path="employees" element={<ManageEmployees />} />
+                <Route path="attendance" element={<ManageAttendance />} />
+                <Route path="leave" element={<ManageLeave />} />
+                <Route path="shifts" element={<ManageShifts />} />
+                <Route path="reports" element={<GenerateReports />} />
+                <Route path="profile" element={<Profile user={user} />} />
+                <Route path="notifications" element={<Notifications />} />
+                <Route path="help" element={<HelpCenter />} />
+              </Routes>
+            </Layout>
+          ) : <Navigate to="/login" />} />
+
+          {/* Admin Routes */}
+          <Route path="/admin/*" element={user?.role === 'admin' ? (
+            <Layout user={user} onLogout={onLogout}>
+              <Routes>
+                <Route path="dashboard" element={<AdminDashboard user={user} />} />
+                <Route path="users" element={<ManageUsers />} />
+                <Route path="audit" element={<AuditLogView />} />
+                <Route path="policies" element={<SetPolicies />} />
+                <Route path="enroll" element={<EnrollBiometrics />} />
+                <Route path="devices" element={<ManageDevices />} />
+                <Route path="workflows" element={<ManageWorkflows />} />
+                <Route path="notifications" element={<AdminNotifications />} />
+                <Route path="integrations" element={<ExternalIntegrations />} />
+                <Route path="leave" element={<LeaveManagement />} />
+                <Route path="oversight" element={<SystemOversight />} />
+                <Route path="profile" element={<Profile user={user} />} />
+                <Route path="help" element={<HelpCenter />} />
+              </Routes>
+            </Layout>
+          ) : <Navigate to="/login" />} />
+        </Routes>
+      </div>
+    </>
   );
 }
 
@@ -173,7 +198,7 @@ function Layout({ children, user, onLogout }: { children: React.ReactNode, user:
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
@@ -185,9 +210,9 @@ function Layout({ children, user, onLogout }: { children: React.ReactNode, user:
         isSidebarOpen ? "translate-x-0" : "-translate-x-full",
         isSidebarCollapsed && "lg:w-20"
       )}>
-        <Sidebar 
-          user={user} 
-          onClose={() => setIsSidebarOpen(false)} 
+        <Sidebar
+          user={user}
+          onClose={() => setIsSidebarOpen(false)}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         />
@@ -195,10 +220,10 @@ function Layout({ children, user, onLogout }: { children: React.ReactNode, user:
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header 
-          user={user} 
-          onLogout={onLogout} 
-          onMenuClick={() => setIsSidebarOpen(true)} 
+        <Header
+          user={user}
+          onLogout={onLogout}
+          onMenuClick={() => setIsSidebarOpen(true)}
         />
         <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50 relative">
           <div className="max-w-7xl mx-auto h-full">

@@ -65,6 +65,24 @@ def shift_detail(request, shift_id):
     except Shift.DoesNotExist:
         return JsonResponse({'error': 'Shift not found'}, status=404)
 
+    if request.method == 'PUT':
+        try:
+            data = json.loads(request.body)
+            if 'name' in data: shift.name = data['name']
+            if 'description' in data: shift.description = data['description']
+            if 'start_time' in data: shift.start_time = data['start_time']
+            if 'end_time' in data: shift.end_time = data['end_time']
+            if 'grace_period' in data: shift.grace_period = int(data['grace_period'])
+            if 'work_days' in data: shift.work_days = data['work_days']
+            if 'department_id' in data:
+                shift.department = Department.objects.get(id=data['department_id']) if data['department_id'] else None
+
+            shift.save()
+            log_audit_event('SHIFT_UPDATED', f'Updated shift "{shift.name}".', user=user, request=request)
+            return JsonResponse({'success': True, 'message': 'Shift updated successfully'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
     if request.method == 'DELETE':
         shift.delete()
         log_audit_event('SHIFT_DELETED', f'Deleted shift ID: {shift_id}.', user=user, request=request)

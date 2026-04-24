@@ -4,9 +4,15 @@ from accounts.models import User
 
 # 8. Devices Table
 class Device(models.Model):
+    class DeviceType(models.TextChoices):
+        KIOSK = 'Kiosk', 'Kiosk'
+        HANDHELD = 'Handheld', 'Handheld'
+        DESKTOP = 'Desktop', 'Desktop'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, db_column='_id')
     device_serial = models.CharField(max_length=255, unique=True)
     name = models.CharField(max_length=255)
+    type = models.CharField(max_length=20, choices=DeviceType.choices, default=DeviceType.KIOSK)
     ip_address = models.GenericIPAddressField(unique=True)
     port = models.IntegerField()
     location = models.CharField(max_length=255, blank=True, null=True)

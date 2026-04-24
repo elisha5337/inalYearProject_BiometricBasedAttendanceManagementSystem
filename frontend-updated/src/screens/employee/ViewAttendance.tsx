@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import {
   Search,
   Download,
@@ -108,8 +108,8 @@ export default function ViewAttendance({ user }: { user: User }) {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex bg-white border border-slate-200 rounded-lg p-1">
-            <button className="px-4 py-1.5 text-sm font-medium bg-blue-50 text-blue-600 rounded-md">Table</button>
+          <div className="flex bg-white border border-slate-200 rounded-2xl p-1">
+            <button className="px-4 py-1.5 text-sm font-medium bg-indigo-50 text-indigo-600 rounded-md">Table</button>
             <button className="px-4 py-1.5 text-sm font-medium text-slate-500 rounded-md cursor-default">Chart</button>
           </div>
           <button onClick={handleExport} className="secondary-button gap-2">
@@ -120,7 +120,7 @@ export default function ViewAttendance({ user }: { user: User }) {
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-2xl border border-rose-100 bg-red-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </div>
       )}
@@ -134,10 +134,10 @@ export default function ViewAttendance({ user }: { user: User }) {
               placeholder="Search by date..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
             />
           </div>
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2">
             <CalendarIcon className="w-4 h-4 text-slate-400" />
             <select
               value={dateRange}
@@ -196,10 +196,10 @@ export default function ViewAttendance({ user }: { user: User }) {
                       className={cn(
                         'px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
                         row.status === 'on-time'
-                          ? 'bg-green-100 text-green-700'
+                          ? 'bg-emerald-100 text-emerald-700'
                           : row.status === 'late'
                             ? 'bg-amber-100 text-amber-700'
-                            : 'bg-blue-100 text-blue-700'
+                            : 'bg-indigo-100 text-indigo-700'
                       )}
                     >
                       {row.status.replace('-', ' ')}
@@ -228,13 +228,13 @@ export default function ViewAttendance({ user }: { user: User }) {
             Showing <span className="font-bold text-slate-900">{filteredRows.length}</span> attendance days
           </p>
           <div className="flex items-center gap-2">
-            <button className="p-2 border border-slate-200 rounded-lg hover:bg-white disabled:opacity-50" disabled>
+            <button className="p-2 border border-slate-200 rounded-2xl hover:bg-white disabled:opacity-50" disabled>
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <button className="w-8 h-8 flex items-center justify-center bg-blue-600 text-white rounded-lg text-sm font-bold">
+            <button className="w-8 h-8 flex items-center justify-center bg-indigo-600 text-white rounded-2xl text-sm font-bold">
               1
             </button>
-            <button className="p-2 border border-slate-200 rounded-lg hover:bg-white disabled:opacity-50" disabled>
+            <button className="p-2 border border-slate-200 rounded-2xl hover:bg-white disabled:opacity-50" disabled>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>

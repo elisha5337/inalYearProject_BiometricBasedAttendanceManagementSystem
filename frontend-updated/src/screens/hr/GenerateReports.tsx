@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import {
   BarChart3,
   FileText,
@@ -63,10 +63,10 @@ const REPORT_FILENAMES: Record<string, string> = {
 };
 
 const reportTypes = [
-  { id: '1', title: 'Monthly Attendance', desc: 'Complete log of all employee check-ins and check-outs for the period.', icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-100' },
+  { id: '1', title: 'Monthly Attendance', desc: 'Complete log of all employee check-ins and check-outs for the period.', icon: Calendar, color: 'text-indigo-600', bg: 'bg-indigo-100' },
   { id: '2', title: 'Overtime Report', desc: 'Analysis of employees working beyond their scheduled shift duration.', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-100' },
   { id: '3', title: 'Leave Summary', desc: 'Overview of approved, pending, and rejected leave requests.', icon: FileText, color: 'text-purple-600', bg: 'bg-purple-100' },
-  { id: '4', title: 'Tardiness Analysis', desc: 'Detailed report on late arrivals vs scheduled shift start times.', icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-100' },
+  { id: '4', title: 'Tardiness Analysis', desc: 'Detailed report on late arrivals vs scheduled shift start times.', icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-100' },
 ];
 
 export default function GenerateReports() {
@@ -192,17 +192,17 @@ export default function GenerateReports() {
                 onClick={() => setSelectedReport(report.id)}
                 className={cn(
                   'professional-card p-8 text-left transition-all group relative overflow-hidden border-2',
-                  selectedReport === report.id ? 'border-blue-600 bg-blue-50/30' : 'border-transparent hover:border-blue-200'
+                  selectedReport === report.id ? 'border-indigo-600 bg-indigo-50/30' : 'border-transparent hover:border-indigo-200'
                 )}
               >
-                <div className={cn('w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-all shadow-sm', report.bg, report.color, selectedReport === report.id && 'scale-110 shadow-blue-200')}>
+                <div className={cn('w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-all shadow-sm', report.bg, report.color, selectedReport === report.id && 'scale-110 shadow-indigo-200')}>
                   <report.icon className="w-7 h-7" />
                 </div>
                 <h3 className="text-xl font-black uppercase tracking-tight leading-none">{report.title}</h3>
                 <p className="text-xs text-slate-500 mt-3 leading-relaxed font-bold uppercase tracking-wider opacity-70">{report.desc}</p>
                 {selectedReport === report.id && (
                   <div className="absolute top-4 right-4">
-                    <CheckCircle2 className="w-6 h-6 text-blue-600" />
+                    <CheckCircle2 className="w-6 h-6 text-indigo-600" />
                   </div>
                 )}
               </button>
@@ -215,7 +215,7 @@ export default function GenerateReports() {
             <div>
               <h3 className="text-lg font-black uppercase tracking-widest text-slate-900">Configurator</h3>
               {selectedReportTitle && (
-                <p className="text-[10px] text-blue-600 font-black mt-1 uppercase tracking-[0.2em]">{selectedReportTitle}</p>
+                <p className="text-[10px] text-indigo-600 font-black mt-1 uppercase tracking-[0.2em]">{selectedReportTitle}</p>
               )}
             </div>
 
@@ -225,7 +225,7 @@ export default function GenerateReports() {
                 <select
                   value={dateRange}
                   onChange={(e) => setDateRange(e.target.value as typeof dateRange)}
-                  className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm"
+                  className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-sm"
                 >
                   <option>Current Month</option>
                   <option>Last Month</option>
@@ -261,7 +261,7 @@ export default function GenerateReports() {
               type="button"
               disabled={!selectedReport || isExporting}
               onClick={handleGenerate}
-              className="w-full py-5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-xs uppercase tracking-[0.3em] rounded-2xl shadow-2xl shadow-blue-200 transition-all flex items-center justify-center gap-3"
+              className="w-full py-5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-xs uppercase tracking-[0.3em] rounded-2xl shadow-2xl shadow-indigo-200 transition-all flex items-center justify-center gap-3"
             >
               {isExporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
               {isExporting ? 'EXECUTING...' : `GENERATE ${outputFormat}`}

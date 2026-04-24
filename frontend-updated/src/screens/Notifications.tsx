@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Bell, CheckCircle2, AlertCircle, Info, Clock, Trash2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { ApiError } from '../lib/api';
@@ -101,13 +101,13 @@ export default function Notifications() {
           <h1 className="text-2xl font-bold text-slate-900">Notifications</h1>
           <p className="text-slate-500">Stay updated with the latest activities and alerts</p>
         </div>
-        <button onClick={handleMarkAllAsRead} className="text-sm font-bold text-blue-600 hover:text-blue-700">
+        <button onClick={handleMarkAllAsRead} className="text-sm font-bold text-indigo-600 hover:text-indigo-700">
           Mark all as read
         </button>
       </div>
 
       {error ? (
-        <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
+        <div className="rounded-2xl border border-rose-100 bg-red-50 px-5 py-4 text-sm font-medium text-rose-700">
           {error}
         </div>
       ) : null}
@@ -122,19 +122,19 @@ export default function Notifications() {
               onClick={() => handleOpenNotification(notification)}
               className={cn(
                 'professional-card p-4 flex gap-4 transition-all hover:shadow-md cursor-pointer',
-                notification.unread ? 'border-l-4 border-l-blue-600' : 'opacity-80',
+                notification.unread ? 'border-l-4 border-l-indigo-600' : 'opacity-80',
               )}
             >
               <div
                 className={cn(
                   'w-10 h-10 rounded-full flex items-center justify-center shrink-0',
                   notification.type === 'info'
-                    ? 'bg-blue-100 text-blue-600'
+                    ? 'bg-indigo-100 text-indigo-600'
                     : notification.type === 'warning'
                       ? 'bg-amber-100 text-amber-600'
                       : notification.type === 'error'
-                        ? 'bg-red-100 text-red-600'
-                        : 'bg-green-100 text-green-600',
+                        ? 'bg-rose-100 text-rose-600'
+                        : 'bg-emerald-100 text-emerald-600',
                 )}
               >
                 {notification.type === 'info' ? (
@@ -165,7 +165,7 @@ export default function Notifications() {
                     event.stopPropagation();
                     handleDelete(notification.id);
                   }}
-                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  className="p-2 text-slate-400 hover:text-rose-600 hover:bg-red-50 rounded-2xl transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>

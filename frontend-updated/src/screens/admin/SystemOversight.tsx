@@ -1,4 +1,4 @@
-import {
+﻿import {
   Activity,
   Cpu,
   Database,
@@ -99,11 +99,11 @@ export default function SystemOversight() {
     const maintenanceDevices = devices.filter((device) => device.status === 'maintenance').length;
 
     return [
-      { name: 'Primary API Server', status: health.dbStatus === 'ERROR' ? 'Attention' : 'Online', load: health.apiLatency, icon: Server, color: health.dbStatus === 'ERROR' ? 'text-red-500' : 'text-green-500' },
-      { name: 'Auth Database Cluster', status: health.dbStatus === 'ERROR' ? 'Error' : 'Online', load: health.dbStatus === 'ERROR' ? '100%' : '45%', icon: Database, color: health.dbStatus === 'ERROR' ? 'text-red-500' : 'text-green-500' },
-      { name: 'Biometric Processing Unit', status: maintenanceDevices > 0 ? 'Warning' : 'Online', load: `${Math.min(100, onlineDevices * 10)}%`, icon: Cpu, color: maintenanceDevices > 0 ? 'text-amber-500' : 'text-green-500' },
-      { name: 'Network Gateway', status: health.apiLatency === 'N/A' ? 'Unknown' : 'Online', load: `${Math.min(100, parseInt(health.apiLatency.replace(/\D/g, ''), 10) || 0)}%`, icon: Network, color: 'text-green-500' },
-      { name: 'Backup Server', status: auditItems.length > 0 ? 'Monitoring' : 'Standby', load: '0%', icon: Server, color: 'text-blue-500' },
+      { name: 'Primary API Server', status: health.dbStatus === 'ERROR' ? 'Attention' : 'Online', load: health.apiLatency, icon: Server, color: health.dbStatus === 'ERROR' ? 'text-rose-500' : 'text-emerald-500' },
+      { name: 'Auth Database Cluster', status: health.dbStatus === 'ERROR' ? 'Error' : 'Online', load: health.dbStatus === 'ERROR' ? '100%' : '45%', icon: Database, color: health.dbStatus === 'ERROR' ? 'text-rose-500' : 'text-emerald-500' },
+      { name: 'Biometric Processing Unit', status: maintenanceDevices > 0 ? 'Warning' : 'Online', load: `${Math.min(100, onlineDevices * 10)}%`, icon: Cpu, color: maintenanceDevices > 0 ? 'text-amber-500' : 'text-emerald-500' },
+      { name: 'Network Gateway', status: health.apiLatency === 'N/A' ? 'Unknown' : 'Online', load: `${Math.min(100, parseInt(health.apiLatency.replace(/\D/g, ''), 10) || 0)}%`, icon: Network, color: 'text-emerald-500' },
+      { name: 'Backup Server', status: auditItems.length > 0 ? 'Monitoring' : 'Standby', load: '0%', icon: Server, color: 'text-indigo-500' },
     ];
   }, [devices, health, auditItems]);
 
@@ -129,8 +129,8 @@ export default function SystemOversight() {
           <button onClick={() => loadOversight(true)} className="secondary-button p-2.5" title="Refresh Metrics">
             <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
           </button>
-          <div className="flex items-center gap-4 px-4 py-2 bg-green-50 text-green-700 rounded-xl border border-green-100">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <div className="flex items-center gap-4 px-4 py-2 bg-green-50 text-emerald-700 rounded-2xl border border-emerald-100">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
             <span className="text-sm font-bold uppercase tracking-wider">
               {health.dbStatus === 'ERROR' ? 'Issues Detected' : 'All Systems Operational'}
             </span>
@@ -139,21 +139,21 @@ export default function SystemOversight() {
       </div>
 
       {error ? (
-        <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
+        <div className="rounded-2xl border border-rose-100 bg-red-50 px-5 py-4 text-sm font-medium text-rose-700">
           {error}
         </div>
       ) : null}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { label: 'System Uptime', value: health.uptime, icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'System Uptime', value: health.uptime, icon: Clock, color: 'text-indigo-600', bg: 'bg-indigo-50' },
           { label: 'Avg Latency', value: health.apiLatency, icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50' },
           { label: 'Storage Used', value: `${Math.min(95, 40 + auditItems.length * 5)}%`, icon: HardDrive, color: 'text-purple-600', bg: 'bg-purple-50' },
-          { label: 'Security Score', value: `${Math.max(0, 100 - auditItems.length * 15)}/100`, icon: ShieldCheck, color: 'text-green-600', bg: 'bg-green-50' },
+          { label: 'Security Score', value: `${Math.max(0, 100 - auditItems.length * 15)}/100`, icon: ShieldCheck, color: 'text-emerald-600', bg: 'bg-green-50' },
         ].map((stat, index) => (
           <div key={index} className="professional-card p-6">
             <div className="flex items-center gap-4">
-              <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center', stat.bg, stat.color)}>
+              <div className={cn('w-12 h-12 rounded-2xl flex items-center justify-center', stat.bg, stat.color)}>
                 <stat.icon className="w-6 h-6" />
               </div>
               <div>
@@ -169,12 +169,12 @@ export default function SystemOversight() {
         <div className="lg:col-span-2 professional-card p-8">
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <Activity className="w-5 h-5 text-blue-600" />
+              <Activity className="w-5 h-5 text-indigo-600" />
               Infrastructure Performance
             </h3>
             <div className="flex gap-4">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-indigo-500 rounded-full"></div>
                 <span className="text-xs text-slate-500">CPU</span>
               </div>
               <div className="flex items-center gap-2">
@@ -212,20 +212,20 @@ export default function SystemOversight() {
           <div className="space-y-4">
             {nodeStatus.map((node, index) => (
               <div key={index} className="professional-card p-4 flex items-center gap-4">
-                <div className="w-10 h-10 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400">
+                <div className="w-10 h-10 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400">
                   <node.icon className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-slate-900 truncate">{node.name}</p>
                   <div className="flex items-center gap-2 mt-1">
                     <span className={cn('text-[10px] font-bold uppercase tracking-wider', node.color)}>{node.status}</span>
-                    <span className="text-[10px] text-slate-300">•</span>
+                    <span className="text-[10px] text-slate-300">â€¢</span>
                     <span className="text-[10px] text-slate-400 font-mono">{node.load} Load</span>
                   </div>
                 </div>
                 <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                   <div
-                    className={cn('h-full rounded-full', parseInt(node.load, 10) > 80 ? 'bg-red-500' : 'bg-blue-500')}
+                    className={cn('h-full rounded-full', parseInt(node.load, 10) > 80 ? 'bg-rose-500' : 'bg-indigo-500')}
                     style={{ width: node.load }}
                   ></div>
                 </div>
@@ -242,15 +242,15 @@ export default function SystemOversight() {
         </div>
         <div className="p-6 space-y-4">
           {incidentLog.map((incident, index) => (
-            <div key={index} className="flex items-center gap-4 p-4 hover:bg-slate-50 rounded-xl transition-colors">
+            <div key={index} className="flex items-center gap-4 p-4 hover:bg-slate-50 rounded-2xl transition-colors">
               <div
                 className={cn(
-                  'w-10 h-10 rounded-lg flex items-center justify-center shrink-0',
+                  'w-10 h-10 rounded-2xl flex items-center justify-center shrink-0',
                   incident.severity === 'CRITICAL' || incident.severity === 'HIGH'
-                    ? 'bg-red-50 text-red-600'
+                    ? 'bg-red-50 text-rose-600'
                     : incident.severity === 'MEDIUM'
                       ? 'bg-amber-50 text-amber-600'
-                      : 'bg-blue-50 text-blue-600',
+                      : 'bg-indigo-50 text-indigo-600',
                 )}
               >
                 <AlertTriangle className="w-5 h-5" />
@@ -264,8 +264,8 @@ export default function SystemOversight() {
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     Severity: {incident.severity}
                   </span>
-                  <span className="text-[10px] text-slate-300">•</span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-green-600">
+                  <span className="text-[10px] text-slate-300">â€¢</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">
                     Action: {incident.action}
                   </span>
                 </div>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Search,
@@ -110,7 +110,7 @@ export default function AuditLog() {
       </div>
 
       {error ? (
-        <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
+        <div className="rounded-2xl border border-rose-100 bg-red-50 px-5 py-4 text-sm font-medium text-rose-700">
           {error}
         </div>
       ) : null}
@@ -124,10 +124,10 @@ export default function AuditLog() {
               placeholder="Search by user, action or details..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
             />
           </div>
-          <div className="flex bg-slate-100 p-1 rounded-lg w-full sm:w-auto">
+          <div className="flex bg-slate-100 p-1 rounded-2xl w-full sm:w-auto">
             {['All', 'High', 'Medium', 'Low'].map((severity) => (
               <button
                 key={severity}
@@ -135,7 +135,7 @@ export default function AuditLog() {
                 className={cn(
                   'px-4 py-1.5 rounded-md text-xs font-bold transition-all flex-1 sm:flex-none',
                   severityFilter === severity
-                    ? 'bg-white text-blue-600 shadow-sm'
+                    ? 'bg-white text-indigo-600 shadow-sm'
                     : 'text-slate-500 hover:text-slate-700',
                 )}
               >
@@ -145,7 +145,7 @@ export default function AuditLog() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 w-full lg:w-auto">
+        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 w-full lg:w-auto">
           <Calendar className="w-4 h-4 text-slate-400" />
           <input
             type="date"
@@ -183,14 +183,14 @@ export default function AuditLog() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-[10px] font-bold shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-[10px] font-bold shrink-0">
                         {log.user.charAt(0)}
                       </div>
                       <span className="text-sm font-bold text-slate-900 truncate">{log.user}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-sm font-bold text-blue-600">{log.action}</span>
+                    <span className="text-sm font-bold text-indigo-600">{log.action}</span>
                   </td>
                   <td className="px-6 py-4">
                     <p className="text-sm text-slate-600 max-w-xs truncate" title={log.details}>
@@ -199,17 +199,17 @@ export default function AuditLog() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1.5">
-                      {log.severity === 'high' && <AlertTriangle className="w-3.5 h-3.5 text-red-500" />}
+                      {log.severity === 'high' && <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />}
                       {log.severity === 'medium' && <Info className="w-3.5 h-3.5 text-amber-500" />}
-                      {log.severity === 'low' && <Shield className="w-3.5 h-3.5 text-green-500" />}
+                      {log.severity === 'low' && <Shield className="w-3.5 h-3.5 text-emerald-500" />}
                       <span
                         className={cn(
                           'text-[10px] font-bold uppercase tracking-wider',
                           log.severity === 'high'
-                            ? 'text-red-600'
+                            ? 'text-rose-600'
                             : log.severity === 'medium'
                               ? 'text-amber-600'
-                              : 'text-green-600',
+                              : 'text-emerald-600',
                         )}
                       >
                         {log.severity}
@@ -234,10 +234,10 @@ export default function AuditLog() {
         <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
           <p className="text-sm text-slate-500">Showing {filteredLogs.length} entries</p>
           <div className="flex gap-2">
-            <button className="p-2 border border-slate-200 rounded-lg hover:bg-white disabled:opacity-50" disabled>
+            <button className="p-2 border border-slate-200 rounded-2xl hover:bg-white disabled:opacity-50" disabled>
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <button className="p-2 border border-slate-200 rounded-lg hover:bg-white" disabled>
+            <button className="p-2 border border-slate-200 rounded-2xl hover:bg-white" disabled>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>

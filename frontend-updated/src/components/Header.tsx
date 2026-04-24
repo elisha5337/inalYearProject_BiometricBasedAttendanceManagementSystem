@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { LogOut, Bell, Search, Menu, History, Settings, RefreshCw } from 'lucide-react';
+import { LogOut, Bell, Search, Menu, History, Settings, RefreshCw, Sun, Moon } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 import { User } from '../types';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
@@ -17,6 +18,7 @@ interface HeaderProps {
 }
 
 export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
+  const { isDarkMode, toggleTheme } = useTheme();
   const userRole = user.role ?? 'employee';
   const isAdmin = userRole === 'admin';
   const navigate = useNavigate();
@@ -99,7 +101,7 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
   function getCategoryClasses(category: HeaderSearchResult['category']) {
     switch (category) {
       case 'User':
-        return 'bg-blue-50 text-blue-700';
+        return 'bg-indigo-50 text-indigo-700';
       case 'Device':
         return 'bg-amber-50 text-amber-700';
       case 'Notification':
@@ -143,11 +145,11 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
     }
   }
   return (
-    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 shrink-0 z-30">
+    <header className="h-16 bg-surface-card border-b border-surface-border flex items-center justify-between px-4 md:px-6 shrink-0 z-30">
       <div className="flex items-center gap-4 flex-1">
         <button 
           onClick={onMenuClick}
-          className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg lg:hidden"
+          className="p-2 text-slate-500 hover:bg-slate-100 rounded-2xl lg:hidden"
         >
           <Menu className="w-6 h-6" />
         </button>
@@ -167,7 +169,7 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
             }}
             onKeyDown={handleSearchKeyDown}
             placeholder="Search records..."
-            className="w-full pl-10 pr-4 py-2 bg-slate-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full pl-10 pr-4 py-2 bg-surface-bg border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none text-surface-text"
           />
 
           {isSearchOpen && query.trim() ? (
@@ -194,7 +196,7 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
                         {result.category}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-slate-900">
+                        <p className="truncate text-sm font-semibold text-surface-text">
                           {result.title}
                         </p>
                         <p className="mt-1 text-xs text-slate-500">
@@ -225,6 +227,14 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
 
       <div className="flex items-center gap-2 md:gap-4">
         <div className="hidden md:flex items-center gap-2">
+          <button
+            onClick={toggleTheme}
+            className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-all"
+            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          >
+            {isDarkMode ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-indigo-600" />}
+          </button>
+
           {isAdmin ? (
             <button
               type="button"
@@ -259,7 +269,7 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
           className="p-2 text-slate-500 hover:bg-slate-100 rounded-full relative"
         >
           <Bell className="w-5 h-5" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+          <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
         </Link>
         
         <div className="h-8 w-px bg-slate-200 mx-1 md:mx-2"></div>
@@ -268,7 +278,7 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
           to={`/${userRole}/profile`}
           className="flex items-center gap-3 p-1 pr-3 hover:bg-slate-100 rounded-full transition-colors"
         >
-          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+          <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold overflow-hidden">
             {user.profilePhoto ? (
               <img src={user.profilePhoto} alt={user.name} className="w-full h-full object-cover" />
             ) : (
@@ -285,7 +295,7 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
 
         <button 
           onClick={onLogout}
-          className="flex items-center gap-2 px-2 py-1.5 text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          className="flex items-center gap-2 px-2 py-1.5 text-sm font-medium text-slate-600 hover:text-rose-600 hover:bg-red-50 rounded-2xl transition-colors"
         >
           <LogOut className="w-4 h-4" />
           <span className="hidden lg:inline">Sign Out</span>

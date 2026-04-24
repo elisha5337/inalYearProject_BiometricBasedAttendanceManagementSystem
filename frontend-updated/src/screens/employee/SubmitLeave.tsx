@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Send, Calendar, AlertCircle, Info, CheckCircle2, Paperclip, X } from 'lucide-react';
 import { User } from '../../types';
 import { fetchMyLeaveRequests, submitLeaveRequest } from '../../lib/leave';
@@ -80,14 +80,14 @@ export default function SubmitLeave({ user }: { user: User }) {
       </div>
 
       {successMessage && (
-        <div className="rounded-xl border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-700 flex items-center gap-2">
+        <div className="rounded-2xl border border-emerald-100 bg-green-50 px-4 py-3 text-sm text-emerald-700 flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4" />
           {successMessage}
         </div>
       )}
 
       {error && (
-        <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-2xl border border-rose-100 bg-red-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </div>
       )}
@@ -99,7 +99,7 @@ export default function SubmitLeave({ user }: { user: User }) {
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">Leave Type</label>
                 <select
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500"
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                 >
@@ -122,11 +122,11 @@ export default function SubmitLeave({ user }: { user: User }) {
                   />
                   <label 
                     htmlFor="attachment"
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 border-dashed rounded-lg flex items-center gap-2 cursor-pointer hover:bg-slate-100 transition-colors text-sm text-slate-600 font-medium"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 border-dashed rounded-2xl flex items-center gap-2 cursor-pointer hover:bg-slate-100 transition-colors text-sm text-slate-600 font-medium"
                   >
-                    <Paperclip className="w-4 h-4 text-blue-500" />
+                    <Paperclip className="w-4 h-4 text-indigo-500" />
                     {attachment ? (
-                      <span className="text-blue-600 font-bold truncate max-w-[180px]">{attachment.name}</span>
+                      <span className="text-indigo-600 font-bold truncate max-w-[180px]">{attachment.name}</span>
                     ) : (
                       "Click to upload proof"
                     )}
@@ -135,7 +135,7 @@ export default function SubmitLeave({ user }: { user: User }) {
                     <button 
                       type="button" 
                       onClick={() => setAttachment(null)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-red-50 text-red-400 rounded-full"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-red-50 text-rose-400 rounded-full"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -152,7 +152,7 @@ export default function SubmitLeave({ user }: { user: User }) {
                   <input
                     type="date"
                     required
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500"
                     value={formData.startDate}
                     onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                   />
@@ -165,7 +165,7 @@ export default function SubmitLeave({ user }: { user: User }) {
                   <input
                     type="date"
                     required
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500"
                     value={formData.endDate}
                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                   />
@@ -178,7 +178,7 @@ export default function SubmitLeave({ user }: { user: User }) {
               <textarea
                 required
                 rows={4}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                 placeholder="Please provide a brief explanation..."
                 value={formData.reason}
                 onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
@@ -205,14 +205,14 @@ export default function SubmitLeave({ user }: { user: User }) {
         </div>
 
         <div className="space-y-6">
-          <div className="professional-card p-6 bg-blue-600 text-white shadow-lg shadow-blue-600/20">
+          <div className="professional-card p-6 bg-indigo-600 text-white shadow-lg shadow-indigo-600/20">
             <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
               <Info className="w-5 h-5" />
               Leave Balance
             </h3>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-blue-100 text-sm">Annual Leave</span>
+                <span className="text-indigo-100 text-sm">Annual Leave</span>
                 <span className="font-bold text-xl">{leaveBalance.annual_left} Days</span>
               </div>
               <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden">
@@ -222,7 +222,7 @@ export default function SubmitLeave({ user }: { user: User }) {
                 ></div>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-blue-100 text-sm">Sick Leave</span>
+                <span className="text-indigo-100 text-sm">Sick Leave</span>
                 <span className="font-bold text-xl">{leaveBalance.sick_left} Days</span>
               </div>
               <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden">

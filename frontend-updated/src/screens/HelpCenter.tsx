@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Search, HelpCircle, Book, MessageCircle, Phone, ExternalLink, ChevronRight, FileText } from 'lucide-react';
 import { fetchFAQs } from '../lib/admin';
 
@@ -45,14 +45,14 @@ export default function HelpCenter() {
             placeholder="Search for help articles..." 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-lg shadow-xl shadow-slate-200/50 focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-lg shadow-xl shadow-slate-200/50 focus:ring-2 focus:ring-indigo-500 outline-none"
           />
         </div>
       </div>
 
       {loading && categories.length === 0 ? (
         <div className="flex justify-center items-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -60,16 +60,16 @@ export default function HelpCenter() {
             const Icon = iconMap[category.icon] || HelpCircle;
             return (
               <div key={category.title} className="professional-card p-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600">
+                <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600">
                   <Icon className="w-6 h-6" />
                 </div>
                 <h3 className="text-xl font-bold text-slate-900">{category.title}</h3>
                 <ul className="space-y-3">
                   {category.items.map((item) => (
                     <li key={item}>
-                      <button className="text-sm text-slate-600 hover:text-blue-600 flex items-center justify-between w-full group text-left">
+                      <button className="text-sm text-slate-600 hover:text-indigo-600 flex items-center justify-between w-full group text-left">
                         {item}
-                        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-400 transition-colors shrink-0" />
+                        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-400 transition-colors shrink-0" />
                       </button>
                     </li>
                   ))}
@@ -88,17 +88,17 @@ export default function HelpCenter() {
         </div>
       )}
 
-      <div className="professional-card p-8 bg-blue-600 text-white overflow-hidden relative">
+      <div className="professional-card p-8 bg-indigo-600 text-white overflow-hidden relative">
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="space-y-4 text-center md:text-left">
             <h2 className="text-3xl font-bold">Still need help?</h2>
-            <p className="text-blue-100 max-w-md">Our support team is available Monday to Friday, 8:00 AM to 5:00 PM (EAT).</p>
+            <p className="text-indigo-100 max-w-md">Our support team is available Monday to Friday, 8:00 AM to 5:00 PM (EAT).</p>
             <div className="flex flex-wrap gap-4 justify-center md:justify-start">
-              <button className="px-6 py-3 bg-white text-blue-600 rounded-xl font-bold flex items-center gap-2 hover:bg-blue-50 transition-colors">
+              <button className="px-6 py-3 bg-white text-indigo-600 rounded-2xl font-bold flex items-center gap-2 hover:bg-indigo-50 transition-colors">
                 <MessageCircle className="w-5 h-5" />
                 Live Chat
               </button>
-              <button className="px-6 py-3 bg-blue-700 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-blue-800 transition-colors">
+              <button className="px-6 py-3 bg-indigo-700 text-white rounded-2xl font-bold flex items-center gap-2 hover:bg-indigo-800 transition-colors">
                 <Phone className="w-5 h-5" />
                 Call Support
               </button>
@@ -114,7 +114,7 @@ export default function HelpCenter() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="professional-card p-6 flex items-center justify-between group cursor-pointer">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-600">
+            <div className="w-10 h-10 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-600">
               <Book className="w-5 h-5" />
             </div>
             <div>
@@ -122,11 +122,11 @@ export default function HelpCenter() {
               <p className="text-sm text-slate-500">Download the full PDF guide</p>
             </div>
           </div>
-          <ExternalLink className="w-5 h-5 text-slate-300 group-hover:text-blue-600 transition-colors" />
+          <ExternalLink className="w-5 h-5 text-slate-300 group-hover:text-indigo-600 transition-colors" />
         </div>
         <div className="professional-card p-6 flex items-center justify-between group cursor-pointer">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-600">
+            <div className="w-10 h-10 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-600">
               <FileText className="w-5 h-5" />
             </div>
             <div>
@@ -134,7 +134,7 @@ export default function HelpCenter() {
               <p className="text-sm text-slate-500">For technical integrations</p>
             </div>
           </div>
-          <ExternalLink className="w-5 h-5 text-slate-300 group-hover:text-blue-600 transition-colors" />
+          <ExternalLink className="w-5 h-5 text-slate-300 group-hover:text-indigo-600 transition-colors" />
         </div>
       </div>
     </div>

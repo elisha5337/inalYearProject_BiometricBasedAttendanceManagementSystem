@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
   Clock,
   Lock,
@@ -299,10 +299,10 @@ export default function SetPolicies() {
           <p className="text-slate-500 font-medium italic">Institutional rules and biometric protocols</p>
         </div>
         <div className="flex gap-3">
-          <button onClick={() => setShowAddModal(true)} className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-2 border border-slate-200 shadow-sm">
+          <button onClick={() => setShowAddModal(true)} className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-2 border border-slate-200 shadow-sm">
             <Plus className="w-4 h-4" /> New Policy
           </button>
-          <button onClick={handleSave} disabled={isSaving || loading} className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg shadow-blue-200 disabled:opacity-50">
+          <button onClick={handleSave} disabled={isSaving || loading} className="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg shadow-indigo-200 disabled:opacity-50">
             {isSaving ? <RotateCcw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {isSaving ? "Saving..." : "Save All Changes"}
           </button>
@@ -316,14 +316,14 @@ export default function SetPolicies() {
         </div>
       )}
 
-      {error && <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-bold text-red-700 uppercase tracking-tight">{error}</div>}
+      {error && <div className="rounded-2xl border border-rose-100 bg-red-50 px-5 py-4 text-sm font-bold text-rose-700 uppercase tracking-tight">{error}</div>}
 
       <div className="grid grid-cols-1 gap-8">
 
         {/* LEAVE QUOTAS SECTION (NEW) */}
         <div className="professional-card overflow-hidden border-2 border-transparent hover:border-emerald-100 transition-all">
           <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 shadow-sm">
+            <div className="w-10 h-10 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm">
               <Plane className="w-5 h-5" />
             </div>
             <div>
@@ -335,12 +335,12 @@ export default function SetPolicies() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Annual Leave Days</label>
-                <input type="number" value={policies.annualLeaveQuota} onChange={(e) => setPolicies(c => ({...c, annualLeaveQuota: parseInt(e.target.value || "0")}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold" />
+                <input type="number" value={policies.annualLeaveQuota} onChange={(e) => setPolicies(c => ({...c, annualLeaveQuota: parseInt(e.target.value || "0")}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold" />
                 <p className="text-[9px] text-slate-400 italic">Global default for all staff members.</p>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Sick Leave Days</label>
-                <input type="number" value={policies.sickLeaveQuota} onChange={(e) => setPolicies(c => ({...c, sickLeaveQuota: parseInt(e.target.value || "0")}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold" />
+                <input type="number" value={policies.sickLeaveQuota} onChange={(e) => setPolicies(c => ({...c, sickLeaveQuota: parseInt(e.target.value || "0")}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold" />
                 <p className="text-[9px] text-slate-400 italic">Medical leave allowance per year.</p>
               </div>
             </div>
@@ -350,7 +350,7 @@ export default function SetPolicies() {
         {/* ATTENDANCE SECTION (RESTORED) */}
         <div className="professional-card overflow-hidden">
           <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 shadow-sm">
+            <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm">
               <Clock className="w-5 h-5" />
             </div>
             <div>
@@ -361,11 +361,11 @@ export default function SetPolicies() {
           <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700">Grace Period (Minutes)</label>
-              <input type="number" value={policies.gracePeriod} onChange={(e) => setPolicies(c => ({...c, gracePeriod: parseInt(e.target.value || "0")}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" />
+              <input type="number" value={policies.gracePeriod} onChange={(e) => setPolicies(c => ({...c, gracePeriod: parseInt(e.target.value || "0")}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700">Late Threshold (Minutes)</label>
-              <input type="number" value={policies.lateThreshold} onChange={(e) => setPolicies(c => ({...c, lateThreshold: parseInt(e.target.value || "0")}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" />
+              <input type="number" value={policies.lateThreshold} onChange={(e) => setPolicies(c => ({...c, lateThreshold: parseInt(e.target.value || "0")}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold" />
             </div>
           </div>
         </div>
@@ -373,7 +373,7 @@ export default function SetPolicies() {
         {/* SECURITY SECTION (RESTORED) */}
         <div className="professional-card overflow-hidden">
           <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 shadow-sm">
+            <div className="w-10 h-10 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-600 shadow-sm">
               <Fingerprint className="w-5 h-5" />
             </div>
             <div>
@@ -388,7 +388,7 @@ export default function SetPolicies() {
                   <p className="text-sm font-bold text-slate-900">Multi-factor Authentication</p>
                   <p className="text-xs text-slate-500 font-medium">Require higher security verification.</p>
                 </div>
-                <div className={cn("w-12 h-6 rounded-full relative transition-colors", policies.mfaEnabled ? "bg-blue-600" : "bg-slate-200")}>
+                <div className={cn("w-12 h-6 rounded-full relative transition-colors", policies.mfaEnabled ? "bg-indigo-600" : "bg-slate-200")}>
                   <div className={cn("absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all", policies.mfaEnabled ? "right-1" : "left-1")}></div>
                 </div>
               </div>
@@ -397,14 +397,14 @@ export default function SetPolicies() {
                   <p className="text-sm font-bold text-slate-900">Liveness Detection</p>
                   <p className="text-xs text-slate-500 font-medium">Prevent biometric spoofing attempts.</p>
                 </div>
-                <div className={cn("w-12 h-6 rounded-full relative transition-colors", policies.livenessDetection ? "bg-blue-600" : "bg-slate-200")}>
+                <div className={cn("w-12 h-6 rounded-full relative transition-colors", policies.livenessDetection ? "bg-indigo-600" : "bg-slate-200")}>
                   <div className={cn("absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all", policies.livenessDetection ? "right-1" : "left-1")}></div>
                 </div>
               </div>
             </div>
             <div className="space-y-2 pt-4">
               <label className="text-sm font-bold text-slate-700">Verification Sensitivity ({policies.sensitivity}%)</label>
-              <input type="range" min="0" max="100" value={policies.sensitivity} onChange={(e) => setPolicies(c => ({...c, sensitivity: parseInt(e.target.value || "0")}))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+              <input type="range" min="0" max="100" value={policies.sensitivity} onChange={(e) => setPolicies(c => ({...c, sensitivity: parseInt(e.target.value || "0")}))} className="w-full h-2 bg-slate-200 rounded-2xl appearance-none cursor-pointer accent-indigo-600" />
             </div>
           </div>
         </div>
@@ -412,7 +412,7 @@ export default function SetPolicies() {
         {/* ACCESS CONTROL SECTION (RESTORED) */}
         <div className="professional-card overflow-hidden">
           <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 shadow-sm">
+            <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600 shadow-sm">
               <Lock className="w-5 h-5" />
             </div>
             <div>
@@ -421,7 +421,7 @@ export default function SetPolicies() {
             </div>
           </div>
           <div className="p-8 space-y-8">
-            <div onClick={() => setPolicies(c => ({...c, manualEntryEnabled: !c.manualEntryEnabled}))} className="flex items-center justify-between p-5 bg-amber-50 border border-amber-100 rounded-3xl cursor-pointer">
+            <div onClick={() => setPolicies(c => ({...c, manualEntryEnabled: !c.manualEntryEnabled}))} className="flex items-center justify-between p-5 bg-amber-50 border border-amber-100 rounded-2xl cursor-pointer">
               <div className="flex items-center gap-4">
                 <ShieldAlert className="w-6 h-6 text-amber-600" />
                 <div>
@@ -436,13 +436,13 @@ export default function SetPolicies() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700 uppercase">Session Timeout</label>
-                <select value={policies.sessionTimeout} onChange={(e) => setPolicies(c => ({...c, sessionTimeout: e.target.value}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold">
+                <select value={policies.sessionTimeout} onChange={(e) => setPolicies(c => ({...c, sessionTimeout: e.target.value}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold">
                   <option>1 Hour</option><option>4 Hours</option><option>8 Hours</option><option>12 Hours</option><option>24 Hours</option>
                 </select>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700 uppercase">Password Expiry</label>
-                <select value={policies.passwordExpiry} onChange={(e) => setPolicies(c => ({...c, passwordExpiry: e.target.value}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold">
+                <select value={policies.passwordExpiry} onChange={(e) => setPolicies(c => ({...c, passwordExpiry: e.target.value}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold">
                   <option>30 Days</option><option>60 Days</option><option>90 Days</option><option>Never</option>
                 </select>
               </div>
@@ -454,7 +454,7 @@ export default function SetPolicies() {
         {customPolicies.length > 0 && (
           <div className="professional-card overflow-hidden">
             <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center gap-3">
-              <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-600 shadow-sm">
+              <div className="w-10 h-10 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-600 shadow-sm">
                 <Settings className="w-5 h-5" />
               </div>
               <div>
@@ -466,16 +466,16 @@ export default function SetPolicies() {
               {customPolicies.map((policy) => (
                 <div key={policy.id} className="flex items-center justify-between p-5 bg-white border border-slate-100 rounded-2xl hover:shadow-md transition-all group">
                   <div className="flex items-center gap-5">
-                    <div className={cn("w-2.5 h-2.5 rounded-full shadow-sm", policy.category === "attendance" ? "bg-blue-500" : policy.category === "security" ? "bg-purple-500" : policy.category === "leave" ? "bg-emerald-500" : "bg-amber-500")} />
+                    <div className={cn("w-2.5 h-2.5 rounded-full shadow-sm", policy.category === "attendance" ? "bg-indigo-500" : policy.category === "security" ? "bg-purple-500" : policy.category === "leave" ? "bg-emerald-500" : "bg-amber-500")} />
                     <div>
                       <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">{policy.name}</h4>
                       <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">{policy.description}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="text-xs font-mono font-black text-blue-600 bg-blue-50 px-4 py-1.5 rounded-lg border border-blue-100 uppercase">{policy.value}</span>
-                    <button onClick={() => handleEditCustomPolicy(policy)} className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"><Pencil className="w-4.5 h-4.5" /></button>
-                    <button onClick={() => handleDeleteCustomPolicy(policy.id)} className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 className="w-4.5 h-4.5" /></button>
+                    <span className="text-xs font-mono font-black text-indigo-600 bg-indigo-50 px-4 py-1.5 rounded-2xl border border-indigo-100 uppercase">{policy.value}</span>
+                    <button onClick={() => handleEditCustomPolicy(policy)} className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all"><Pencil className="w-4.5 h-4.5" /></button>
+                    <button onClick={() => handleDeleteCustomPolicy(policy.id)} className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-red-50 rounded-2xl transition-all"><Trash2 className="w-4.5 h-4.5" /></button>
                   </div>
                 </div>
               ))}
@@ -487,10 +487,10 @@ export default function SetPolicies() {
       {showAddModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={closePolicyModal} />
-          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
+                <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
                   {editingPolicyId ? <Pencil className="w-6 h-6" /> : <Plus className="w-7 h-7" />}
                 </div>
                 <div>
@@ -498,18 +498,18 @@ export default function SetPolicies() {
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Define new system-wide parameters</p>
                 </div>
               </div>
-              <button onClick={closePolicyModal} className="p-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"><X className="w-6 h-6" /></button>
+              <button onClick={closePolicyModal} className="p-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"><X className="w-6 h-6" /></button>
             </div>
 
             <form onSubmit={handleAddPolicy} className="flex-1 overflow-y-auto p-8 space-y-8">
               <div className="space-y-2 text-left">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Rule Designation</label>
-                <input type="text" required placeholder="e.g., Compassionate Leave" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm" value={newPolicy.name} onChange={(e) => setNewPolicy(c => ({ ...c, name: e.target.value }))} />
+                <input type="text" required placeholder="e.g., Compassionate Leave" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-sm" value={newPolicy.name} onChange={(e) => setNewPolicy(c => ({ ...c, name: e.target.value }))} />
               </div>
 
               <div className="space-y-2 text-left">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Operational Category</label>
-                <select className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm" value={newPolicy.category} onChange={(e) => setNewPolicy(c => ({ ...c, category: e.target.value as any }))}>
+                <select className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-sm" value={newPolicy.category} onChange={(e) => setNewPolicy(c => ({ ...c, category: e.target.value as any }))}>
                   <option value="attendance">Attendance & Time</option>
                   <option value="leave">Leave & Quotas</option>
                   <option value="security">Security & Biometrics</option>
@@ -519,17 +519,17 @@ export default function SetPolicies() {
 
               <div className="space-y-2 text-left">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Assigned Value</label>
-                <input type="text" required placeholder="e.g., 20 Days" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm" value={newPolicy.value} onChange={(e) => setNewPolicy(c => ({ ...c, value: e.target.value }))} />
+                <input type="text" required placeholder="e.g., 20 Days" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-sm" value={newPolicy.value} onChange={(e) => setNewPolicy(c => ({ ...c, value: e.target.value }))} />
               </div>
 
               <div className="space-y-2 text-left">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Logic Description</label>
-                <textarea required rows={3} placeholder="Explain how this policy impacts system logic..." className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm resize-none" value={newPolicy.description} onChange={(e) => setNewPolicy(c => ({ ...c, description: e.target.value }))} />
+                <textarea required rows={3} placeholder="Explain how this policy impacts system logic..." className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-sm resize-none" value={newPolicy.description} onChange={(e) => setNewPolicy(c => ({ ...c, description: e.target.value }))} />
               </div>
 
               <div className="flex gap-4 pt-4 sticky bottom-0 bg-white pb-2">
                 <button type="button" onClick={closePolicyModal} className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all">Abort</button>
-                <button type="submit" className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all">Confirm Rule</button>
+                <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all">Confirm Rule</button>
               </div>
             </form>
           </div>

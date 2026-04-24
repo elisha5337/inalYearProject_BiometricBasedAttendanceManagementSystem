@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Cpu,
@@ -164,23 +164,23 @@ export default function ManageDevices() {
       </div>
 
       {error ? (
-        <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
+        <div className="rounded-2xl border border-rose-100 bg-red-50 px-5 py-4 text-sm font-medium text-rose-700">
           {error}
         </div>
       ) : null}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="professional-card p-6 border-l-4 border-blue-600">
+        <div className="professional-card p-6 border-l-4 border-indigo-600">
           <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Total Devices</p>
           <h3 className="text-2xl font-bold text-slate-900 mt-1">{stats.total}</h3>
         </div>
-        <div className="professional-card p-6 border-l-4 border-green-600">
+        <div className="professional-card p-6 border-l-4 border-emerald-600">
           <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Online</p>
-          <h3 className="text-2xl font-bold text-green-600 mt-1">{stats.online}</h3>
+          <h3 className="text-2xl font-bold text-emerald-600 mt-1">{stats.online}</h3>
         </div>
-        <div className="professional-card p-6 border-l-4 border-red-600">
+        <div className="professional-card p-6 border-l-4 border-rose-600">
           <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Offline</p>
-          <h3 className="text-2xl font-bold text-red-600 mt-1">{stats.offline}</h3>
+          <h3 className="text-2xl font-bold text-rose-600 mt-1">{stats.offline}</h3>
         </div>
         <div className="professional-card p-6 border-l-4 border-amber-600">
           <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Maintenance</p>
@@ -197,14 +197,14 @@ export default function ManageDevices() {
               placeholder="Search by name, location or IP..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
             />
           </div>
           <div className="w-full lg:w-auto">
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-full lg:w-auto bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 outline-none"
+              className="w-full lg:w-auto bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 text-sm font-medium text-slate-600 outline-none"
             >
               <option>All Types</option>
               <option>Kiosk</option>
@@ -237,7 +237,7 @@ export default function ManageDevices() {
                 <tr key={device.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                      <div className="w-8 h-8 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
                         {device.type === 'Kiosk' && <Monitor className="w-4 h-4" />}
                         {device.type === 'Handheld' && <Smartphone className="w-4 h-4" />}
                         {device.type === 'Desktop' && <Cpu className="w-4 h-4" />}
@@ -253,18 +253,18 @@ export default function ManageDevices() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       {device.status === 'online' ? (
-                        <Wifi className="w-4 h-4 text-green-500" />
+                        <Wifi className="w-4 h-4 text-emerald-500" />
                       ) : (
-                        <WifiOff className="w-4 h-4 text-red-500" />
+                        <WifiOff className="w-4 h-4 text-rose-500" />
                       )}
                       <span
                         className={cn(
                           'text-[10px] font-bold uppercase tracking-wider',
                           device.status === 'online'
-                            ? 'text-green-600'
+                            ? 'text-emerald-600'
                             : device.status === 'maintenance'
                               ? 'text-amber-600'
-                              : 'text-red-600',
+                              : 'text-rose-600',
                         )}
                       >
                         {device.status}
@@ -277,7 +277,7 @@ export default function ManageDevices() {
                         {device.lastSync ? new Date(device.lastSync).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Never'}
                       </span>
                       {device.battery && (
-                        <span className="text-[10px] text-red-500 font-bold">Battery: {device.battery}</span>
+                        <span className="text-[10px] text-rose-500 font-bold">Battery: {device.battery}</span>
                       )}
                     </div>
                   </td>
@@ -285,13 +285,13 @@ export default function ManageDevices() {
                     <div className="flex justify-end gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => handleOpenModal(device)}
-                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-colors"
                       >
                         <Settings className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(device.id)}
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-red-50 rounded-2xl transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -333,7 +333,7 @@ export default function ManageDevices() {
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData((current) => ({ ...current, name: e.target.value }))}
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                     placeholder="e.g. Main Entrance Kiosk"
                   />
                 </div>
@@ -350,7 +350,7 @@ export default function ManageDevices() {
                         type: e.target.value as DeviceFormPayload['type'],
                       }))
                     }
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                   >
                     <option value="Kiosk">Kiosk</option>
                     <option value="Handheld">Handheld</option>
@@ -366,7 +366,7 @@ export default function ManageDevices() {
                       type="text"
                       value={formData.ip}
                       onChange={(e) => setFormData((current) => ({ ...current, ip: e.target.value }))}
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                       placeholder="192.168.1.XX"
                     />
                   </div>
@@ -382,7 +382,7 @@ export default function ManageDevices() {
                     type="text"
                     value={formData.location}
                     onChange={(e) => setFormData((current) => ({ ...current, location: e.target.value }))}
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                     placeholder="e.g. Block B, Room 101"
                   />
                 </div>

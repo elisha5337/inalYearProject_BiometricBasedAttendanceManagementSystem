@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import {
   Clock,
   Calendar,
@@ -106,14 +106,14 @@ export default function EmployeeDashboard({ user }: { user: User }) {
         <div className="flex gap-3">
           <div
             className={cn(
-              'px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2',
-              currentlyCheckedIn ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
+              'px-4 py-2 rounded-2xl text-sm font-bold flex items-center gap-2',
+              currentlyCheckedIn ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
             )}
           >
             <div
               className={cn(
                 'w-2 h-2 rounded-full',
-                currentlyCheckedIn ? 'bg-green-500 animate-pulse' : 'bg-slate-400'
+                currentlyCheckedIn ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
               )}
             ></div>
             {currentlyCheckedIn ? 'Currently Checked In' : 'Awaiting Check-in'}
@@ -122,7 +122,7 @@ export default function EmployeeDashboard({ user }: { user: User }) {
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-2xl border border-rose-100 bg-red-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </div>
       )}
@@ -130,10 +130,10 @@ export default function EmployeeDashboard({ user }: { user: User }) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="professional-card p-6">
           <div className="flex items-center justify-between">
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
+            <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600">
               <Clock className="w-6 h-6" />
             </div>
-            <span className="text-xs font-bold text-green-600 flex items-center gap-1">
+            <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
               <TrendingUp className="w-3 h-3" />
               Live
             </span>
@@ -146,7 +146,7 @@ export default function EmployeeDashboard({ user }: { user: User }) {
 
         <div className="professional-card p-6">
           <div className="flex items-center justify-between">
-            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600">
+            <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600">
               <Calendar className="w-6 h-6" />
             </div>
             <span className="text-xs font-bold text-slate-400">{stats?.month_name || 'This Month'}</span>
@@ -159,10 +159,10 @@ export default function EmployeeDashboard({ user }: { user: User }) {
 
         <div className="professional-card p-6">
           <div className="flex items-center justify-between">
-            <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600">
+            <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600">
               <AlertCircle className="w-6 h-6" />
             </div>
-            <span className="text-xs font-bold text-red-600 flex items-center gap-1">
+            <span className="text-xs font-bold text-rose-600 flex items-center gap-1">
               <ArrowUpRight className="w-3 h-3" />
               {stats?.late_count ?? 0}
             </span>
@@ -175,7 +175,7 @@ export default function EmployeeDashboard({ user }: { user: User }) {
 
         <div className="professional-card p-6">
           <div className="flex items-center justify-between">
-            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600">
+            <div className="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-600">
               <FileText className="w-6 h-6" />
             </div>
             <span className="text-xs font-bold text-slate-400">Available</span>
@@ -191,7 +191,7 @@ export default function EmployeeDashboard({ user }: { user: User }) {
         <div className="lg:col-span-2 professional-card p-8">
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-lg font-bold text-slate-900">Weekly Activity</h3>
-            <select className="text-sm bg-slate-50 border-none rounded-lg px-3 py-1 outline-none font-medium text-slate-600">
+            <select className="text-sm bg-slate-50 border-none rounded-2xl px-3 py-1 outline-none font-medium text-slate-600">
               <option>Last 7 Days</option>
             </select>
           </div>
@@ -230,7 +230,7 @@ export default function EmployeeDashboard({ user }: { user: User }) {
                   <div
                     className={cn(
                       'w-2 h-2 rounded-full mt-2 shrink-0',
-                      item.type === 'Check-in' ? 'bg-blue-500' : 'bg-slate-400'
+                      item.type === 'Check-in' ? 'bg-indigo-500' : 'bg-slate-400'
                     )}
                   ></div>
                   <div className="flex-1 min-w-0">
@@ -244,10 +244,10 @@ export default function EmployeeDashboard({ user }: { user: User }) {
                     className={cn(
                       'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider',
                       item.status === 'on-time'
-                        ? 'bg-green-100 text-green-700'
+                        ? 'bg-emerald-100 text-emerald-700'
                         : item.status === 'late'
                           ? 'bg-amber-100 text-amber-700'
-                          : 'bg-blue-100 text-blue-700'
+                          : 'bg-indigo-100 text-indigo-700'
                     )}
                   >
                     {item.status}

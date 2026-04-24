@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { User as UserIcon, Mail, Phone, Building2, MapPin, Camera, Save, Shield, Bell, Globe } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { User } from '../types';
@@ -147,7 +147,7 @@ export default function Profile({ user }: ProfileProps) {
     <div className="max-w-5xl mx-auto space-y-8">
       <div className="flex flex-col md:flex-row md:items-end gap-6 pb-6 border-b border-slate-200">
         <div className="relative group shrink-0">
-          <div className="w-32 h-32 rounded-3xl bg-blue-100 flex items-center justify-center text-blue-600 text-4xl font-bold overflow-hidden border-4 border-white shadow-xl">
+          <div className="w-32 h-32 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 text-4xl font-bold overflow-hidden border-4 border-white shadow-xl">
             {profilePhoto ? (
               <img src={profilePhoto} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             ) : (
@@ -156,7 +156,7 @@ export default function Profile({ user }: ProfileProps) {
           </div>
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="absolute bottom-2 right-2 p-2 bg-blue-600 text-white rounded-xl shadow-lg hover:bg-blue-700 transition-all scale-90 group-hover:scale-100"
+            className="absolute bottom-2 right-2 p-2 bg-indigo-600 text-white rounded-2xl shadow-lg hover:bg-indigo-700 transition-all scale-90 group-hover:scale-100"
           >
             <Camera className="w-4 h-4" />
           </button>
@@ -182,13 +182,13 @@ export default function Profile({ user }: ProfileProps) {
       </div>
 
       {error ? (
-        <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
+        <div className="rounded-2xl border border-rose-100 bg-red-50 px-5 py-4 text-sm font-medium text-rose-700">
           {error}
         </div>
       ) : null}
 
       {success ? (
-        <div className="rounded-2xl border border-green-100 bg-green-50 px-5 py-4 text-sm font-medium text-green-700">
+        <div className="rounded-2xl border border-emerald-100 bg-green-50 px-5 py-4 text-sm font-medium text-emerald-700">
           {success}
         </div>
       ) : null}
@@ -205,8 +205,8 @@ export default function Profile({ user }: ProfileProps) {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all',
-                activeTab === tab.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-600 hover:bg-slate-100',
+                'w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all',
+                activeTab === tab.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-600 hover:bg-slate-100',
               )}
             >
               <tab.icon className="w-4 h-4" />
@@ -227,7 +227,7 @@ export default function Profile({ user }: ProfileProps) {
                       type="text"
                       value={formState.fullName}
                       onChange={(event) => setFormState((current) => ({ ...current, fullName: event.target.value }))}
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                     />
                   </div>
                 </div>
@@ -239,7 +239,7 @@ export default function Profile({ user }: ProfileProps) {
                       type="email"
                       value={formState.email}
                       onChange={(event) => setFormState((current) => ({ ...current, email: event.target.value }))}
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                     />
                   </div>
                 </div>
@@ -251,7 +251,7 @@ export default function Profile({ user }: ProfileProps) {
                       type="tel"
                       value={formState.phone}
                       onChange={(event) => setFormState((current) => ({ ...current, phone: event.target.value }))}
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                     />
                   </div>
                 </div>
@@ -263,7 +263,7 @@ export default function Profile({ user }: ProfileProps) {
                       type="text"
                       value={formState.department}
                       disabled
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-500 cursor-not-allowed"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-100 border border-slate-200 rounded-2xl text-sm text-slate-500 cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -275,7 +275,7 @@ export default function Profile({ user }: ProfileProps) {
                       type="text"
                       value={formState.position}
                       onChange={(event) => setFormState((current) => ({ ...current, position: event.target.value }))}
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                     />
                   </div>
                 </div>
@@ -288,7 +288,7 @@ export default function Profile({ user }: ProfileProps) {
                   value={formState.bio}
                   onChange={(event) => setFormState((current) => ({ ...current, bio: event.target.value }))}
                   placeholder="Tell us about yourself..."
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
                 ></textarea>
               </div>
             </div>
@@ -301,7 +301,7 @@ export default function Profile({ user }: ProfileProps) {
                 <p className="text-sm text-slate-600 mb-6">
                   Manage your password and security settings to keep your account safe.
                 </p>
-                <button onClick={handleChangePassword} className="secondary-button text-blue-600 border-blue-200 hover:bg-blue-50 gap-2">
+                <button onClick={handleChangePassword} className="secondary-button text-indigo-600 border-indigo-200 hover:bg-indigo-50 gap-2">
                   <Shield className="w-4 h-4" />
                   Change Password
                 </button>
@@ -309,7 +309,7 @@ export default function Profile({ user }: ProfileProps) {
 
               <div className="professional-card p-8 space-y-6">
                 <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-blue-600" />
+                  <Shield className="w-5 h-5 text-indigo-600" />
                   Security Activity
                 </h3>
                 <div className="space-y-4">
@@ -338,7 +338,7 @@ export default function Profile({ user }: ProfileProps) {
                     </div>
                     <span className={cn(
                       "text-sm font-bold px-3 py-1 rounded-full",
-                      profile?.biometricEnrolled ? "text-green-700 bg-green-100" : "text-amber-700 bg-amber-100"
+                      profile?.biometricEnrolled ? "text-emerald-700 bg-emerald-100" : "text-amber-700 bg-amber-100"
                     )}>
                       {profile?.biometricEnrolled ? 'Enrolled' : 'Not Enrolled'}
                     </span>
@@ -376,7 +376,7 @@ export default function Profile({ user }: ProfileProps) {
                       }))}
                       className={cn(
                         "w-12 h-6 rounded-full transition-all relative shrink-0",
-                        formState.notificationSettings[item.id] ? "bg-blue-600" : "bg-slate-300"
+                        formState.notificationSettings[item.id] ? "bg-indigo-600" : "bg-slate-300"
                       )}
                     >
                       <div className={cn(
@@ -406,10 +406,10 @@ export default function Profile({ user }: ProfileProps) {
                       ...curr,
                       regionalSettings: { ...curr.regionalSettings, language: e.target.value }
                     }))}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                   >
                     <option value="en">English (US)</option>
-                    <option value="am">Amharic (አማርኛ)</option>
+                    <option value="am">Amharic (áŠ áˆ›áˆ­áŠ›)</option>
                     <option value="fr">French</option>
                   </select>
                 </div>
@@ -422,7 +422,7 @@ export default function Profile({ user }: ProfileProps) {
                       ...curr,
                       regionalSettings: { ...curr.regionalSettings, timezone: e.target.value }
                     }))}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                   >
                     <option value="UTC+3">East Africa Time (UTC+3)</option>
                     <option value="UTC+0">UTC (Greenwich Mean Time)</option>

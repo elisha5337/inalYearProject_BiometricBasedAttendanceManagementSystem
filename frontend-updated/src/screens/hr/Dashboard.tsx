@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import {
   Users,
   UserCheck,
@@ -258,7 +258,7 @@ export default function HRDashboard({ user }: { user: User }) {
         <div className="text-right">
           <p className="text-sm font-medium text-slate-500">System Status</p>
           <div className="flex items-center gap-2 mt-1">
-            <div className={`w-2 h-2 rounded-full ${offlineCount === 0 ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            <div className={`w-2 h-2 rounded-full ${offlineCount === 0 ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
             <span className="text-sm font-bold text-slate-900 uppercase">
               {offlineCount === 0 ? 'All Devices Online' : `${offlineCount} Devices Offline`}
             </span>
@@ -270,7 +270,7 @@ export default function HRDashboard({ user }: { user: User }) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Link to="/hr/employees" className="professional-card p-6 hover:shadow-md transition-all group">
           <div className="flex items-center justify-between">
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+            <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
               <Users className="w-6 h-6" />
             </div>
             <span className="text-xs font-bold text-slate-400">Total</span>
@@ -283,10 +283,10 @@ export default function HRDashboard({ user }: { user: User }) {
 
         <Link to="/hr/attendance" className="professional-card p-6 hover:shadow-md transition-all group">
           <div className="flex items-center justify-between">
-            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600 group-hover:bg-green-600 group-hover:text-white transition-colors">
+            <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
               <UserCheck className="w-6 h-6" />
             </div>
-            <span className="text-xs font-bold text-green-600 flex items-center gap-1">
+            <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
               <TrendingUp className="w-3 h-3" />
               {presentPercent}%
             </span>
@@ -299,10 +299,10 @@ export default function HRDashboard({ user }: { user: User }) {
 
         <Link to="/hr/attendance" className="professional-card p-6 hover:shadow-md transition-all group">
           <div className="flex items-center justify-between">
-            <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+            <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
               <Clock className="w-6 h-6" />
             </div>
-            <span className="text-xs font-bold text-red-600 flex items-center gap-1">
+            <span className="text-xs font-bold text-rose-600 flex items-center gap-1">
               <ArrowUpRight className="w-3 h-3" />
               {lateDeltaText}
             </span>
@@ -315,7 +315,7 @@ export default function HRDashboard({ user }: { user: User }) {
 
         <Link to="/hr/leave" className="professional-card p-6 hover:shadow-md transition-all group">
           <div className="flex items-center justify-between">
-            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+            <div className="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
               <ClipboardList className="w-6 h-6" />
             </div>
             <span className="text-xs font-bold text-purple-600">Pending</span>
@@ -334,7 +334,7 @@ export default function HRDashboard({ user }: { user: User }) {
             <h3 className="text-lg font-bold text-slate-900">Check-in Distribution</h3>
             <div className="flex gap-2">
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                <div className="w-3 h-3 bg-indigo-600 rounded-full"></div>
                 <span className="text-xs text-slate-500">On Time</span>
               </div>
               <div className="flex items-center gap-1.5">
@@ -367,12 +367,12 @@ export default function HRDashboard({ user }: { user: User }) {
               const severity = a.type;
               const iconBg =
                 severity === 'error'
-                  ? 'bg-red-100 text-red-600'
+                  ? 'bg-rose-100 text-rose-600'
                   : severity === 'warning'
                     ? 'bg-amber-100 text-amber-600'
                     : severity === 'success'
-                      ? 'bg-green-100 text-green-600'
-                      : 'bg-blue-100 text-blue-600';
+                      ? 'bg-emerald-100 text-emerald-600'
+                      : 'bg-indigo-100 text-indigo-600';
 
               const icon =
                 severity === 'error' ? (
@@ -385,7 +385,7 @@ export default function HRDashboard({ user }: { user: User }) {
 
               return (
                 <div key={idx} className="flex gap-4">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${iconBg}`}>
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${iconBg}`}>
                     {icon}
                   </div>
                   <div>
@@ -398,7 +398,7 @@ export default function HRDashboard({ user }: { user: User }) {
             })}
           </div>
           <div className="p-4 bg-slate-50 border-t border-slate-100">
-            <Link to="/admin/notifications" className="w-full py-2 text-sm font-bold text-blue-600 hover:bg-white rounded-lg transition-colors flex items-center justify-center">
+            <Link to="/admin/notifications" className="w-full py-2 text-sm font-bold text-indigo-600 hover:bg-white rounded-2xl transition-colors flex items-center justify-center">
               View All Notifications
             </Link>
           </div>
@@ -409,7 +409,7 @@ export default function HRDashboard({ user }: { user: User }) {
       <div className="professional-card">
         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-lg font-bold text-slate-900">Recent Check-ins</h3>
-          <Link to="/hr/attendance" className="text-sm font-bold text-blue-600 hover:underline">View All</Link>
+          <Link to="/hr/attendance" className="text-sm font-bold text-indigo-600 hover:underline">View All</Link>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -427,7 +427,7 @@ export default function HRDashboard({ user }: { user: User }) {
                 <tr key={row.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600">
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-600">
                         {row.employeeName.charAt(0)}
                       </div>
                       <span className="text-sm font-bold text-slate-900">{row.employeeName}</span>
@@ -439,7 +439,7 @@ export default function HRDashboard({ user }: { user: User }) {
                   <td className="px-6 py-4">
                     <span className={cn(
                       "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                      row.status === 'on-time' ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                      row.status === 'on-time' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
                     )}>
                       {row.status}
                     </span>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import {
   Bell,
   AlertCircle,
@@ -204,7 +204,7 @@ export default function Notifications() {
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-2xl border border-rose-200 bg-red-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </div>
       )}
@@ -226,9 +226,9 @@ export default function Notifications() {
                   type="button"
                   onClick={() => setFilter(item.id as NotificationFilter)}
                   className={cn(
-                    'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                    'w-full flex items-center gap-3 px-3 py-2 rounded-2xl text-sm font-medium transition-colors',
                     filter === item.id
-                      ? 'bg-blue-50 text-blue-600'
+                      ? 'bg-indigo-50 text-indigo-600'
                       : 'text-slate-600 hover:bg-slate-50',
                   )}
                 >
@@ -262,7 +262,7 @@ export default function Notifications() {
                         [category.id]: event.target.checked,
                       }))
                     }
-                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
                   <span className="text-sm text-slate-600 group-hover:text-slate-900 transition-colors">
                     {category.label}
@@ -279,7 +279,7 @@ export default function Notifications() {
             <input
               type="text"
               placeholder="Search notifications..."
-              className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+              className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
             />
@@ -296,17 +296,17 @@ export default function Notifications() {
                   key={notification.id}
                   className={cn(
                     'professional-card p-4 flex gap-4 transition-all hover:shadow-md',
-                    notification.unread && 'border-l-4 border-l-blue-600',
+                    notification.unread && 'border-l-4 border-l-indigo-600',
                   )}
                 >
                   <div
                     className={cn(
-                      'w-10 h-10 rounded-xl flex items-center justify-center shrink-0',
+                      'w-10 h-10 rounded-2xl flex items-center justify-center shrink-0',
                       notification.type === 'warning' || notification.type === 'error'
-                        ? 'bg-red-50 text-red-600'
+                        ? 'bg-red-50 text-rose-600'
                         : notification.type === 'success'
-                          ? 'bg-green-50 text-green-600'
-                          : 'bg-blue-50 text-blue-600',
+                          ? 'bg-green-50 text-emerald-600'
+                          : 'bg-indigo-50 text-indigo-600',
                     )}
                   >
                     {notification.type === 'warning' || notification.type === 'error' ? (
@@ -337,7 +337,7 @@ export default function Notifications() {
                           <button
                             type="button"
                             onClick={() => handleMarkAsRead(notification.id)}
-                            className="p-1 text-blue-400 hover:text-blue-600 transition-colors"
+                            className="p-1 text-indigo-400 hover:text-indigo-600 transition-colors"
                             title="Mark as read"
                           >
                             <Mail className="w-4 h-4" />
@@ -346,7 +346,7 @@ export default function Notifications() {
                         <button
                           type="button"
                           onClick={() => handleDelete(notification.id)}
-                          className="p-1 text-slate-300 hover:text-red-600 transition-colors"
+                          className="p-1 text-slate-300 hover:text-rose-600 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -360,7 +360,7 @@ export default function Notifications() {
                         {notification.category}
                       </span>
                       {notification.unread && (
-                        <span className="px-2 py-0.5 bg-blue-100 text-blue-600 text-[10px] font-bold rounded uppercase tracking-wider">
+                        <span className="px-2 py-0.5 bg-indigo-100 text-indigo-600 text-[10px] font-bold rounded uppercase tracking-wider">
                           New
                         </span>
                       )}

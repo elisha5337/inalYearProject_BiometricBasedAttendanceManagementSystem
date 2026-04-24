@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import {
   Search,
   Filter,
@@ -91,9 +91,9 @@ function exportPDF(employees: Employee[]) {
       (e) =>
         `<tr>
           <td>${e.full_name}</td><td>${e.email}</td><td>${e.role}</td>
-          <td>${e.department}</td><td>${e.position || '—'}</td>
-          <td>${e.employment_type?.replace('_', '-') || '—'}</td>
-          <td>${e.hire_date || '—'}</td>
+          <td>${e.department}</td><td>${e.position || 'â€”'}</td>
+          <td>${e.employment_type?.replace('_', '-') || 'â€”'}</td>
+          <td>${e.hire_date || 'â€”'}</td>
           <td style="color:${e.status === 'ACTIVE' ? 'green' : 'red'}">${e.status}</td>
         </tr>`
     )
@@ -180,8 +180,8 @@ export default function ManageEmployees() {
 
   const statusBadge = (status: string) => {
     const s = status?.toUpperCase();
-    if (s === 'ACTIVE') return 'bg-green-100 text-green-700';
-    if (s === 'SUSPENDED') return 'bg-red-100 text-red-700';
+    if (s === 'ACTIVE') return 'bg-emerald-100 text-emerald-700';
+    if (s === 'SUSPENDED') return 'bg-rose-100 text-rose-700';
     return 'bg-slate-100 text-slate-600';
   };
 
@@ -190,7 +190,7 @@ export default function ManageEmployees() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Link to="/hr" className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-600 transition-all" title="Back to Dashboard">
+          <Link to="/hr" className="p-2 hover:bg-slate-100 rounded-2xl text-slate-400 hover:text-slate-600 transition-all" title="Back to Dashboard">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
@@ -220,12 +220,12 @@ export default function ManageEmployees() {
                 placeholder="Search by name, email, position or department..."
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
               />
             </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={cn('secondary-button gap-2 transition-all', showFilters && 'bg-blue-50 border-blue-200 text-blue-600')}
+              className={cn('secondary-button gap-2 transition-all', showFilters && 'bg-indigo-50 border-indigo-200 text-indigo-600')}
             >
               <Filter className="w-4 h-4" />
               Filters
@@ -245,7 +245,7 @@ export default function ManageEmployees() {
               <select
                 value={filterDept}
                 onChange={(e) => { setFilterDept(e.target.value); setPage(1); }}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="">All Departments</option>
                 {departments.map((d) => <option key={d.id} value={d.name}>{d.name}</option>)}
@@ -256,7 +256,7 @@ export default function ManageEmployees() {
               <select
                 value={filterStatus}
                 onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="">All Status</option>
                 <option value="ACTIVE">Active</option>
@@ -268,7 +268,7 @@ export default function ManageEmployees() {
               <select
                 value={filterType}
                 onChange={(e) => { setFilterType(e.target.value); setPage(1); }}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="">All Types</option>
                 <option value="FULL_TIME">Full-time</option>
@@ -297,7 +297,7 @@ export default function ManageEmployees() {
             <div key={emp.id} className="professional-card group hover:shadow-md transition-all">
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
-                  <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600 text-xl font-bold overflow-hidden">
+                  <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 text-xl font-bold overflow-hidden">
                     {emp.profile_photo ? (
                       <img src={emp.profile_photo} alt={emp.full_name} className="w-full h-full object-cover rounded-2xl" />
                     ) : (
@@ -309,7 +309,7 @@ export default function ManageEmployees() {
                       {emp.status || 'Unknown'}
                     </span>
                     {emp.enrolled && (
-                      <span className="flex items-center gap-1 text-[10px] text-blue-600 font-semibold">
+                      <span className="flex items-center gap-1 text-[10px] text-indigo-600 font-semibold">
                         <Fingerprint className="w-3 h-3" /> Enrolled
                       </span>
                     )}
@@ -333,7 +333,7 @@ export default function ManageEmployees() {
                       <Clock className="w-4 h-4 text-slate-400 shrink-0" />
                       <span className="text-xs">
                         {emp.employment_type?.replace('_', '-')}
-                        {emp.hire_date ? ` • Hired ${emp.hire_date}` : ''}
+                        {emp.hire_date ? ` â€¢ Hired ${emp.hire_date}` : ''}
                       </span>
                     </div>
                   )}
@@ -342,7 +342,7 @@ export default function ManageEmployees() {
                 <div className="mt-6 pt-6 border-t border-slate-100">
                   <button
                     onClick={() => setSelectedEmployee(emp)}
-                    className="w-full py-2 text-sm font-bold text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-2 text-sm font-bold text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-colors flex items-center justify-center gap-2"
                   >
                     <Eye className="w-4 h-4" />
                     View Full Profile
@@ -358,13 +358,13 @@ export default function ManageEmployees() {
       {!loading && filtered.length > PAGE_SIZE && (
         <div className="flex items-center justify-between pt-4">
           <p className="text-sm text-slate-500">
-            Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length} employees
+            Showing {(page - 1) * PAGE_SIZE + 1}â€“{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length} employees
           </p>
           <div className="flex gap-2">
             <button
               onClick={() => setPage((p) => p - 1)}
               disabled={page === 1}
-              className="p-2 border border-slate-200 rounded-lg hover:bg-white disabled:opacity-40"
+              className="p-2 border border-slate-200 rounded-2xl hover:bg-white disabled:opacity-40"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -372,7 +372,7 @@ export default function ManageEmployees() {
             <button
               onClick={() => setPage((p) => p + 1)}
               disabled={page === totalPages}
-              className="p-2 border border-slate-200 rounded-lg hover:bg-white disabled:opacity-40"
+              className="p-2 border border-slate-200 rounded-2xl hover:bg-white disabled:opacity-40"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -386,13 +386,13 @@ export default function ManageEmployees() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <h2 className="text-xl font-bold text-slate-900">Employee Profile</h2>
-              <button onClick={() => setSelectedEmployee(null)} className="p-2 hover:bg-slate-100 rounded-lg">
+              <button onClick={() => setSelectedEmployee(null)} className="p-2 hover:bg-slate-100 rounded-2xl">
                 <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
             <div className="p-6 space-y-6">
               <div className="flex items-center gap-4">
-                <div className="w-20 h-20 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600 text-2xl font-bold overflow-hidden shrink-0">
+                <div className="w-20 h-20 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 text-2xl font-bold overflow-hidden shrink-0">
                   {selectedEmployee.profile_photo ? (
                     <img src={selectedEmployee.profile_photo} alt={selectedEmployee.full_name} className="w-full h-full object-cover rounded-2xl" />
                   ) : (
@@ -439,26 +439,26 @@ export default function ManageEmployees() {
                   {(query || filterDept || filterStatus || filterType) ? ' (filtered)' : ' (all)'}
                 </p>
               </div>
-              <button onClick={() => setShowExportModal(false)} className="p-2 hover:bg-slate-100 rounded-lg">
+              <button onClick={() => setShowExportModal(false)} className="p-2 hover:bg-slate-100 rounded-2xl">
                 <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
             <div className="p-6">
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { id: 'pdf', label: 'PDF', icon: FileText, color: 'text-red-600', bg: 'bg-red-50' },
-                  { id: 'excel', label: 'Excel', icon: FileSpreadsheet, color: 'text-green-600', bg: 'bg-green-50' },
-                  { id: 'csv', label: 'CSV', icon: TableIcon, color: 'text-blue-600', bg: 'bg-blue-50' },
+                  { id: 'pdf', label: 'PDF', icon: FileText, color: 'text-rose-600', bg: 'bg-red-50' },
+                  { id: 'excel', label: 'Excel', icon: FileSpreadsheet, color: 'text-emerald-600', bg: 'bg-green-50' },
+                  { id: 'csv', label: 'CSV', icon: TableIcon, color: 'text-indigo-600', bg: 'bg-indigo-50' },
                 ].map((format) => (
                   <button
                     key={format.id}
                     onClick={() => setExportFormat(format.id)}
                     className={cn(
-                      'flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all',
-                      exportFormat === format.id ? 'border-blue-600 bg-blue-50 shadow-sm' : 'border-slate-100 bg-white hover:border-slate-200'
+                      'flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all',
+                      exportFormat === format.id ? 'border-indigo-600 bg-indigo-50 shadow-sm' : 'border-slate-100 bg-white hover:border-slate-200'
                     )}
                   >
-                    <div className={cn('p-2 rounded-lg', format.bg, format.color)}>
+                    <div className={cn('p-2 rounded-2xl', format.bg, format.color)}>
                       <format.icon className="w-5 h-5" />
                     </div>
                     <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">{format.label}</span>
@@ -467,7 +467,7 @@ export default function ManageEmployees() {
               </div>
             </div>
             <div className="p-6 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row gap-3">
-              <button onClick={() => setShowExportModal(false)} className="flex-1 py-3 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-all order-2 sm:order-1">
+              <button onClick={() => setShowExportModal(false)} className="flex-1 py-3 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-2xl transition-all order-2 sm:order-1">
                 Cancel
               </button>
               <button
@@ -480,8 +480,8 @@ export default function ManageEmployees() {
                 }}
                 disabled={!exportFormat || isExporting}
                 className={cn(
-                  'flex-1 py-3 text-sm font-bold text-white rounded-xl shadow-lg transition-all active:scale-95 order-1 sm:order-2',
-                  exportFormat ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20' : 'bg-slate-300 cursor-not-allowed shadow-none'
+                  'flex-1 py-3 text-sm font-bold text-white rounded-2xl shadow-lg transition-all active:scale-95 order-1 sm:order-2',
+                  exportFormat ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20' : 'bg-slate-300 cursor-not-allowed shadow-none'
                 )}
               >
                 {exportFormat === 'pdf' ? 'Open Print Preview' : 'Download File'}

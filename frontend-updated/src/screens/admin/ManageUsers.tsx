@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+﻿import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { ApiError, apiRequest } from '../../lib/api';
@@ -308,7 +308,6 @@ export default function ManageUsers() {
         position: formState.position,
         hireDate: formState.hireDate,
         departmentId: formState.departmentId,
-        password: `${username}123`, // AUTOMATICALLY SET DEFAULT PASSWORD
       };
 
       if (editingUserId) {
@@ -324,6 +323,12 @@ export default function ManageUsers() {
 
         setSuccessMessage('User updated successfully.');
       } else {
+        if (!payload.password?.trim()) {
+          setError('A password is required when creating a new user.');
+          setSaving(false);
+          return;
+        }
+
         await createUser(payload);
         const refreshedUsers = await fetchUsers();
         setUsers(refreshedUsers);
@@ -344,7 +349,7 @@ export default function ManageUsers() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="space-y-2">
             <p className="text-sm font-medium uppercase tracking-[0.22em] text-slate-500">Administration</p>
@@ -376,7 +381,7 @@ export default function ManageUsers() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         
         <div className="lg:col-span-7 xl:col-span-8 relative min-h-[600px]">
-          <div className="lg:absolute lg:inset-0 flex flex-col bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden h-full">
+          <div className="lg:absolute lg:inset-0 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden h-full">
             <div className="p-6 border-b border-slate-200 bg-white shrink-0">
               <div className="grid gap-4 md:grid-cols-[1fr_200px]">
                 <label className="space-y-2">
@@ -386,7 +391,7 @@ export default function ManageUsers() {
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
                     placeholder="Search by name, position, or department..."
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white"
                   />
                 </label>
 
@@ -395,7 +400,7 @@ export default function ManageUsers() {
                   <select
                     value={roleFilter}
                     onChange={(event) => setRoleFilter(event.target.value as 'all' | AppUserRole)}
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white"
                   >
                     <option value="all">All roles</option>
                     <option value="admin">Admin</option>
@@ -437,7 +442,7 @@ export default function ManageUsers() {
                         </td>
                         <td className="px-6 py-5">
                           <div className="flex flex-col gap-2">
-                            <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${user.biometricEnrolled ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200' : 'bg-slate-50 text-slate-400 ring-1 ring-slate-200'}`}>
+                            <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${user.biometricEnrolled ? 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'bg-slate-50 text-slate-400 ring-1 ring-slate-200'}`}>
                               {user.biometricEnrolled ? `Enrolled ${user.enrollmentInfo}` : 'Pending'}
                             </span>
                             <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${getStatusClasses(user.isActive)}`}>
@@ -447,9 +452,9 @@ export default function ManageUsers() {
                         </td>
                         <td className="px-6 py-5">
                           <div className="flex flex-wrap gap-2">
-                            <button type="button" onClick={() => startEditing(user)} className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600">Edit</button>
+                            <button type="button" onClick={() => startEditing(user)} className="rounded-2xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 transition-all hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600">Edit</button>
                             {!isProtectedSystemUser(user) && (
-                              <button type="button" onClick={() => handleStatusToggle(user)} disabled={saving || statusActionUserId === user.id} className={`rounded-xl px-4 py-2 text-xs font-bold transition-all disabled:opacity-50 ${user.isActive ? 'border border-rose-100 bg-rose-50 text-rose-700 hover:bg-rose-100' : 'border border-emerald-100 bg-emerald-50 text-emerald-700 hover:border-emerald-100'}`}>{statusActionUserId === user.id ? '...' : user.isActive ? 'Suspend' : 'Activate'}</button>
+                              <button type="button" onClick={() => handleStatusToggle(user)} disabled={saving || statusActionUserId === user.id} className={`rounded-2xl px-4 py-2 text-xs font-bold transition-all disabled:opacity-50 ${user.isActive ? 'border border-rose-100 bg-rose-50 text-rose-700 hover:bg-rose-100' : 'border border-emerald-100 bg-emerald-50 text-emerald-700 hover:border-emerald-100'}`}>{statusActionUserId === user.id ? '...' : user.isActive ? 'Suspend' : 'Activate'}</button>
                             )}
                           </div>
                         </td>
@@ -463,14 +468,14 @@ export default function ManageUsers() {
         </div>
 
         <div className="lg:col-span-5 xl:col-span-4 h-full">
-          <aside className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col h-full sticky top-6">
+          <aside className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col h-full sticky top-6">
             <div className="flex items-start justify-between gap-4 shrink-0 mb-6">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-400">{editingUserId ? 'User Management' : 'System Enrollment'}</p>
                 <h2 className="mt-1 text-xl font-bold text-slate-900">{editingUserId ? 'Update Profile' : 'New Employee'}</h2>
               </div>
               {editingUserId && (
-                <button type="button" onClick={resetForm} className="rounded-xl border border-slate-200 px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest transition-all hover:bg-white hover:text-slate-900">Cancel</button>
+                <button type="button" onClick={resetForm} className="rounded-2xl border border-slate-200 px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest transition-all hover:bg-white hover:text-slate-900">Cancel</button>
               )}
             </div>
 
@@ -478,28 +483,28 @@ export default function ManageUsers() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="space-y-1.5">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">First name</span>
-                  <input type="text" value={formState.firstName} onChange={(event) => setFormState((current) => ({ ...current, firstName: event.target.value }))} required className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/5" />
+                  <input type="text" value={formState.firstName} onChange={(event) => setFormState((current) => ({ ...current, firstName: event.target.value }))} required className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/5" />
                 </label>
                 <label className="space-y-1.5">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Last name</span>
-                  <input type="text" value={formState.lastName} onChange={(event) => setFormState((current) => ({ ...current, lastName: event.target.value }))} required className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/5" />
+                  <input type="text" value={formState.lastName} onChange={(event) => setFormState((current) => ({ ...current, lastName: event.target.value }))} required className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/5" />
                 </label>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="space-y-1.5">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Username</span>
-                  <input type="text" value={formState.username} onChange={(event) => setFormState((current) => ({ ...current, username: event.target.value }))} required className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/5" />
+                  <input type="text" value={formState.username} onChange={(event) => setFormState((current) => ({ ...current, username: event.target.value }))} required className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/5" />
                 </label>
                 <label className="space-y-1.5">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Email</span>
-                  <input type="email" value={formState.email} onChange={(event) => setFormState((current) => ({ ...current, email: event.target.value }))} required className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/5" />
+                  <input type="email" value={formState.email} onChange={(event) => setFormState((current) => ({ ...current, email: event.target.value }))} required className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/5" />
                 </label>
               </div>
 
               <label className="block space-y-1.5">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Department</span>
-                <select value={formState.departmentId} onChange={(event) => setFormState((current) => ({ ...current, departmentId: event.target.value, position: "" }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white">
+                <select value={formState.departmentId} onChange={(event) => setFormState((current) => ({ ...current, departmentId: event.target.value, position: "" }))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white">
                   <option value="">Unassigned</option>
                   {departments.map((dept) => (
                     <option key={dept.id} value={dept.id}>{dept.name}</option>
@@ -510,7 +515,7 @@ export default function ManageUsers() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="space-y-1.5">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Position</span>
-                  <select value={formState.position} onChange={(event) => setFormState((current) => ({ ...current, position: event.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white">
+                  <select value={formState.position} onChange={(event) => setFormState((current) => ({ ...current, position: event.target.value }))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white">
                     <option value="">{formState.departmentId ? 'Select Role' : 'Pick Dept First'}</option>
                     {availablePositions.map((pos) => (
                       <option key={pos.id} value={pos.name}>{pos.name}</option>
@@ -519,7 +524,7 @@ export default function ManageUsers() {
                 </label>
                 <label className="space-y-1.5">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Hire Date</span>
-                  <input type="date" value={formState.hireDate} onChange={(event) => setFormState((current) => ({ ...current, hireDate: event.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white" />
+                  <input type="date" value={formState.hireDate} onChange={(event) => setFormState((current) => ({ ...current, hireDate: event.target.value }))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white" />
                 </label>
               </div>
 
@@ -527,37 +532,35 @@ export default function ManageUsers() {
                 <label className="space-y-1.5">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Access Role</span>
                   <select value={formState.role} onChange={(event) => setRoleFilter(event.target.value as any)} className="hidden invisible" tabIndex={-1} aria-hidden="true" />
-                  <select value={formState.role} onChange={(event) => setFormState((current) => ({ ...current, role: event.target.value as AppUserRole }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white">
+                  <select value={formState.role} onChange={(event) => setFormState((current) => ({ ...current, role: event.target.value as AppUserRole }))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white">
                     <option value="admin">Admin</option>
                     <option value="hr">HR</option>
                     <option value="employee">Employee</option>
                   </select>
                 </label>
-                <div className="space-y-1.5">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Auto-Password</span>
-                  <div className="w-full px-4 py-2 bg-blue-50 border border-blue-100 rounded-xl text-[10px] font-bold text-blue-700 leading-tight uppercase">
-                    Credential will be <br /> <span className="font-black underline text-blue-900">[USERNAME]123</span>
-                  </div>
-                </div>
+                <label className="space-y-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Password</span>
+                  <input type="password" value={formState.password ?? ''} onChange={(event) => setFormState((current) => ({ ...current, password: event.target.value }))} placeholder={editingUserId ? 'Leave blank' : 'Required'} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white" />
+                </label>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2 pt-2">
-                <label className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/50 px-4 py-3 cursor-pointer group hover:bg-white transition-all">
-                  <input type="checkbox" checked={formState.isActive} onChange={(event) => setFormState((current) => ({ ...current, isActive: event.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                <label className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 px-4 py-3 cursor-pointer group hover:bg-white transition-all">
+                  <input type="checkbox" checked={formState.isActive} onChange={(event) => setFormState((current) => ({ ...current, isActive: event.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
                   <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Active</span>
                 </label>
-                <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/50 px-4 py-3 cursor-not-allowed opacity-80">
-                  <input type="checkbox" checked={formState.biometricEnrolled} readOnly disabled className="h-4 w-4 rounded border-slate-300 text-blue-400" />
+                <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 px-4 py-3 cursor-not-allowed opacity-80">
+                  <input type="checkbox" checked={formState.biometricEnrolled} readOnly disabled className="h-4 w-4 rounded border-slate-300 text-indigo-400" />
                   <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
                     Enrolled {currentEditingRecord?.enrollmentInfo}
                   </span>
                 </div>
               </div>
 
-              {error && <div className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-600 text-center uppercase tracking-wider">{error}</div>}
-              {successMessage && <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-600 text-center uppercase tracking-wider">{successMessage}</div>}
+              {error && <div className="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-600 text-center uppercase tracking-wider">{error}</div>}
+              {successMessage && <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-600 text-center uppercase tracking-wider">{successMessage}</div>}
 
-              <button type="submit" disabled={saving} className="w-full rounded-2xl bg-slate-900 px-4 py-4 text-sm font-bold text-white transition-all hover:bg-blue-600 active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg">
+              <button type="submit" disabled={saving} className="w-full rounded-2xl bg-slate-900 px-4 py-4 text-sm font-bold text-white transition-all hover:bg-indigo-600 active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg">
                 {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
                 {saving ? 'Processing...' : editingUserId ? 'Update Profile' : 'Register Employee'}
               </button>

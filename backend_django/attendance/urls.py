@@ -23,4 +23,7 @@ urlpatterns = [
 
     # Utilities
     path('reload-embeddings/', views.reload_embeddings, name='reload_embeddings'),
+    
+    # Public endpoints
+    path('public-landing-data/', views.api_public_landing_data, name='public_landing_data'),
 ]

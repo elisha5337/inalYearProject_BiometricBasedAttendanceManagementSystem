@@ -188,6 +188,21 @@ def list_all_leave_requests(request):
 
 
 @csrf_exempt
+def cancel_leave_request(request, request_id):
+    user, auth_err = require_auth(request)
+    if auth_err: return auth_err
+    try:
+        leave_request = LeaveRequest.objects.get(pk=request_id, user=user)
+    except LeaveRequest.DoesNotExist:
+        return JsonResponse({'error': 'Leave request not found.'}, status=404)
+    if leave_request.status != LeaveRequest.LeaveStatus.PENDING:
+        return JsonResponse({'error': 'Only pending requests can be cancelled.'}, status=400)
+    leave_request.status = LeaveRequest.LeaveStatus.CANCELLED
+    leave_request.save()
+    log_audit_event('LEAVE_CANCELLED', f'{user.username} cancelled their {leave_request.leave_type} leave request.', user=user, request=request)
+    return JsonResponse({'success': True, 'message': 'Leave request cancelled.'})
+
+@csrf_exempt
 def manage_leave_request(request, request_id):
     user, auth_err = require_staff(request)
     if auth_err: return auth_err

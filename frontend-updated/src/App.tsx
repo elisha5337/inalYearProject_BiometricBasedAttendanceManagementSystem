@@ -6,10 +6,7 @@ import { cn } from './lib/utils';
 import { ApiError } from './lib/api';
 import { fetchCurrentUser, logoutUser } from './lib/auth';
 
-// Public Components
-import PublicNavbar from './components/PublicNavbar';
-
-import Landing, { AboutPage } from './screens/public/Landing';
+import AboutPage from './screens/public/About';
 import Login from './screens/public/Login';
 import ResetPassword from './screens/public/ResetPassword';
 import BiometricTerminal from './screens/public/BiometricTerminal';
@@ -110,19 +107,15 @@ export default function App() {
   );
 }
 
-function AppContent({ user, onLogin, onLogout }: { user: User | null, onLogin: (user: User) => void, onLogout: () => void }) {
-  const location = useLocation();
-  const publicPaths = ['/', '/terminal', '/login', '/verification', '/about'];
-  const isResetPath = location.pathname.startsWith('/reset-password');
-  const isPublicPage = publicPaths.includes(location.pathname) || isResetPath;
+import SessionManager from './components/SessionManager';
 
+function AppContent({ user, onLogin, onLogout }: { user: User | null, onLogin: (user: User) => void, onLogout: () => void }) {
   return (
     <>
-      {isPublicPage && !user && <PublicNavbar />}
       <div className="relative">
         <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={user ? <Navigate to={`/${user.role}/dashboard`} /> : <Landing />} />
+          {/* Root: redirect to login or dashboard */}
+          <Route path="/" element={<Navigate to={user ? `/${user.role}/dashboard` : '/login'} replace />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/terminal" element={<BiometricTerminal />} />
           <Route path="/verification" element={<VerificationStatus />} />
@@ -196,6 +189,7 @@ function Layout({ children, user, onLogout }: { children: React.ReactNode, user:
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
+      <SessionManager onLogout={onLogout} userRole={user.role} />
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div

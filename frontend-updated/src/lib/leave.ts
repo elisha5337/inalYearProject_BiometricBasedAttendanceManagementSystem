@@ -123,6 +123,10 @@ export async function fetchMyLeaveRequests(): Promise<LeaveRequestsPayload> {
   return { requests, summary };
 }
 
+export async function cancelLeaveRequest(id: string) {
+  return apiRequest(`/api/leave/api/cancel/${id}/`, { method: 'POST' });
+}
+
 export async function submitLeaveRequest(payload: SubmitLeaveRequestPayload) {
   const formData = new FormData();
   formData.append('leaveType', payload.leaveType);

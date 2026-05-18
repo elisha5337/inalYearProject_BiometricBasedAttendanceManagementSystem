@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Check, X, Loader2, Download, Search, RefreshCw, AlertCircle, ShieldAlert } from 'lucide-react';
 
@@ -173,7 +173,7 @@ export default function ManageAttendance() {
                       <td className="px-6 py-5">
                         <div>
                           <p className="font-bold text-slate-900">{record.employeeName}</p>
-                          <p className="text-[10px] text-slate-500 uppercase font-black">{record.employeeCode} â€¢ {record.department}</p>
+                          <p className="text-[10px] text-slate-500 uppercase font-black">{record.employeeCode} � {record.department}</p>
                           <p className="text-[10px] text-indigo-600 font-bold mt-0.5">{record.assignment} // {record.location}</p>
                         </div>
                       </td>

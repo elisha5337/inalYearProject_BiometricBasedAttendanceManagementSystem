@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Clock,
   Lock,
@@ -47,6 +47,7 @@ type PolicyState = {
   manualEntryEnabled: boolean;
   annualLeaveQuota: number;
   sickLeaveQuota: number;
+  customSessionTimeout: number;
 };
 
 const defaultPolicyState: PolicyState = {
@@ -60,6 +61,7 @@ const defaultPolicyState: PolicyState = {
   manualEntryEnabled: false,
   annualLeaveQuota: 20,
   sickLeaveQuota: 12,
+  customSessionTimeout: 60,
 };
 
 function extractNumber(value: string, fallback: number) {
@@ -82,21 +84,23 @@ function categoryToBackend(value: CustomPolicy["category"]) {
 }
 
 function timeoutFromMinutes(minutes: number) {
-  if (minutes <= 60) return "1 Hour";
-  if (minutes <= 120) return "2 Hours";
-  if (minutes <= 240) return "4 Hours";
-  if (minutes <= 480) return "8 Hours";
-  if (minutes <= 720) return "12 Hours";
-  return "24 Hours";
+  if (minutes === 60) return "1 Hour";
+  if (minutes === 120) return "2 Hours";
+  if (minutes === 240) return "4 Hours";
+  if (minutes === 480) return "8 Hours";
+  if (minutes === 720) return "12 Hours";
+  if (minutes === 1440) return "24 Hours";
+  return "Custom";
 }
 
-function minutesFromTimeout(label: string) {
-  if (label.startsWith("1")) return 60;
-  if (label.startsWith("2")) return 120;
-  if (label.startsWith("4")) return 240;
-  if (label.startsWith("8")) return 480;
-  if (label.startsWith("12")) return 720;
-  return 1440;
+function minutesFromTimeout(label: string, customValue: number) {
+  if (label === "1 Hour") return 60;
+  if (label === "2 Hours") return 120;
+  if (label === "4 Hours") return 240;
+  if (label === "8 Hours") return 480;
+  if (label === "12 Hours") return 720;
+  if (label === "24 Hours") return 1440;
+  return customValue;
 }
 
 function findPolicy(policies: LeavePolicyRecord[], matcher: (policy: LeavePolicyRecord) => boolean) {
@@ -154,6 +158,7 @@ export default function SetPolicies() {
         manualEntryEnabled: Boolean(loadedConfig.manualEntryEnabled),
         annualLeaveQuota: extractNumber(annualPolicy?.value || "20", 20),
         sickLeaveQuota: extractNumber(sickPolicy?.value || "12", 12),
+        customSessionTimeout: loadedConfig.sessionTimeoutMinutes,
       });
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Unable to load policy configuration.");
@@ -202,7 +207,7 @@ export default function SetPolicies() {
     await Promise.all([
       updateGlobalConfig({
         ...globalConfig,
-        sessionTimeoutMinutes: minutesFromTimeout(nextPolicies.sessionTimeout),
+        sessionTimeoutMinutes: minutesFromTimeout(nextPolicies.sessionTimeout, nextPolicies.customSessionTimeout),
         strictMode: nextPolicies.mfaEnabled,
         biometricLockActive: nextPolicies.livenessDetection,
         manualEntryEnabled: nextPolicies.manualEntryEnabled,
@@ -437,9 +442,22 @@ export default function SetPolicies() {
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700 uppercase">Session Timeout</label>
                 <select value={policies.sessionTimeout} onChange={(e) => setPolicies(c => ({...c, sessionTimeout: e.target.value}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold">
-                  <option>1 Hour</option><option>4 Hours</option><option>8 Hours</option><option>12 Hours</option><option>24 Hours</option>
+                  <option>1 Hour</option><option>2 Hours</option><option>4 Hours</option><option>8 Hours</option><option>12 Hours</option><option>24 Hours</option><option>Custom</option>
                 </select>
               </div>
+              {policies.sessionTimeout === "Custom" && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-left-2 duration-300">
+                  <label className="text-sm font-bold text-slate-700 uppercase">Custom Timeout (Minutes)</label>
+                  <input 
+                    type="number" 
+                    value={policies.customSessionTimeout} 
+                    onChange={(e) => setPolicies(c => ({...c, customSessionTimeout: parseInt(e.target.value || "0")}))} 
+                    className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold transition-all" 
+                    placeholder="Enter minutes..."
+                  />
+                  <p className="text-[10px] text-slate-400 italic px-2">Total session duration in minutes.</p>
+                </div>
+              )}
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700 uppercase">Password Expiry</label>
                 <select value={policies.passwordExpiry} onChange={(e) => setPolicies(c => ({...c, passwordExpiry: e.target.value}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold">

@@ -94,7 +94,7 @@ def get_session_timeout_minutes(config=None):
         timeout_minutes = int(active_config.get('session_timeout_minutes', 60))
     except (TypeError, ValueError):
         timeout_minutes = 60
-    return max(15, timeout_minutes)
+    return max(1, timeout_minutes)
 
 
 def apply_session_timeout(request, config=None):

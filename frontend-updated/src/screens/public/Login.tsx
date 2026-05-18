@@ -1,209 +1,217 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import backroundimage from "../../assets/HUIOT.png"
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  Fingerprint,
+  User as UserIcon,
+  KeyRound,
   Lock,
   Mail,
-  ArrowRight,
   AlertCircle,
-  User as UserIcon,
-  Shield,
-  Briefcase,
-  ArrowLeft,
   CheckCircle,
   Loader2,
-} from 'lucide-react';
-
-import { ApiError } from '../../lib/api';
-import { loginUser, changePassword, logoutUser } from '../../lib/auth';
-import type { User } from '../../types';
-import { cn } from '../../lib/utils';
+  Shield,
+  ArrowLeft,
+} from "lucide-react";
+import logo from "../../assets/logo.jpg";
+import { ApiError } from "../../lib/api";
+import { loginUser, changePassword, logoutUser } from "../../lib/auth";
+import type { User } from "../../types";
 
 interface LoginProps {
   onLogin: (user: User) => void;
 }
 
-type UserRole = 'admin' | 'hr' | 'employee';
+type UserRole = "admin" | "hr" | "employee";
+
+const TABS: { id: UserRole; label: string }[] = [
+  { id: "admin", label: "Admin Login" },
+  { id: "employee", label: "Employee Login" },
+  { id: "hr", label: "HR Login" },
+];
 
 export default function Login({ onLogin }: LoginProps) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('employee');
-  const [error, setError] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState<UserRole>("admin");
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
-  const [forgotPasswordStatus, setForgotPasswordStatus] = useState<'idle' | 'loading' | 'success'>(
-    'idle',
-  );
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [forgotPasswordStatus, setForgotPasswordStatus] = useState<
+    "idle" | "loading" | "success"
+  >("idle");
 
   const [forcePasswordReset, setForcePasswordReset] = useState(false);
   const [resettingUser, setResettingUser] = useState<User | null>(null);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
-  const [resetError, setResetError] = useState('');
-  const [resetSuccess, setResetSuccess] = useState('');
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [resetError, setResetError] = useState("");
+  const [resetSuccess, setResetSuccess] = useState("");
 
   const navigate = useNavigate();
 
   useEffect(() => {
-    const savedUsername =
-      localStorage.getItem('remembered_username') ||
-      localStorage.getItem('rememberedUsername') ||
-      localStorage.getItem('remembered_email') ||
-      localStorage.getItem('rememberedEmail');
-
-    if (savedUsername) {
-      setUsername(savedUsername);
+    const saved =
+      localStorage.getItem("remembered_username") ||
+      localStorage.getItem("rememberedUsername") ||
+      localStorage.getItem("remembered_email") ||
+      localStorage.getItem("rememberedEmail");
+    if (saved) {
+      setUsername(saved);
       setRememberMe(true);
     }
   }, []);
 
-  const handleLogin = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setError('');
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
     setIsLoading(true);
-
     try {
-      const normalizedUsername = username.trim();
-
-      if (!normalizedUsername || !password.trim()) {
-        setError('Please enter both username and password.');
+      const id = username.trim();
+      if (!id || !password.trim()) {
+        setError("Please enter both username and password.");
         return;
       }
+      if (rememberMe) localStorage.setItem("remembered_username", id);
+      else localStorage.removeItem("remembered_username");
+      localStorage.removeItem("rememberedUsername");
+      localStorage.removeItem("remembered_email");
+      localStorage.removeItem("rememberedEmail");
 
-      if (rememberMe) {
-        localStorage.setItem('remembered_username', normalizedUsername);
-      } else {
-        localStorage.removeItem('remembered_username');
-      }
-
-      localStorage.removeItem('rememberedUsername');
-      localStorage.removeItem('remembered_email');
-      localStorage.removeItem('rememberedEmail');
-
-      const authenticatedUser = await loginUser({
-        identifier: normalizedUsername,
+      const user = await loginUser({
+        identifier: id,
         password: password.trim(),
         role,
       });
-
-      if (authenticatedUser.mustChangePassword || password.trim() === `${normalizedUsername}123`) {
-        setResettingUser(authenticatedUser);
+      if (user.mustChangePassword || password.trim() === `${id}123`) {
+        setResettingUser(user);
         setForcePasswordReset(true);
         return;
       }
-
-      onLogin(authenticatedUser);
-      navigate(`/${authenticatedUser.role ?? role}/dashboard`, { replace: true });
-    } catch (loginError) {
-      const message =
-        loginError instanceof ApiError
-          ? loginError.message
-          : `Invalid credentials for ${role.toUpperCase()} role.`;
-
-      setError(message);
+      onLogin(user);
+      navigate(`/${user.role ?? role}/dashboard`, { replace: true });
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : `Invalid credentials for ${role.toUpperCase()} role.`,
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleForgotPassword = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setForgotPasswordStatus('loading');
-
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    setForgotPasswordStatus('success');
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotPasswordStatus("loading");
+    await new Promise((r) => setTimeout(r, 2000));
+    setForgotPasswordStatus("success");
   };
 
-  const handleForcePasswordReset = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setResetError('');
-    
+  const handleForcePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError("");
     if (newPassword.length < 8) {
-      setResetError('Password must be at least 8 characters long.');
+      setResetError("Password must be at least 8 characters long.");
       return;
     }
     if (newPassword !== confirmNewPassword) {
-      setResetError('Passwords do not match.');
+      setResetError("Passwords do not match.");
       return;
     }
-    
     setIsLoading(true);
     try {
       await changePassword(newPassword);
       await logoutUser();
-      
       setForcePasswordReset(false);
       setResettingUser(null);
-      setPassword('');
-      setNewPassword('');
-      setConfirmNewPassword('');
-      setResetError('');
-      setResetSuccess('SECURE PASSWORD SET. PLEASE LOG IN AGAIN.');
+      setPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+      setResetError("");
+      setResetSuccess("SECURE PASSWORD SET. PLEASE LOG IN AGAIN.");
     } catch (err) {
-      setResetError(err instanceof ApiError ? err.message : 'Failed to save password.');
+      setResetError(
+        err instanceof ApiError ? err.message : "Failed to save password.",
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const roles: { id: UserRole; label: string; icon: typeof UserIcon }[] = [
-    { id: 'employee', label: 'Employee', icon: UserIcon },
-    { id: 'hr', label: 'HR Officer', icon: Briefcase },
-    { id: 'admin', label: 'Administrator', icon: Shield },
-  ];
-
   return (
-    <div className="h-screen w-screen bg-slate-50 flex flex-col md:flex-row overflow-hidden relative">
+    /* ── Page background ── */
+    <div
+      style={{ backgroundColor: "#D9E2EC" }}
+      className="min-h-screen w-full flex flex-col items-center justify-center gap-3 p-4"
+    >
+      {/* ── Force Password Reset Modal ── */}
       {forcePasswordReset && resettingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-8 space-y-6 relative overflow-hidden">
-            <div className="text-center space-y-2">
-              <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Shield className="w-8 h-8" />
-              </div>
-              <h3 className="text-2xl font-bold text-slate-900">Security Requirement</h3>
-              <p className="text-slate-500 text-sm">
-                You must update your default assigned password before accessing the system.
-              </p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div
+            className="bg-white w-full max-w-md p-8 space-y-5"
+            style={{ border: "1px solid #D1D5DB", borderRadius: 0 }}
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <Shield className="w-6 h-6 text-blue-600" />
+              <h3 className="text-lg font-bold text-gray-900">
+                Security Requirement
+              </h3>
             </div>
-
+            <p className="text-sm text-gray-600">
+              You must update your default password before accessing the system.
+            </p>
             {resetError && (
-              <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-2 text-xs font-bold text-rose-600">
+              <div
+                className="flex items-center gap-2 p-3 bg-red-50 text-red-700 text-sm"
+                style={{ border: "1px solid #FCA5A5" }}
+              >
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 {resetError}
               </div>
             )}
-
             <form onSubmit={handleForcePasswordReset} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">New Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <div>
+                <label className="block text-sm font-bold text-gray-800 mb-1">
+                  New Password
+                </label>
+                <div className="flex" style={{ border: "1px solid #D1D5DB" }}>
+                  <span
+                    className="flex items-center justify-center w-10 bg-white border-r"
+                    style={{ borderColor: "#D1D5DB" }}
+                  >
+                    <Lock className="w-4 h-4 text-gray-400" />
+                  </span>
                   <input
                     type="password"
                     required
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="flex-1 px-3 py-2 text-sm outline-none"
+                    style={{ backgroundColor: "#EBF2FA" }}
                     placeholder="Minimum 8 characters"
                   />
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Confirm Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <div>
+                <label className="block text-sm font-bold text-gray-800 mb-1">
+                  Confirm Password
+                </label>
+                <div className="flex" style={{ border: "1px solid #D1D5DB" }}>
+                  <span
+                    className="flex items-center justify-center w-10 bg-white border-r"
+                    style={{ borderColor: "#D1D5DB" }}
+                  >
+                    <Lock className="w-4 h-4 text-gray-400" />
+                  </span>
                   <input
                     type="password"
                     required
                     value={confirmNewPassword}
                     onChange={(e) => setConfirmNewPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="flex-1 px-3 py-2 text-sm outline-none"
+                    style={{ backgroundColor: "#EBF2FA" }}
                     placeholder="Retype new password"
                   />
                 </div>
@@ -211,81 +219,98 @@ export default function Login({ onLogin }: LoginProps) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg mt-2 flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-2 text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+                style={{ backgroundColor: "#338EC3", borderRadius: 0 }}
               >
-                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'SAVE & CONTINUE'}
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  "SAVE & CONTINUE"
+                )}
               </button>
             </form>
           </div>
         </div>
       )}
 
+      {/* ── Forgot Password Modal ── */}
       {showForgotPassword && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-8 space-y-6 relative overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div
+            className="bg-white w-full max-w-md p-8 space-y-5"
+            style={{ border: "1px solid #D1D5DB", borderRadius: 0 }}
+          >
             <button
               onClick={() => {
                 setShowForgotPassword(false);
-                setForgotPasswordStatus('idle');
+                setForgotPasswordStatus("idle");
               }}
-              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 transition-colors"
+              className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-2"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" /> Back
             </button>
-
-            {forgotPasswordStatus !== 'success' ? (
+            {forgotPasswordStatus !== "success" ? (
               <>
-                <div className="text-center space-y-2">
-                  <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Lock className="w-8 h-8" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-slate-900">Forgot Password?</h3>
-                  <p className="text-slate-500">No worries, we'll send you reset instructions.</p>
-                </div>
-
+                <h3 className="text-lg font-bold text-gray-900">
+                  Forgot Password?
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Enter your university email to receive reset instructions.
+                </p>
                 <form onSubmit={handleForgotPassword} className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-slate-700">Email Address</label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <div>
+                    <label className="block text-sm font-bold text-gray-800 mb-1">
+                      Email Address
+                    </label>
+                    <div
+                      className="flex"
+                      style={{ border: "1px solid #D1D5DB" }}
+                    >
+                      <span
+                        className="flex items-center justify-center w-10 bg-white border-r"
+                        style={{ borderColor: "#D1D5DB" }}
+                      >
+                        <Mail className="w-4 h-4 text-gray-400" />
+                      </span>
                       <input
                         type="email"
                         required
                         value={forgotPasswordEmail}
                         onChange={(e) => setForgotPasswordEmail(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                        placeholder="Enter your university email"
+                        className="flex-1 px-3 py-2 text-sm outline-none"
+                        style={{ backgroundColor: "#EBF2FA" }}
+                        placeholder="your@hawassa.edu.et"
                       />
                     </div>
                   </div>
                   <button
                     type="submit"
-                    disabled={forgotPasswordStatus === 'loading'}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                    disabled={forgotPasswordStatus === "loading"}
+                    className="w-full py-2 text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+                    style={{ backgroundColor: "#338EC3", borderRadius: 0 }}
                   >
-                    {forgotPasswordStatus === 'loading' ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                    {forgotPasswordStatus === "loading" ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      'SEND RESET LINK'
+                      "SEND RESET LINK"
                     )}
                   </button>
                 </form>
               </>
             ) : (
-              <div className="text-center space-y-6 py-4">
-                <div className="w-20 h-20 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto">
-                  <CheckCircle className="w-10 h-10" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-2xl font-bold text-slate-900">Check Your Email</h3>
-                  <p className="text-slate-500">
-                    We've sent a password reset link to <br />
-                    <span className="font-bold text-slate-900">{forgotPasswordEmail}</span>
-                  </p>
-                </div>
+              <div className="text-center space-y-4 py-4">
+                <CheckCircle className="w-12 h-12 text-green-500 mx-auto" />
+                <h3 className="text-lg font-bold text-gray-900">
+                  Check Your Email
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Reset link sent to{" "}
+                  <span className="font-bold">{forgotPasswordEmail}</span>
+                </p>
                 <button
                   onClick={() => setShowForgotPassword(false)}
-                  className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl"
+                  className="w-full py-2 text-white font-bold text-sm"
+                  style={{ backgroundColor: "#338EC3", borderRadius: 0 }}
                 >
                   BACK TO LOGIN
                 </button>
@@ -295,179 +320,227 @@ export default function Login({ onLogin }: LoginProps) {
         </div>
       )}
 
-      <div className="hidden md:flex md:w-1/2 p-12 flex-col justify-between text-white relative overflow-hidden h-full">
-        <div className="absolute inset-0 z-0">
+      {/* ══════════════════════════════════════
+          HEADER BANNER
+      ══════════════════════════════════════ */}
+      <div
+        className="w-full max-w-lg flex items-center gap-4 px-4 py-3"
+        style={{
+          backgroundColor: "#0073CE",
+          border: "1px solid #D1D5DB",
+          borderRadius: 0,
+        }}
+      >
+        {/* Circular institutional logo */}
+        <div
+          className="w-12 h-12 rounded-full shrink-0 overflow-hidden bg-white"
+          style={{
+            border: "2px solid rgba(255,255,255,0.5)",
+            boxShadow: "0 0 0 1px rgba(255,255,255,0.2)",
+          }}
+        >
           <img
-            src={backroundimage}
-            alt="Technology Background"
+            src={logo}
+            alt="Hawassa University Logo"
             className="w-full h-full object-cover"
-            referrerPolicy="no-referrer"
           />
-          <div className="absolute inset-0 bg-slate-900/30"></div>
         </div>
-
-        {/*<div className="relative z-10">*/}
-        {/*  <div className="flex items-center gap-3 mb-12">*/}
-        {/*    <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/20">*/}
-        {/*      <Fingerprint className="w-8 h-8" />*/}
-        {/*    </div>*/}
-        {/*    <h1 className="text-2xl font-bold tracking-tight">BBE AMS-HU IOT</h1>*/}
-        {/*  </div>*/}
-
-        {/*  <div className="space-y-6 max-w-md">*/}
-        {/*    <h2 className="text-5xl font-bold leading-tight">Secure Attendance Management</h2>*/}
-        {/*    <p className="text-blue-50 text-lg leading-relaxed font-medium">*/}
-        {/*      Login to access your dashboard, view reports, and manage your profile. Our biometric*/}
-        {/*      systems ensure accuracy and security for all HU-IOT employees.*/}
-        {/*    </p>*/}
-        {/*  </div>*/}
-        {/*</div>*/}
-
-        {/*<div className="relative z-10 flex items-center gap-4 text-sm text-blue-100">*/}
-        {/*  <span>(c) 2026 Hawassa University</span>*/}
-        {/*  <span className="w-1 h-1 bg-blue-300 rounded-full"></span>*/}
-        {/*  <button className="hover:underline">Privacy Policy</button>*/}
-        {/*  <span className="w-1 h-1 bg-blue-300 rounded-full"></span>*/}
-        {/*  <button className="hover:underline">Support</button>*/}
-        {/*</div>*/}
-
-        <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
+        <p className="text-white text-sm font-semibold leading-snug">
+          Hawassa University Integrated Systems — Online Portal
+        </p>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center bg-white h-full overflow-y-auto custom-scrollbar p-6 lg:p-12">
-        <div className="w-full max-w-md space-y-6 py-8">
-          <div className="text-center md:text-left">
-            <h2 className="text-3xl font-bold text-slate-900">Welcome Back</h2>
-            <p className="text-slate-500 mt-2 text-sm">Select your role and enter your credentials</p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            {roles.map((selectedRole) => (
+      {/* ══════════════════════════════════════
+          CENTRAL LOGIN CARD
+      ══════════════════════════════════════ */}
+      <div
+        className="w-full max-w-lg bg-white"
+        style={{ border: "1px solid #D1D5DB", borderRadius: 0 }}
+      >
+        {/* Tab bar */}
+        <div className="flex" style={{ borderBottom: "1px solid #D1D5DB" }}>
+          {TABS.map((tab) => {
+            const active = role === tab.id;
+            return (
               <button
-                key={selectedRole.id}
+                key={tab.id}
                 type="button"
-                disabled={isLoading}
-                onClick={() => setRole(selectedRole.id)}
-                className={cn(
-                  'flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all',
-                  role === selectedRole.id
-                    ? 'bg-blue-50 border-blue-600 text-blue-600'
-                    : 'bg-white border-slate-100 text-slate-500 hover:border-slate-200',
-                  isLoading && 'opacity-50 cursor-not-allowed',
-                )}
+                onClick={() => {
+                  setRole(tab.id);
+                  setError("");
+                }}
+                className="flex-1 py-3 text-xs font-semibold transition-colors"
+                style={{
+                  color: active ? "#222222" : "#555555",
+                  fontWeight: active ? 700 : 400,
+                  backgroundColor: active ? "#FFFFFF" : "#F3F4F6",
+                  borderTop: active
+                    ? "3px solid #0073CE"
+                    : "3px solid transparent",
+                  borderRight: "1px solid #D1D5DB",
+                  borderRadius: 0,
+                }}
               >
-                <selectedRole.icon
-                  className={cn(
-                    'w-5 h-5',
-                    role === selectedRole.id ? 'text-blue-600' : 'text-slate-400',
-                  )}
-                />
-                <span className="text-[10px] font-bold uppercase tracking-wider">
-                  {selectedRole.label.split(' ')[0]}
-                </span>
+                {tab.label}
               </button>
-            ))}
-          </div>
+            );
+          })}
+        </div>
 
+        {/* Card body */}
+        <div className="px-8 py-6 space-y-5">
+          <p className="text-sm text-gray-600">
+            Use your user name and password to log in.
+          </p>
+
+          {/* Error */}
           {error && (
-            <div className="p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-3 text-xs font-bold text-rose-600 animate-in fade-in slide-in-from-top-2">
+            <div
+              className="flex items-center gap-2 p-3 bg-red-50 text-red-700 text-sm"
+              style={{ border: "1px solid #FCA5A5" }}
+            >
               <AlertCircle className="w-4 h-4 shrink-0" />
-              {error.toUpperCase()}
+              {error}
             </div>
           )}
 
+          {/* Reset success */}
           {resetSuccess && (
-            <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center gap-3 text-xs font-bold text-emerald-600 animate-in fade-in slide-in-from-top-2">
+            <div
+              className="flex items-center gap-2 p-3 bg-green-50 text-green-700 text-sm"
+              style={{ border: "1px solid #86EFAC" }}
+            >
               <CheckCircle className="w-4 h-4 shrink-0" />
               {resetSuccess}
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Username</label>
-              <div className="relative">
-                <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <form onSubmit={handleLogin} className="space-y-4">
+            {/* Username */}
+            <div>
+              <label className="block text-sm font-bold text-gray-800 mb-1">
+                User Name
+              </label>
+              <div className="flex" style={{ border: "1px solid #D1D5DB" }}>
+                <span
+                  className="flex items-center justify-center w-10 bg-white border-r"
+                  style={{ borderColor: "#D1D5DB" }}
+                >
+                  <UserIcon className="w-4 h-4 text-gray-400" />
+                </span>
                 <input
                   type="text"
                   required
                   disabled={isLoading}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 outline-none transition-all disabled:bg-slate-100"
-                  placeholder="Employee Username"
+                  className="flex-1 px-3 py-2 text-sm outline-none disabled:opacity-60"
+                  style={{ backgroundColor: "#EBF2FA", borderRadius: 0 }}
+                  placeholder="Enter your username"
                   autoComplete="username"
                 />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Password</label>
-                <button
-                  type="button"
-                  onClick={() => setShowForgotPassword(true)}
-                  className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wider"
+            {/* Password */}
+            <div>
+              <label className="block text-sm font-bold text-gray-800 mb-1">
+                Password
+              </label>
+              <div className="flex" style={{ border: "1px solid #D1D5DB" }}>
+                <span
+                  className="flex items-center justify-center w-10 bg-white border-r"
+                  style={{ borderColor: "#D1D5DB" }}
                 >
-                  Reset?
-                </button>
-              </div>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <KeyRound className="w-4 h-4 text-gray-400" />
+                </span>
                 <input
                   type="password"
                   required
                   disabled={isLoading}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 outline-none transition-all disabled:bg-slate-100"
+                  className="flex-1 px-3 py-2 text-sm outline-none disabled:opacity-60"
+                  style={{ backgroundColor: "#EBF2FA", borderRadius: 0 }}
                   placeholder="••••••••"
                   autoComplete="current-password"
                 />
               </div>
             </div>
 
+            {/* Remember me */}
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
                 id="remember"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                className="w-4 h-4"
+                style={{ accentColor: "#338EC3" }}
               />
-              <label htmlFor="remember" className="text-xs font-bold text-slate-500 uppercase tracking-wider cursor-pointer select-none">
+              <label
+                htmlFor="remember"
+                className="text-xs text-gray-600 cursor-pointer select-none"
+              >
                 Remember session
               </label>
             </div>
 
+            {/* Login button */}
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-slate-900 hover:bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-2 text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+              style={{ backgroundColor: "#338EC3", borderRadius: 0 }}
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  AUTHENTICATING...
+                  <Loader2 className="w-4 h-4 animate-spin" /> Authenticating...
                 </>
               ) : (
-                <>
-                  SIGN IN AS {role.toUpperCase()}
-                  <ArrowRight className="w-5 h-5" />
-                </>
+                "Login"
               )}
             </button>
           </form>
 
-          <div className="text-center pt-6 border-t border-slate-100">
+          {/* Divider + action links */}
+          <div
+            style={{ borderTop: "1px solid #D1D5DB" }}
+            className="pt-4 flex flex-col gap-2"
+          >
             <button
-              onClick={() => navigate('/terminal')}
-              className="text-slate-400 text-xs font-bold uppercase tracking-[0.2em] hover:text-blue-600 transition-colors"
+              type="button"
+              onClick={() => navigate("/terminal")}
+              className="text-sm text-left hover:underline"
+              style={{ color: "#2A70A6" }}
             >
-              Go to Mark Attendance
+              Fill Attendance at Terminal
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForgotPassword(true)}
+              className="text-sm text-left hover:underline"
+              style={{ color: "#2A70A6" }}
+            >
+              Forget your password?
             </button>
           </div>
         </div>
+      </div>
+
+      {/* ══════════════════════════════════════
+          FOOTER BANNER
+      ══════════════════════════════════════ */}
+      <div
+        className="w-full max-w-lg bg-white px-4 py-3 text-center text-xs text-gray-600"
+        style={{
+          borderTop: "4px solid #338EC3",
+          border: "1px solid #D1D5DB",
+          borderTopWidth: "4px",
+          borderRadius: 0,
+        }}
+      >
+        Copyright &copy; 2026 Hawassa University. All rights reserved.
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Search,
   Filter,
@@ -91,9 +91,9 @@ function exportPDF(employees: Employee[]) {
       (e) =>
         `<tr>
           <td>${e.full_name}</td><td>${e.email}</td><td>${e.role}</td>
-          <td>${e.department}</td><td>${e.position || 'â€”'}</td>
-          <td>${e.employment_type?.replace('_', '-') || 'â€”'}</td>
-          <td>${e.hire_date || 'â€”'}</td>
+          <td>${e.department}</td><td>${e.position || '—'}</td>
+          <td>${e.employment_type?.replace('_', '-') || '—'}</td>
+          <td>${e.hire_date || '—'}</td>
           <td style="color:${e.status === 'ACTIVE' ? 'green' : 'red'}">${e.status}</td>
         </tr>`
     )
@@ -333,7 +333,7 @@ export default function ManageEmployees() {
                       <Clock className="w-4 h-4 text-slate-400 shrink-0" />
                       <span className="text-xs">
                         {emp.employment_type?.replace('_', '-')}
-                        {emp.hire_date ? ` â€¢ Hired ${emp.hire_date}` : ''}
+                        {emp.hire_date ? ` • Hired ${emp.hire_date}` : ''}
                       </span>
                     </div>
                   )}
@@ -358,7 +358,7 @@ export default function ManageEmployees() {
       {!loading && filtered.length > PAGE_SIZE && (
         <div className="flex items-center justify-between pt-4">
           <p className="text-sm text-slate-500">
-            Showing {(page - 1) * PAGE_SIZE + 1}â€“{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length} employees
+            Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length} employees
           </p>
           <div className="flex gap-2">
             <button

@@ -1,4 +1,4 @@
-﻿import {
+import {
   Activity,
   Cpu,
   Database,
@@ -219,7 +219,7 @@ export default function SystemOversight() {
                   <p className="text-sm font-bold text-slate-900 truncate">{node.name}</p>
                   <div className="flex items-center gap-2 mt-1">
                     <span className={cn('text-[10px] font-bold uppercase tracking-wider', node.color)}>{node.status}</span>
-                    <span className="text-[10px] text-slate-300">â€¢</span>
+                    <span className="text-[10px] text-slate-400">�</span>
                     <span className="text-[10px] text-slate-400 font-mono">{node.load} Load</span>
                   </div>
                 </div>
@@ -264,7 +264,7 @@ export default function SystemOversight() {
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     Severity: {incident.severity}
                   </span>
-                  <span className="text-[10px] text-slate-300">â€¢</span>
+                  <span className="text-[10px] text-slate-400">�</span>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">
                     Action: {incident.action}
                   </span>

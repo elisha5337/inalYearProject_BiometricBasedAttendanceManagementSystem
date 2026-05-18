@@ -82,7 +82,7 @@ export default function Sidebar({ user, onClose, isCollapsed, onToggleCollapse }
         isCollapsed && "lg:px-4 lg:justify-center"
       )}>
         <div className="flex items-center gap-3 overflow-hidden">
-          <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-indigo-900/50">
+          <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-lg" style={{ backgroundColor: '#0073CE' }}>
             <Fingerprint className="text-white w-6 h-6" />
           </div>
           {!isCollapsed && (
@@ -115,9 +115,10 @@ export default function Sidebar({ user, onClose, isCollapsed, onToggleCollapse }
                 "flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-bold transition-all relative group",
                 isCollapsed && "lg:justify-center lg:px-0",
                 isActive 
-                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/40" 
+                  ? "text-white shadow-lg" 
                   : "text-slate-400 hover:bg-slate-800 hover:text-white"
               )}
+              style={isActive ? { backgroundColor: '#0073CE' } : undefined}
             >
               <item.icon className="w-5 h-5 shrink-0" />
               {!isCollapsed && (
@@ -136,7 +137,7 @@ export default function Sidebar({ user, onClose, isCollapsed, onToggleCollapse }
           "flex items-center gap-3 px-3 py-2 bg-slate-800/50 rounded-2xl border border-slate-700",
           isCollapsed && "lg:px-2 lg:bg-transparent lg:border-none"
         )}>
-          <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-xs font-bold text-white shrink-0 overflow-hidden shadow-lg shadow-indigo-900/50">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold text-white shrink-0 overflow-hidden shadow-lg" style={{ backgroundColor: '#0073CE' }}>
             {user.profilePhoto ? (
               <img src={user.profilePhoto} alt={user.name} className="w-full h-full object-cover" />
             ) : (

@@ -1,7 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 
 import { ApiError } from '../../lib/api';
-import { fetchMyLeaveRequests, type LeaveRequestRecord } from '../../lib/leave';
+import { cancelLeaveRequest, fetchMyLeaveRequests, type LeaveRequestRecord } from '../../lib/leave';
 
 function formatDisplayDate(value: string | null) {
   if (!value) {
@@ -50,6 +50,8 @@ export default function LeaveHistory() {
   const [statusFilter, setStatusFilter] = useState<'all' | LeaveRequestRecord['status']>('all');
   const [leaveTypeFilter, setLeaveTypeFilter] = useState('all');
 
+  const [cancelling, setCancelling] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -85,6 +87,19 @@ export default function LeaveHistory() {
       cancelled = true;
     };
   }, []);
+
+  async function handleCancel(id: string) {
+    if (!window.confirm('Are you sure you want to cancel this leave request?')) return;
+    try {
+      setCancelling(id);
+      await cancelLeaveRequest(id);
+      setRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'cancelled' as const } : r));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to cancel request.');
+    } finally {
+      setCancelling(null);
+    }
+  }
 
   const leaveTypeOptions = useMemo(() => {
     return Array.from(new Set(requests.map((request) => request.leaveTypeLabel))).sort();
@@ -260,6 +275,9 @@ export default function LeaveHistory() {
                   <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                     Notes
                   </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Action
+                  </th>
                 </tr>
               </thead>
 
@@ -292,6 +310,17 @@ export default function LeaveHistory() {
                         : request.reviewedBy
                           ? `Reviewed by ${request.reviewedBy}`
                           : 'Awaiting HR review'}
+                    </td>
+                    <td className="px-6 py-5">
+                      {request.status === 'pending' && (
+                        <button
+                          onClick={() => handleCancel(request.id)}
+                          disabled={cancelling === request.id}
+                          className="px-3 py-1 text-xs font-bold text-rose-600 border border-rose-200 rounded-2xl hover:bg-rose-50 transition-colors disabled:opacity-50"
+                        >
+                          {cancelling === request.id ? 'Cancelling...' : 'Cancel'}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

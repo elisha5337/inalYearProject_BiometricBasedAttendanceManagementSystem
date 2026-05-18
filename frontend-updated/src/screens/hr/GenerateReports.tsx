@@ -4,14 +4,12 @@ import {
   FileText,
   Download,
   Calendar,
-  Users,
   Clock,
-  ArrowRight,
   CheckCircle2,
   AlertCircle,
-  TrendingUp,
   FileSpreadsheet,
   FileText as FilePdf,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { API_BASE, apiRequest } from '../../lib/api';

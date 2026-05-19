@@ -1,4 +1,4 @@
-﻿import { apiRequest, ensureCsrfCookie } from './api';
+import { apiRequest, ensureCsrfCookie } from './api';
 import type { AppUserRole, User } from '../types';
 
 type BackendUser = {
@@ -58,6 +58,7 @@ export async function loginUser(payload: {
   identifier: string;
   password: string;
   role: AppUserRole;
+  remember?: boolean;
 }) {
   await ensureCsrfCookie();
 

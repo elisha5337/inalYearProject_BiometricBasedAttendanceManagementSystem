@@ -1,3 +1,4 @@
+import { useLanguage } from '../../lib/translations';
 ﻿import { useEffect, useMemo, useState } from 'react';
 import {
   Search,
@@ -12,6 +13,7 @@ import { cn } from '../../lib/utils';
 import { buildDailyAttendanceRows, fetchMyAttendanceHistory } from '../../lib/attendance';
 
 export default function ViewAttendance({ user }: { user: User }) {
+  const { t } = useLanguage();
   const [dateRange, setDateRange] = useState('This Month');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -103,8 +105,8 @@ export default function ViewAttendance({ user }: { user: User }) {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Attendance History</h1>
-          <p className="text-slate-500">Detailed log of your check-in and check-out records</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('Attendance History')}</h1>
+          <p className="text-slate-500">{t('Detailed log of your check-in and check-out records')}</p>
         </div>
 
         <div className="flex items-center gap-3">

@@ -1,3 +1,4 @@
+import { useLanguage } from '../../lib/translations';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Check, X, Loader2, Download, Search, RefreshCw, AlertCircle, ShieldAlert } from 'lucide-react';
@@ -45,6 +46,7 @@ function downloadCsv(rows: HrAttendanceRecord[]) {
 }
 
 export default function ManageAttendance() {
+  const { t } = useLanguage();
   const [searchParams] = useSearchParams();
   const [records, setRecords] = useState<HrAttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,12 +109,12 @@ export default function ManageAttendance() {
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="space-y-2">
-            <p className="text-sm font-medium uppercase tracking-[0.22em] text-slate-500">HR Operations</p>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Attendance Management</h1>
-            <p className="max-w-2xl text-sm text-slate-600">Review real-time biometric logs and audit manual verification requests.</p>
+            <p className="text-sm font-medium uppercase tracking-[0.22em] text-slate-500">{t('HR Operations')}</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{t('Attendance Management')}</h1>
+            <p className="max-w-2xl text-sm text-slate-600">{t('Review real-time biometric logs and audit manual verification requests.')}</p>
           </div>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Total</p><p className="mt-2 text-2xl font-semibold text-slate-900">{stats.total}</p></div>
+            <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">{t('Total')}</p><p className="mt-2 text-2xl font-semibold text-slate-900">{stats.total}</p></div>
             <div className="rounded-2xl bg-emerald-50 p-4"><p className="text-xs font-medium uppercase tracking-[0.18em] text-emerald-700">Present</p><p className="mt-2 text-2xl font-semibold text-emerald-900">{stats.present}</p></div>
             <div className="rounded-2xl bg-amber-50 p-4"><p className="text-xs font-medium uppercase tracking-[0.18em] text-amber-700">Late</p><p className="mt-2 text-2xl font-semibold text-amber-900">{stats.late}</p></div>
             <div className="rounded-2xl bg-sky-50 p-4"><p className="text-xs font-medium uppercase tracking-[0.18em] text-sky-700">Pending</p><p className="mt-2 text-2xl font-semibold text-sky-900">{stats.pending}</p></div>
@@ -173,7 +175,7 @@ export default function ManageAttendance() {
                       <td className="px-6 py-5">
                         <div>
                           <p className="font-bold text-slate-900">{record.employeeName}</p>
-                          <p className="text-[10px] text-slate-500 uppercase font-black">{record.employeeCode} · {record.department}</p>
+                          <p className="text-[10px] text-slate-500 uppercase font-black">{record.employeeCode} Â· {record.department}</p>
                           <p className="text-[10px] text-indigo-600 font-bold mt-0.5">{record.assignment} // {record.location}</p>
                         </div>
                       </td>

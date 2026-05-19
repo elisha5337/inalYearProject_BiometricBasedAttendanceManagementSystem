@@ -1,3 +1,4 @@
+import { useLanguage } from '../../lib/translations';
 import { useEffect, useMemo, useState } from "react";
 import {
   Clock,
@@ -108,6 +109,7 @@ function findPolicy(policies: LeavePolicyRecord[], matcher: (policy: LeavePolicy
 }
 
 export default function SetPolicies() {
+  const { t } = useLanguage();
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -300,8 +302,8 @@ export default function SetPolicies() {
     <div className="max-w-4xl mx-auto space-y-8 pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 uppercase tracking-tight">System Policies</h1>
-          <p className="text-slate-500 font-medium italic">Institutional rules and biometric protocols</p>
+          <h1 className="text-2xl font-bold text-slate-900 uppercase tracking-tight">{t('System Policies')}</h1>
+          <p className="text-slate-500 font-medium italic">{t('Institutional rules and biometric protocols')}</p>
         </div>
         <div className="flex gap-3">
           <button onClick={() => setShowAddModal(true)} className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-2 border border-slate-200 shadow-sm">
@@ -333,7 +335,7 @@ export default function SetPolicies() {
             </div>
             <div>
               <h3 className="font-black text-slate-900 uppercase tracking-tight">Leave Entitlements</h3>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Define standard yearly leave allocations</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">{t('Define standard yearly leave allocations')}</p>
             </div>
           </div>
           <div className="p-8 space-y-8">
@@ -360,7 +362,7 @@ export default function SetPolicies() {
             </div>
             <div>
               <h3 className="font-bold text-slate-900 uppercase">Attendance Rules</h3>
-              <p className="text-xs text-slate-500">Thresholds for lateness and grace periods</p>
+              <p className="text-xs text-slate-500">{t('Thresholds for lateness and grace periods')}</p>
             </div>
           </div>
           <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -383,7 +385,7 @@ export default function SetPolicies() {
             </div>
             <div>
               <h3 className="font-bold text-slate-900 uppercase">Biometric Security</h3>
-              <p className="text-xs text-slate-500">Configure verification protocols</p>
+              <p className="text-xs text-slate-500">{t('Configure verification protocols')}</p>
             </div>
           </div>
           <div className="p-8 space-y-8">
@@ -391,7 +393,7 @@ export default function SetPolicies() {
               <div onClick={() => setPolicies(c => ({...c, mfaEnabled: !c.mfaEnabled}))} className="flex items-center justify-between p-4 border border-slate-100 rounded-2xl hover:bg-slate-50 cursor-pointer">
                 <div>
                   <p className="text-sm font-bold text-slate-900">Multi-factor Authentication</p>
-                  <p className="text-xs text-slate-500 font-medium">Require higher security verification.</p>
+                  <p className="text-xs text-slate-500 font-medium">{t('Require higher security verification.')}</p>
                 </div>
                 <div className={cn("w-12 h-6 rounded-full relative transition-colors", policies.mfaEnabled ? "bg-indigo-600" : "bg-slate-200")}>
                   <div className={cn("absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all", policies.mfaEnabled ? "right-1" : "left-1")}></div>
@@ -400,7 +402,7 @@ export default function SetPolicies() {
               <div onClick={() => setPolicies(c => ({...c, livenessDetection: !c.livenessDetection}))} className="flex items-center justify-between p-4 border border-slate-100 rounded-2xl hover:bg-slate-50 cursor-pointer">
                 <div>
                   <p className="text-sm font-bold text-slate-900">Liveness Detection</p>
-                  <p className="text-xs text-slate-500 font-medium">Prevent biometric spoofing attempts.</p>
+                  <p className="text-xs text-slate-500 font-medium">{t('Prevent biometric spoofing attempts.')}</p>
                 </div>
                 <div className={cn("w-12 h-6 rounded-full relative transition-colors", policies.livenessDetection ? "bg-indigo-600" : "bg-slate-200")}>
                   <div className={cn("absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all", policies.livenessDetection ? "right-1" : "left-1")}></div>
@@ -422,7 +424,7 @@ export default function SetPolicies() {
             </div>
             <div>
               <h3 className="font-bold text-slate-900 uppercase">Access & Authentication</h3>
-              <p className="text-xs text-slate-500">Manage system sessions and password rules</p>
+              <p className="text-xs text-slate-500">{t('Manage system sessions and password rules')}</p>
             </div>
           </div>
           <div className="p-8 space-y-8">
@@ -431,7 +433,7 @@ export default function SetPolicies() {
                 <ShieldAlert className="w-6 h-6 text-amber-600" />
                 <div>
                   <p className="text-sm font-bold text-slate-900 uppercase">Manual Entry Fallback</p>
-                  <p className="text-xs text-slate-500 font-medium uppercase tracking-tighter">Allow manual credential login if biometrics fail.</p>
+                  <p className="text-xs text-slate-500 font-medium uppercase tracking-tighter">{t('Allow manual credential login if biometrics fail.')}</p>
                 </div>
               </div>
               <div className={cn("w-12 h-6 rounded-full relative transition-colors", policies.manualEntryEnabled ? "bg-amber-500" : "bg-slate-200")}>
@@ -477,7 +479,7 @@ export default function SetPolicies() {
               </div>
               <div>
                 <h3 className="font-black text-slate-900 uppercase tracking-tight">Custom Organization Rules</h3>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Manage additional unique protocols</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">{t('Manage additional unique protocols')}</p>
               </div>
             </div>
             <div className="p-6 space-y-4">
@@ -513,7 +515,7 @@ export default function SetPolicies() {
                 </div>
                 <div>
                   <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">{editingPolicyId ? "Modify Rule" : "Register Rule"}</h3>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Define new system-wide parameters</p>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">{t('Define new system-wide parameters')}</p>
                 </div>
               </div>
               <button onClick={closePolicyModal} className="p-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"><X className="w-6 h-6" /></button>

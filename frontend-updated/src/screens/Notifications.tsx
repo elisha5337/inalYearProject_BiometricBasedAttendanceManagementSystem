@@ -1,3 +1,4 @@
+import { useLanguage } from '../lib/translations';
 ﻿import { useEffect, useState } from 'react';
 import { Bell, CheckCircle2, AlertCircle, Info, Clock, Trash2 } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -11,6 +12,7 @@ import {
 } from '../lib/admin';
 
 export default function Notifications() {
+  const { t } = useLanguage();
   const [notifications, setNotifications] = useState<AppNotificationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,8 +100,8 @@ export default function Notifications() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Notifications</h1>
-          <p className="text-slate-500">Stay updated with the latest activities and alerts</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('Notifications')}</h1>
+          <p className="text-slate-500">{t('Stay updated with the latest activities and alerts')}</p>
         </div>
         <button onClick={handleMarkAllAsRead} className="text-sm font-bold text-indigo-600 hover:text-indigo-700">
           Mark all as read
@@ -181,7 +183,7 @@ export default function Notifications() {
             <Bell className="w-10 h-10 text-slate-300" />
           </div>
           <h3 className="text-lg font-bold text-slate-900">All caught up!</h3>
-          <p className="text-slate-500">You have no new notifications at the moment.</p>
+          <p className="text-slate-500">{t('You have no new notifications at the moment.')}</p>
         </div>
       )}
     </div>

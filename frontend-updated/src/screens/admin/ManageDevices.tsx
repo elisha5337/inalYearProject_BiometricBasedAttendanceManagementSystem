@@ -1,3 +1,4 @@
+import { useLanguage } from '../../lib/translations';
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -28,6 +29,7 @@ import {
 } from '../../lib/admin';
 
 export default function ManageDevices() {
+  const { t } = useLanguage();
   const [searchParams] = useSearchParams();
   const [devices, setDevices] = useState<DeviceRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,8 +149,8 @@ export default function ManageDevices() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Device Management</h1>
-          <p className="text-slate-500">Monitor and configure biometric terminals and scanners</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('Device Management')}</h1>
+          <p className="text-slate-500">{t('Monitor and configure biometric terminals and scanners')}</p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">

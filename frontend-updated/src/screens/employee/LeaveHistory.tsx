@@ -1,3 +1,4 @@
+import { useLanguage } from '../../lib/translations';
 ﻿import { useEffect, useMemo, useState } from 'react';
 
 import { ApiError } from '../../lib/api';
@@ -43,6 +44,7 @@ function getStatusClasses(status: LeaveRequestRecord['status']) {
 }
 
 export default function LeaveHistory() {
+  const { t } = useLanguage();
   const [requests, setRequests] = useState<LeaveRequestRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -147,19 +149,15 @@ export default function LeaveHistory() {
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-2">
-            <p className="text-sm font-medium uppercase tracking-[0.22em] text-slate-500">
-              Leave Management
-            </p>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Leave History</h1>
-            <p className="max-w-2xl text-sm text-slate-600">
-              Review all submitted leave requests with their latest approval status, decision notes,
-              and date ranges pulled directly from the backend.
-            </p>
+            <p className="text-sm font-medium uppercase tracking-[0.22em] text-slate-500">{t('Leave Management')}</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{t('Leave History')}</h1>
+            <p className="max-w-2xl text-sm text-slate-600">{t(`Review all submitted leave requests with their latest approval status, decision notes,
+              and date ranges pulled directly from the backend.`)}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Total</p>
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">{t('Total')}</p>
               <p className="mt-2 text-2xl font-semibold text-slate-900">{stats.total}</p>
             </div>
             <div className="rounded-2xl bg-emerald-50 p-4">
@@ -241,9 +239,7 @@ export default function LeaveHistory() {
       <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 px-6 py-5">
           <h2 className="text-lg font-semibold text-slate-900">Request Timeline</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Each request below is synchronized from the backend leave module.
-          </p>
+          <p className="mt-1 text-sm text-slate-600">{t('Each request below is synchronized from the backend leave module.')}</p>
         </div>
 
         {loading ? (

@@ -1,3 +1,4 @@
+import { useLanguage } from '../../lib/translations';
 ﻿import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -24,6 +25,7 @@ type EnrollmentStep = "select" | "capture" | "success";
 type EnrollmentMode = "fingerprint" | "face" | "both";
 
 export default function EnrollBiometrics() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [step, setStep] = useState<EnrollmentStep>("select");
   const [searchQuery, setSearchQuery] = useState("");
@@ -265,12 +267,8 @@ export default function EnrollBiometrics() {
   return (
     <div className="max-w-3xl mx-auto pb-20">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">
-          Biometric Enrollment
-        </h1>
-        <p className="text-slate-500">
-          Securely register employee biometric data for authentication
-        </p>
+        <h1 className="text-2xl font-bold text-slate-900">{t('Biometric Enrollment')}</h1>
+        <p className="text-slate-500">{t('Securely register employee biometric data for authentication')}</p>
       </div>
 
       <div className="flex items-center justify-between mb-10 relative">
@@ -492,10 +490,8 @@ export default function EnrollBiometrics() {
                     </button>
                   ))}
                 </div>
-                <p className="text-[11px] text-slate-500">
-                  Face capture is the live backend-connected enrollment flow in
-                  this build.
-                </p>
+                <p className="text-[11px] text-slate-500">{t(`Face capture is the live backend-connected enrollment flow in
+                  this build.`)}</p>
               </div>
             )}
 

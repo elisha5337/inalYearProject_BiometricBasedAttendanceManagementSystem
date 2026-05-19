@@ -1,3 +1,4 @@
+import { useLanguage } from '../../lib/translations';
 ﻿import {
   CheckCircle2,
   AlertTriangle,
@@ -42,6 +43,7 @@ function getIntegrationIcon(type: string) {
 }
 
 export default function ExternalIntegrations() {
+  const { t } = useLanguage();
   const [integrations, setIntegrations] = useState<IntegrationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -167,8 +169,8 @@ export default function ExternalIntegrations() {
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">External Integrations</h1>
-          <p className="text-slate-500 mt-1">Manage connections to HRIS, Payroll, and Cloud services</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('External Integrations')}</h1>
+          <p className="text-slate-500 mt-1">{t('Manage connections to HRIS, Payroll, and Cloud services')}</p>
         </div>
         <button onClick={() => setShowAddModal(true)} className="primary-button gap-2">
           <Plus className="w-4 h-4" />
@@ -262,7 +264,7 @@ export default function ExternalIntegrations() {
           </div>
           <div className="text-center">
             <p className="text-sm font-bold text-slate-900">Connect New Service</p>
-            <p className="text-xs text-slate-500 mt-1">Browse available integrations</p>
+            <p className="text-xs text-slate-500 mt-1">{t('Browse available integrations')}</p>
           </div>
         </button>
       </div>

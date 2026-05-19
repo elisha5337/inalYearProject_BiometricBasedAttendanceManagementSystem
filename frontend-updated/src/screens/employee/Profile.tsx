@@ -1,3 +1,4 @@
+import { useLanguage } from '../../lib/translations';
 ﻿import { useState } from 'react';
 import { 
   User, 
@@ -15,12 +16,13 @@ import {
 import { User as UserType } from '../../types';
 
 export default function Profile({ user }: { user: UserType }) {
+  const { t } = useLanguage();
   const [isEditing, setIsEditing] = useState(false);
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">My Profile</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{t('My Profile')}</h1>
         <button 
           onClick={() => setIsEditing(!isEditing)}
           className="primary-button"
@@ -140,7 +142,7 @@ export default function Profile({ user }: { user: UserType }) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-bold text-slate-900">Change Password</p>
-                  <p className="text-xs text-slate-500">Update your account password regularly for better security</p>
+                  <p className="text-xs text-slate-500">{t('Update your account password regularly for better security')}</p>
                 </div>
                 <button className="secondary-button">Update</button>
               </div>
@@ -148,7 +150,7 @@ export default function Profile({ user }: { user: UserType }) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-bold text-slate-900">Two-Factor Authentication</p>
-                  <p className="text-xs text-slate-500">Add an extra layer of security to your account</p>
+                  <p className="text-xs text-slate-500">{t('Add an extra layer of security to your account')}</p>
                 </div>
                 <div className="w-12 h-6 bg-indigo-600 rounded-full relative cursor-pointer">
                   <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></div>

@@ -9,6 +9,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { apiRequest } from '../../lib/api';
 import { fetchDevices, fetchNotifications, formatRelativeTime, type DeviceRecord } from '../../lib/admin';
 import SkeletonLoader from '../../components/SkeletonLoader';
+import { useLanguage } from '../../lib/translations';
 
 function toISODate(d: Date) { return d.toISOString().slice(0, 10); }
 function formatTimeForDisplay(v: string) { const p = new Date(v); return isNaN(p.getTime()) ? v : p.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
@@ -16,6 +17,7 @@ function formatHHMM(m: number) { return `${String(Math.floor(m / 60)).padStart(2
 function computeLateDelta(t: number, y: number) { const d = t - y; return d === 0 ? '+0' : d > 0 ? `+${d}` : `${d}`; }
 
 export default function HRDashboard({ user }: { user: User }) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dashboardStats, setDashboardStats] = useState<{ totalEmployees: number; presentToday: number; pendingLeaves: number; activeShifts: number } | null>(null);
@@ -134,15 +136,15 @@ export default function HRDashboard({ user }: { user: User }) {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-page-title">HR Overview</h1>
-          <p className="text-page-sub">Real-time workforce metrics and pending actions</p>
+          <h1 className="text-page-title">{t('HR Overview')}</h1>
+          <p className="text-page-sub">{t('Real-time workforce metrics and pending actions')}</p>
         </div>
         <div className="text-right">
-          <p className="text-body">System Status</p>
+          <p className="text-body">{t('System Status')}</p>
           <div className="flex items-center gap-2 mt-1">
             <div className={cn('w-2 h-2 rounded-full', offlineCount === 0 ? 'bg-emerald-500' : 'bg-rose-500')} />
             <span className="text-sm font-bold text-surface-text uppercase">
-              {offlineCount === 0 ? 'All Devices Online' : `${offlineCount} Devices Offline`}
+              {offlineCount === 0 ? t('All Devices Online') : `${offlineCount} Devices Offline`}
             </span>
           </div>
         </div>
@@ -160,7 +162,7 @@ export default function HRDashboard({ user }: { user: User }) {
             <span className="text-xs font-bold text-surface-muted">Total</span>
           </div>
           <div className="mt-4">
-            <p className="text-body">Total Employees</p>
+            <p className="text-body">{t('Total Employees')}</p>
             <h3 className="text-value">{dashboardStats?.totalEmployees.toLocaleString() ?? 0}</h3>
           </div>
         </Link>
@@ -175,7 +177,7 @@ export default function HRDashboard({ user }: { user: User }) {
             </span>
           </div>
           <div className="mt-4">
-            <p className="text-body">Present Today</p>
+            <p className="text-body">{t('Present Today')}</p>
             <h3 className="text-value">{dashboardStats?.presentToday.toLocaleString() ?? 0}</h3>
           </div>
         </Link>
@@ -190,7 +192,7 @@ export default function HRDashboard({ user }: { user: User }) {
             </span>
           </div>
           <div className="mt-4">
-            <p className="text-body">Late Arrivals</p>
+            <p className="text-body">{t('Late Arrivals')}</p>
             <h3 className="text-value">{lateToday.toLocaleString()}</h3>
           </div>
         </Link>

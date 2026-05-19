@@ -1,3 +1,4 @@
+import { useLanguage } from '../../lib/translations';
 ﻿import { useEffect, useState, useMemo } from 'react';
 import { 
   Clock, 
@@ -58,6 +59,7 @@ interface Holiday {
 }
 
 export default function ManageShifts() {
+  const { t } = useLanguage();
   const [showModal, setShowModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showHolidayModal, setShowHolidayModal] = useState(false); // NEW
@@ -385,8 +387,8 @@ export default function ManageShifts() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Shift Management</h1>
-            <p className="text-slate-500">Define work schedules and assign employee shifts</p>
+            <h1 className="text-2xl font-bold text-slate-900">{t('Shift Management')}</h1>
+            <p className="text-slate-500">{t('Define work schedules and assign employee shifts')}</p>
           </div>
         </div>
         
@@ -445,7 +447,7 @@ export default function ManageShifts() {
           <div className="col-span-full flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-slate-200">
             <Clock className="w-12 h-12 text-slate-300 mb-4" />
             <h3 className="text-lg font-bold text-slate-900">No Shifts Defined</h3>
-            <p className="text-sm text-slate-500">Create a shift to start managing attendance.</p>
+            <p className="text-sm text-slate-500">{t('Create a shift to start managing attendance.')}</p>
           </div>
         ) : (
           shifts.map((shift) => (
@@ -594,7 +596,7 @@ export default function ManageShifts() {
               </div>
               <div>
                 <h4 className="font-bold text-slate-900">No recent assignments</h4>
-                <p className="text-sm text-slate-500 mt-1">Start assigning employees to shifts to see them here.</p>
+                <p className="text-sm text-slate-500 mt-1">{t('Start assigning employees to shifts to see them here.')}</p>
               </div>
             </div>
           )
@@ -652,7 +654,7 @@ export default function ManageShifts() {
                 <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600 shadow-lg shadow-emerald-200 border border-emerald-200"><Gift className="w-6 h-6" /></div>
                 <div>
                   <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Institutional Holidays</h3>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Manage Official Closed Days</p>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">{t('Manage Official Closed Days')}</p>
                 </div>
               </div>
               <button onClick={() => setShowHolidayModal(false)} className="p-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"><X className="w-6 h-6" /></button>

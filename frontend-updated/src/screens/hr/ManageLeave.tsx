@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { 
   CheckCircle2, 
   XCircle, 
@@ -28,6 +28,7 @@ import { cn } from '../../lib/utils';
 import { Link } from 'react-router-dom';
 import { apiRequest, API_BASE } from '../../lib/api';
 import { formatRelativeTime } from '../../lib/admin';
+import { useLanguage } from '../../lib/translations';
 
 interface LeaveRequest {
   id: string;
@@ -47,6 +48,7 @@ interface LeaveRequest {
 }
 
 export default function ManageLeave() {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('Pending');
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('');
@@ -176,8 +178,8 @@ export default function ManageLeave() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Leave Requests</h1>
-            <p className="text-slate-500">Review and process employee leave applications</p>
+            <h1 className="text-2xl font-bold text-slate-900">{t('Leave Requests')}</h1>
+            <p className="text-slate-500">{t('Review and process employee leave applications')}</p>
           </div>
         </div>
         
@@ -206,7 +208,7 @@ export default function ManageLeave() {
                   activeTab === tab ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20" : "text-slate-500 hover:text-slate-700"
                 )}
               >
-                {tab}
+                {t(tab)}
                 {tab === 'Pending' && pendingCount > 0 && <span className="ml-2 bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{pendingCount}</span>}
               </button>
             ))}
@@ -218,13 +220,13 @@ export default function ManageLeave() {
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 grayscale opacity-50">
             <RefreshCw className="w-8 h-8 animate-spin mb-4" />
-            <p className="text-sm font-bold">Synchronizing Leave Records...</p>
+            <p className="text-sm font-bold">{t('Synchronizing Leave Records...')}</p>
           </div>
         ) : filteredRequests.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-slate-200">
             <Clock className="w-12 h-12 text-slate-300 mb-4" />
             <h3 className="text-lg font-bold text-slate-900">No {activeTab} Requests</h3>
-            <p className="text-sm text-slate-500">There are no leave applications in this category.</p>
+            <p className="text-sm text-slate-500">{t('There are no leave applications in this category.')}</p>
           </div>
         ) : (
           filteredRequests.map((request) => {
@@ -422,8 +424,8 @@ export default function ManageLeave() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-slate-900">Export Leave Report</h2>
-                <p className="text-sm text-slate-500">Select format and date range</p>
+                <h2 className="text-xl font-bold text-slate-900">{t('Export Leave Report')}</h2>
+                <p className="text-sm text-slate-500">{t('Select format and date range')}</p>
               </div>
               <button 
                 onClick={() => setShowExportModal(false)}

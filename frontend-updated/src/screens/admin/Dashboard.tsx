@@ -4,6 +4,7 @@ import { User } from '../../types';
 import { cn } from '../../lib/utils';
 import { Link, useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useLanguage } from '../../lib/translations';
 import SkeletonLoader from '../../components/SkeletonLoader';
 import { ApiError } from '../../lib/api';
 import { fetchDashboardOverview, formatRelativeTime, type DashboardOverview } from '../../lib/admin';
@@ -18,6 +19,7 @@ const emptyOverview: DashboardOverview = {
 
 export default function AdminDashboard({ user }: { user: User }) {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [overview, setOverview] = useState<DashboardOverview>(emptyOverview);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +47,7 @@ export default function AdminDashboard({ user }: { user: User }) {
 
   const healthCards = [
     {
-      label: 'Main Server',
+      label: t('Main Server'),
       value: overview.health.dbStatus === 'ERROR' ? 'Attention Needed' : 'Operational',
       extra: overview.health.uptime,
       icon: Server,
@@ -54,8 +56,8 @@ export default function AdminDashboard({ user }: { user: User }) {
         ? <AlertTriangle className="w-5 h-5 text-rose-400" />
         : <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />,
     },
-    { label: 'Database', value: overview.health.dbStatus === 'ERROR' ? 'Disconnected' : 'Connected', extra: overview.health.apiLatency, icon: Database, accent: 'bg-blue-500/20 text-blue-400' },
-    { label: 'Biometric Nodes', value: overview.devicesOnlineText, extra: overview.health.activeTerminals, icon: Cpu, accent: 'bg-amber-500/20 text-amber-400', rightIcon: <AlertTriangle className="w-5 h-5 text-amber-400" /> },
+    { label: t('Database'), value: overview.health.dbStatus === 'ERROR' ? 'Disconnected' : 'Connected', extra: overview.health.apiLatency, icon: Database, accent: 'bg-blue-500/20 text-blue-400' },
+    { label: t('Biometric Nodes'), value: overview.devicesOnlineText, extra: overview.health.activeTerminals, icon: Cpu, accent: 'bg-amber-500/20 text-amber-400', rightIcon: <AlertTriangle className="w-5 h-5 text-amber-400" /> },
   ];
 
   return (
@@ -63,15 +65,15 @@ export default function AdminDashboard({ user }: { user: User }) {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-page-title">System Administration</h1>
-          <p className="text-page-sub">Global system health, security monitoring and configuration</p>
+          <h1 className="text-page-title">{t('System Administration')}</h1>
+          <p className="text-page-sub">{t('Global system health, security monitoring and configuration')}</p>
         </div>
         <div className="flex gap-3">
           <Link to="/admin/audit" className="secondary-button gap-2">
-            <History className="w-4 h-4" /> System Logs
+            <History className="w-4 h-4" /> {t('System Logs')}
           </Link>
           <Link to="/admin/policies" className="primary-button gap-2">
-            <Settings className="w-4 h-4" /> Global Settings
+            <Settings className="w-4 h-4" /> {t('Global Settings')}
           </Link>
         </div>
       </div>
@@ -83,10 +85,10 @@ export default function AdminDashboard({ user }: { user: User }) {
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { label: 'Total Users',        value: overview.stats.totalEmployees,   icon: Users,       cls: 'icon-brand' },
-          { label: 'Active Accounts',    value: overview.stats.activeEmployees,  icon: UserCheck,   cls: 'icon-green' },
-          { label: 'Suspended',          value: overview.stats.suspendedEmployees, icon: UserX,     cls: 'icon-rose' },
-          { label: 'Bio-Enrolled',       value: overview.stats.faceEnrolled,     icon: Fingerprint, cls: 'icon-purple' },
+          { label: t('Total Users'),        value: overview.stats.totalEmployees,   icon: Users,       cls: 'icon-brand' },
+          { label: t('Active Accounts'),    value: overview.stats.activeEmployees,  icon: UserCheck,   cls: 'icon-green' },
+          { label: t('Suspended'),          value: overview.stats.suspendedEmployees, icon: UserX,     cls: 'icon-rose' },
+          { label: t('Bio-Enrolled'),       value: overview.stats.faceEnrolled,     icon: Fingerprint, cls: 'icon-purple' },
         ].map(card => (
           <div key={card.label} className="professional-card p-6">
             <div className="flex items-center gap-4">
@@ -133,9 +135,9 @@ export default function AdminDashboard({ user }: { user: User }) {
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-card-title flex items-center gap-2">
               <Activity className="w-5 h-5" style={{ color: '#0073CE' }} />
-              Authentication Load
+              {t('Authentication Load')}
             </h3>
-            <span className="text-xs font-bold text-surface-muted uppercase tracking-widest">Real-time Traffic</span>
+            <span className="text-xs font-bold text-surface-muted uppercase tracking-widest">{t('Real-time Traffic')}</span>
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -157,12 +159,12 @@ export default function AdminDashboard({ user }: { user: User }) {
         </div>
 
         <div className="space-y-4">
-          <h3 className="text-card-title">Administrative Tasks</h3>
+          <h3 className="text-card-title">{t('Administrative Tasks')}</h3>
           {[
-            { label: 'Manage Users',      icon: Users,       cls: 'icon-brand',   path: '/admin/users' },
-            { label: 'Enroll Biometrics', icon: Fingerprint, cls: 'icon-purple',  path: '/admin/enroll' },
-            { label: 'Configure Devices', icon: Cpu,         cls: 'icon-amber',   path: '/admin/devices' },
-            { label: 'Security Policies', icon: ShieldCheck, cls: 'icon-green',   path: '/admin/policies' },
+            { label: t('Manage Users'),      icon: Users,       cls: 'icon-brand',   path: '/admin/users' },
+            { label: t('Enroll Biometrics'), icon: Fingerprint, cls: 'icon-purple',  path: '/admin/enroll' },
+            { label: t('Configure Devices'), icon: Cpu,         cls: 'icon-amber',   path: '/admin/devices' },
+            { label: t('Security Policies'), icon: ShieldCheck, cls: 'icon-green',   path: '/admin/policies' },
           ].map((action, i) => (
             <button key={i} onClick={() => navigate(action.path)}
               className="professional-card w-full p-4 flex items-center gap-4 hover:border-brand transition-all group">
@@ -179,8 +181,8 @@ export default function AdminDashboard({ user }: { user: User }) {
       {/* Audit Log */}
       <div className="professional-card">
         <div className="p-6 border-b border-surface-divider flex items-center justify-between">
-          <h3 className="text-card-title">Recent Audit Events</h3>
-          <Link to="/admin/audit" className="text-link">View Full Log</Link>
+          <h3 className="text-card-title">{t('Recent Audit Events')}</h3>
+          <Link to="/admin/audit" className="text-link">{t('View Full Log')}</Link>
         </div>
         <div className="p-6 space-y-2">
           {loading ? (

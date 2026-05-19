@@ -1,3 +1,4 @@
+import { useLanguage } from '../../lib/translations';
 ﻿import {
   Calendar,
   Search,
@@ -19,6 +20,7 @@ import { ApiError } from '../../lib/api';
 import { fetchAdminLeaveRequests, processLeaveRequest, type AdminLeaveRequestRecord } from '../../lib/admin';
 
 export default function LeaveManagement() {
+  const { t } = useLanguage();
   const [requests, setRequests] = useState<AdminLeaveRequestRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,8 +109,8 @@ export default function LeaveManagement() {
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Leave Management Oversight</h1>
-          <p className="text-slate-500 mt-1">Review and manage employee leave requests</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('Leave Management Oversight')}</h1>
+          <p className="text-slate-500 mt-1">{t('Review and manage employee leave requests')}</p>
         </div>
         <button onClick={handleExport} className="secondary-button gap-2">
           <Download className="w-4 h-4" />

@@ -1,3 +1,4 @@
+import { useLanguage } from '../../lib/translations';
 import { useState, useEffect, useCallback } from 'react';
 import {
   Search,
@@ -108,7 +109,7 @@ td{padding:7px 10px;border-bottom:1px solid #e2e8f0}
 tr:nth-child(even){background:#f8fafc}
 @media print{button{display:none}}
 </style></head><body>
-<h1>HU-IOT Employee Directory</h1>
+<h1>{t('HU-IOT Employee Directory')}</h1>
 <p>Generated: ${new Date().toLocaleString()} &nbsp;|&nbsp; Total: ${employees.length} employees</p>
 <button onclick="window.print()" style="margin-bottom:16px;padding:8px 20px;background:#2563eb;color:white;border:none;border-radius:6px;cursor:pointer">Print / Save PDF</button>
 <table><thead><tr>
@@ -120,6 +121,7 @@ tr:nth-child(even){background:#f8fafc}
 }
 
 export default function ManageEmployees() {
+  const { t } = useLanguage();
   const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -194,8 +196,8 @@ export default function ManageEmployees() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Employee Directory</h1>
-            <p className="text-slate-500">View and browse all registered HU-IOT employees</p>
+            <h1 className="text-2xl font-bold text-slate-900">{t('Employee Directory')}</h1>
+            <p className="text-slate-500">{t('View and browse all registered HU-IOT employees')}</p>
           </div>
         </div>
         <div className="flex gap-3">

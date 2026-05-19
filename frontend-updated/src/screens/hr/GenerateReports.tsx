@@ -1,3 +1,4 @@
+import { useLanguage } from '../../lib/translations';
 ﻿import { useState, useEffect } from 'react';
 import {
   BarChart3,
@@ -68,6 +69,7 @@ const reportTypes = [
 ];
 
 export default function GenerateReports() {
+  const { t } = useLanguage();
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<'Current Month' | 'Last Month' | 'Last 3 Months' | 'Custom Range'>('Current Month');
   const [customStart, setCustomStart] = useState('');
@@ -177,8 +179,8 @@ export default function GenerateReports() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Institutional Reports</h1>
-        <p className="text-slate-500 font-medium italic">Create and export analytical datasets for HR oversight</p>
+        <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tight">{t('Institutional Reports')}</h1>
+        <p className="text-slate-500 font-medium italic">{t('Create and export analytical datasets for HR oversight')}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 text-slate-900">

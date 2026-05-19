@@ -1,9 +1,11 @@
+import { useLanguage } from '../../lib/translations';
 ﻿import { useEffect, useState } from 'react';
 import { Send, Calendar, AlertCircle, Info, CheckCircle2, Paperclip, X } from 'lucide-react';
 import { User } from '../../types';
 import { fetchMyLeaveRequests, submitLeaveRequest } from '../../lib/leave';
 
 export default function SubmitLeave({ user }: { user: User }) {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     type: 'Annual Leave',
     startDate: '',
@@ -75,8 +77,8 @@ export default function SubmitLeave({ user }: { user: User }) {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Submit Leave Request</h1>
-        <p className="text-slate-500">Request time off by providing the details below</p>
+        <h1 className="text-2xl font-bold text-slate-900">{t('Submit Leave Request')}</h1>
+        <p className="text-slate-500">{t('Request time off by providing the details below')}</p>
       </div>
 
       {successMessage && (

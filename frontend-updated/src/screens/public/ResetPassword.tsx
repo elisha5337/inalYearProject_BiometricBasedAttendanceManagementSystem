@@ -8,12 +8,11 @@ import {
   CheckCircle, 
   Loader2, 
   ArrowLeft,
-  ArrowRight,
-  RefreshCw,
   KeyRound
 } from 'lucide-react';
 import { confirmPasswordReset } from '../../lib/auth';
 import { ApiError } from '../../lib/api';
+import logo from "../../assets/logo.jpg";
 
 export default function ResetPassword() {
   const params = useParams();
@@ -66,102 +65,180 @@ export default function ResetPassword() {
   };
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm font-sans">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="bg-white w-full max-w-md rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] p-8 md:p-10 relative overflow-hidden border border-slate-100"
+    <div
+      style={{ backgroundColor: "#D9E2EC" }}
+      className="min-h-screen w-full flex flex-col items-center justify-center gap-3 p-4 font-sans"
+    >
+      {/* ══════════════════════════════════════
+          HEADER BANNER
+      ══════════════════════════════════════ */}
+      <div
+        className="w-full max-w-lg flex items-center gap-4 px-4 py-3"
+        style={{
+          backgroundColor: "#0073CE",
+          border: "1px solid #D1D5DB",
+          borderRadius: 0,
+        }}
       >
-        <AnimatePresence mode="wait">
+        <div
+          className="w-12 h-12 rounded-full shrink-0 overflow-hidden bg-white"
+          style={{
+            border: "2px solid rgba(255,255,255,0.5)",
+            boxShadow: "0 0 0 1px rgba(255,255,255,0.2)",
+          }}
+        >
+          <img
+            src={logo}
+            alt="Hawassa University Logo"
+            className="w-full h-full object-cover"
+          />
+        </div>
+        <p className="text-white text-sm font-semibold leading-snug">
+          HU-IOT BBEAMS — Online Attendance Managment System
+        </p>
+      </div>
+
+      {/* ══════════════════════════════════════
+          CENTRAL CARD
+      ══════════════════════════════════════ */}
+      <div
+        className="w-full max-w-lg bg-white"
+        style={{ border: "1px solid #D1D5DB", borderRadius: 0 }}
+      >
+        <div className="px-8 py-6 space-y-5">
           {!uid || !token ? (
-            <motion.div 
-              key="invalid"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="text-center space-y-6"
-            >
-               <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
-                 <AlertCircle className="w-8 h-8" />
-               </div>
-               <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight italic">Protocol Refused</h2>
-               <p className="text-slate-500 text-xs font-medium leading-relaxed"> Handshake parameters are corrupted. Please request a new link.</p>
-               <button onClick={() => navigate('/login')} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px]">Return to Login</button>
-            </motion.div>
+            <div className="text-center space-y-4">
+               <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
+               <h3 className="text-lg font-bold text-gray-900">Invalid Link</h3>
+               <p className="text-sm text-gray-600">This password reset link is invalid or has expired.</p>
+               <button 
+                 onClick={() => navigate('/login')} 
+                 className="w-full py-2 text-white font-bold text-sm"
+                 style={{ backgroundColor: "#338EC3", borderRadius: 0 }}
+               >
+                 BACK TO LOGIN
+               </button>
+            </div>
           ) : success ? (
-            <motion.div 
-              key="success"
-              initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-              className="text-center space-y-8 py-4"
-            >
-              <div className="w-24 h-24 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-100">
-                <CheckCircle className="w-10 h-10" />
+            <div className="text-center space-y-4 py-4">
+              <CheckCircle className="w-12 h-12 text-green-500 mx-auto" />
+              <h3 className="text-lg font-bold text-gray-900">Password Reset Successful</h3>
+              <p className="text-sm text-gray-600">Your password has been securely updated. Redirecting to login...</p>
+              <div className="w-32 mx-auto bg-gray-200 h-1 mt-4">
+                <motion.div initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: 3 }} className="h-full bg-green-500" />
               </div>
-              <div className="space-y-2">
-                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight italic">Access Restored</h3>
-                <p className="text-slate-500 font-bold uppercase tracking-widest text-[9px]">Identity updated. Redirecting in 3s...</p>
-              </div>
-              <div className="w-32 mx-auto bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                <motion.div initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: 3 }} className="h-full bg-emerald-500" />
-              </div>
-            </motion.div>
+            </div>
           ) : (
-            <motion.div key="form" className="space-y-8">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-indigo-100 shadow-sm">
-                  <KeyRound className="w-8 h-8" />
-                </div>
-                <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight italic">New Credentials</h2>
-                <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] mt-1">Configure security override</p>
+            <>
+              <div className="flex items-center gap-3 mb-2">
+                <Shield className="w-6 h-6 text-blue-600" />
+                <h3 className="text-lg font-bold text-gray-900">
+                  Reset Password
+                </h3>
               </div>
+              <p className="text-sm text-gray-600">
+                Please enter your new password below.
+              </p>
 
               {error && (
-                <div className="p-4 bg-rose-50 border-l-4 border-rose-600 rounded-2xl flex items-center gap-3 shadow-sm">
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                  <span className="text-[10px] font-black text-rose-700 uppercase tracking-widest">{error}</span>
+                <div
+                  className="flex items-center gap-2 p-3 bg-red-50 text-red-700 text-sm"
+                  style={{ border: "1px solid #FCA5A5" }}
+                >
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  {error}
                 </div>
               )}
 
-              <form onSubmit={handleReset} className="space-y-5">
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">New Access Key</label>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+              <form onSubmit={handleReset} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-800 mb-1">
+                    New Password
+                  </label>
+                  <div className="flex" style={{ border: "1px solid #D1D5DB" }}>
+                    <span
+                      className="flex items-center justify-center w-10 bg-white border-r"
+                      style={{ borderColor: "#D1D5DB" }}
+                    >
+                      <Lock className="w-4 h-4 text-gray-400" />
+                    </span>
                     <input
-                      type="password" required value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all font-bold placeholder:text-slate-200"
-                      placeholder="••••••••"
+                      type="password"
+                      required
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="flex-1 px-3 py-2 text-sm outline-none"
+                      style={{ backgroundColor: "#EBF2FA" }}
+                      placeholder="Minimum 8 characters"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Confirm Signature</label>
-                  <div className="relative">
-                    <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                <div>
+                  <label className="block text-sm font-bold text-gray-800 mb-1">
+                    Confirm Password
+                  </label>
+                  <div className="flex" style={{ border: "1px solid #D1D5DB" }}>
+                    <span
+                      className="flex items-center justify-center w-10 bg-white border-r"
+                      style={{ borderColor: "#D1D5DB" }}
+                    >
+                      <Lock className="w-4 h-4 text-gray-400" />
+                    </span>
                     <input
-                      type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all font-bold placeholder:text-slate-200"
-                      placeholder="••••••••"
+                      type="password"
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="flex-1 px-3 py-2 text-sm outline-none"
+                      style={{ backgroundColor: "#EBF2FA" }}
+                      placeholder="Retype new password"
                     />
                   </div>
                 </div>
 
                 <button
-                  type="submit" disabled={isLoading}
-                  className="w-full bg-slate-900 hover:bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-3 uppercase tracking-[0.2em] text-[10px]"
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full py-2 text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+                  style={{ backgroundColor: "#338EC3", borderRadius: 0 }}
                 >
-                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'REWRITE CREDENTIALS'}
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'SAVE PASSWORD'}
                 </button>
               </form>
 
-              <div className="pt-6 border-t border-slate-50 text-center">
-                <button onClick={() => navigate('/login')} className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] hover:text-indigo-600 transition-all flex items-center justify-center gap-2 mx-auto italic">
-                   <ArrowLeft className="w-3 h-3" /> Back to Portal
+              <div
+                style={{ borderTop: "1px solid #D1D5DB" }}
+                className="pt-4 flex flex-col gap-2"
+              >
+                <button
+                  type="button"
+                  onClick={() => navigate("/login")}
+                  className="text-sm text-left hover:underline flex items-center gap-1"
+                  style={{ color: "#2A70A6" }}
+                >
+                  <ArrowLeft className="w-4 h-4" /> Return to Login
                 </button>
               </div>
-            </motion.div>
+            </>
           )}
-        </AnimatePresence>
-      </motion.div>
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════
+          FOOTER BANNER
+      ══════════════════════════════════════ */}
+      <div
+        className="w-full max-w-lg bg-white px-4 py-3 text-center text-xs text-gray-600"
+        style={{
+          borderTop: "4px solid #338EC3",
+          border: "1px solid #D1D5DB",
+          borderTopWidth: "4px",
+          borderRadius: 0,
+        }}
+      >
+        Copyright &copy; 2026 Hawassa University. All rights reserved.
+      </div>
     </div>
   );
 }

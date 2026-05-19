@@ -10,10 +10,11 @@ import {
   Loader2,
   Shield,
   ArrowLeft,
+  X,
 } from "lucide-react";
 import logo from "../../assets/logo.jpg";
 import { ApiError } from "../../lib/api";
-import { loginUser, changePassword, logoutUser } from "../../lib/auth";
+import { loginUser, changePassword, logoutUser, requestPasswordReset } from "../../lib/auth";
 import type { User } from "../../types";
 
 interface LoginProps {
@@ -41,6 +42,7 @@ export default function Login({ onLogin }: LoginProps) {
   const [forgotPasswordStatus, setForgotPasswordStatus] = useState<
     "idle" | "loading" | "success"
   >("idle");
+  const [forgotPasswordError, setForgotPasswordError] = useState("");
 
   const [forcePasswordReset, setForcePasswordReset] = useState(false);
   const [resettingUser, setResettingUser] = useState<User | null>(null);
@@ -83,6 +85,7 @@ export default function Login({ onLogin }: LoginProps) {
         identifier: id,
         password: password.trim(),
         role,
+        remember: rememberMe,
       });
       if (user.mustChangePassword || password.trim() === `${id}123`) {
         setResettingUser(user);
@@ -104,9 +107,15 @@ export default function Login({ onLogin }: LoginProps) {
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    setForgotPasswordError("");
     setForgotPasswordStatus("loading");
-    await new Promise((r) => setTimeout(r, 2000));
-    setForgotPasswordStatus("success");
+    try {
+      await requestPasswordReset(forgotPasswordEmail);
+      setForgotPasswordStatus("success");
+    } catch (err) {
+      setForgotPasswordError(err instanceof ApiError ? err.message : "Failed to request password reset.");
+      setForgotPasswordStatus("idle");
+    }
   };
 
   const handleForcePasswordReset = async (e: React.FormEvent) => {
@@ -257,6 +266,12 @@ export default function Login({ onLogin }: LoginProps) {
                 <p className="text-sm text-gray-600">
                   Enter your university email to receive reset instructions.
                 </p>
+                {forgotPasswordError && (
+                  <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 text-sm" style={{ border: "1px solid #FCA5A5" }}>
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    {forgotPasswordError}
+                  </div>
+                )}
                 <form onSubmit={handleForgotPassword} className="space-y-4">
                   <div>
                     <label className="block text-sm font-bold text-gray-800 mb-1">
@@ -421,7 +436,7 @@ export default function Login({ onLogin }: LoginProps) {
               <label className="block text-sm font-bold text-gray-800 mb-1">
                 User Name
               </label>
-              <div className="flex" style={{ border: "1px solid #D1D5DB" }}>
+              <div className="flex relative" style={{ border: "1px solid #D1D5DB" }}>
                 <span
                   className="flex items-center justify-center w-10 bg-white border-r"
                   style={{ borderColor: "#D1D5DB" }}
@@ -434,11 +449,28 @@ export default function Login({ onLogin }: LoginProps) {
                   disabled={isLoading}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="flex-1 px-3 py-2 text-sm outline-none disabled:opacity-60"
+                  className="flex-1 px-3 py-2 pr-8 text-sm outline-none disabled:opacity-60"
                   style={{ backgroundColor: "#EBF2FA", borderRadius: 0 }}
                   placeholder="Enter your username"
                   autoComplete="username"
                 />
+                {username && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUsername("");
+                      setRememberMe(false);
+                      localStorage.removeItem("remembered_username");
+                      localStorage.removeItem("rememberedUsername");
+                      localStorage.removeItem("remembered_email");
+                      localStorage.removeItem("rememberedEmail");
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-6 h-6 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+                    title="Clear remembered username"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -469,20 +501,33 @@ export default function Login({ onLogin }: LoginProps) {
             </div>
 
             {/* Remember me */}
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="remember"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4"
-                style={{ accentColor: "#338EC3" }}
-              />
-              <label
-                htmlFor="remember"
-                className="text-xs text-gray-600 cursor-pointer select-none"
-              >
-                Remember session
+            <div className="flex items-center justify-between py-1">
+              <label htmlFor="remember" className="flex items-center gap-3 cursor-pointer select-none group">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    id="remember"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <div
+                    className="w-10 h-6 rounded-full transition-all duration-300 ease-in-out bg-slate-200 group-hover:bg-slate-300"
+                    style={{
+                      backgroundColor: rememberMe ? "#338EC3" : undefined,
+                      boxShadow: rememberMe ? "0 0 10px rgba(51, 142, 195, 0.4)" : "none"
+                    }}
+                  />
+                  <div
+                    className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 ease-in-out shadow-sm"
+                    style={{
+                      transform: rememberMe ? "translateX(16px)" : "translateX(0)"
+                    }}
+                  />
+                </div>
+                <span className="text-xs font-semibold text-slate-600 group-hover:text-slate-800 transition-colors">
+                  Remember session
+                </span>
               </label>
             </div>
 

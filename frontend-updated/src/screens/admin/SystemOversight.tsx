@@ -1,3 +1,4 @@
+import { useLanguage } from '../../lib/translations';
 import {
   Activity,
   Cpu,
@@ -41,6 +42,7 @@ const emptyHealth: SystemHealthMetrics = {
 };
 
 export default function SystemOversight() {
+  const { t } = useLanguage();
   const [health, setHealth] = useState<SystemHealthMetrics>(emptyHealth);
   const [devices, setDevices] = useState<DeviceRecord[]>([]);
   const [auditItems, setAuditItems] = useState<SecurityAuditItem[]>([]);
@@ -122,8 +124,8 @@ export default function SystemOversight() {
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">System Oversight</h1>
-          <p className="text-slate-500 mt-1">Real-time infrastructure monitoring and performance analysis</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('System Oversight')}</h1>
+          <p className="text-slate-500 mt-1">{t('Real-time infrastructure monitoring and performance analysis')}</p>
         </div>
         <div className="flex items-center gap-3">
           <button onClick={() => loadOversight(true)} className="secondary-button p-2.5" title="Refresh Metrics">
@@ -219,7 +221,7 @@ export default function SystemOversight() {
                   <p className="text-sm font-bold text-slate-900 truncate">{node.name}</p>
                   <div className="flex items-center gap-2 mt-1">
                     <span className={cn('text-[10px] font-bold uppercase tracking-wider', node.color)}>{node.status}</span>
-                    <span className="text-[10px] text-slate-400">·</span>
+                    <span className="text-[10px] text-slate-400">Â·</span>
                     <span className="text-[10px] text-slate-400 font-mono">{node.load} Load</span>
                   </div>
                 </div>
@@ -264,7 +266,7 @@ export default function SystemOversight() {
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     Severity: {incident.severity}
                   </span>
-                  <span className="text-[10px] text-slate-400">·</span>
+                  <span className="text-[10px] text-slate-400">Â·</span>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">
                     Action: {incident.action}
                   </span>

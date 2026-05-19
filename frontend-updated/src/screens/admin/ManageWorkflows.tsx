@@ -1,3 +1,4 @@
+import { useLanguage } from '../../lib/translations';
 ﻿import { useEffect, useState } from 'react';
 import {
   GitBranch,
@@ -27,6 +28,7 @@ import {
 } from '../../lib/admin';
 
 export default function ManageWorkflows() {
+  const { t } = useLanguage();
   const [workflows, setWorkflows] = useState<WorkflowRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -179,8 +181,8 @@ export default function ManageWorkflows() {
     <div className="space-y-6 pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Automation Workflows</h1>
-          <p className="text-slate-500">Manage automated business logic and system triggers</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('Automation Workflows')}</h1>
+          <p className="text-slate-500">{t('Manage automated business logic and system triggers')}</p>
         </div>
 
         <div className="flex gap-3">
@@ -338,7 +340,7 @@ export default function ManageWorkflows() {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">Create New Workflow</h3>
-                  <p className="text-xs text-slate-500">Define a new automation trigger and action</p>
+                  <p className="text-xs text-slate-500">{t('Define a new automation trigger and action')}</p>
                 </div>
               </div>
               <button onClick={() => setShowCreateModal(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-2xl transition-all">

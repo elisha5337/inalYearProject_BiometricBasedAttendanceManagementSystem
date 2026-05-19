@@ -1,4 +1,5 @@
-﻿import { useEffect, useRef, useState } from 'react';
+import { useLanguage } from '../lib/translations';
+import { useEffect, useRef, useState } from 'react';
 import { User as UserIcon, Mail, Phone, Building2, MapPin, Camera, Save, Shield, Bell, Globe } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { User } from '../types';
@@ -10,6 +11,7 @@ interface ProfileProps {
 }
 
 export default function Profile({ user }: ProfileProps) {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('general');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
@@ -120,6 +122,8 @@ export default function Profile({ user }: ProfileProps) {
         regionalSettings: updated.regionalSettings,
       }));
       setProfilePhoto(updated.profilePhoto);
+      localStorage.setItem('app_language', updated.regionalSettings.language || 'en');
+      window.dispatchEvent(new Event('languageChanged'));
       setSuccess('Profile updated successfully.');
     } catch (saveError) {
       setError(saveError instanceof ApiError ? saveError.message : 'Unable to save profile changes.');
@@ -298,9 +302,7 @@ export default function Profile({ user }: ProfileProps) {
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="professional-card p-8 border-l-4 border-l-amber-500 bg-amber-50/30">
                 <h3 className="text-lg font-bold text-slate-900 mb-2 font-display">Account Security</h3>
-                <p className="text-sm text-slate-600 mb-6">
-                  Manage your password and security settings to keep your account safe.
-                </p>
+                <p className="text-sm text-slate-600 mb-6">{t('Manage your password and security settings to keep your account safe.')}</p>
                 <button onClick={handleChangePassword} className="secondary-button text-indigo-600 border-indigo-200 hover:bg-indigo-50 gap-2">
                   <Shield className="w-4 h-4" />
                   Change Password
@@ -316,7 +318,7 @@ export default function Profile({ user }: ProfileProps) {
                   <div className="flex items-center justify-between py-3 border-b border-slate-100">
                     <div>
                       <p className="text-sm font-bold text-slate-800">Last Login</p>
-                      <p className="text-xs text-slate-500">Timestamp of your most recent access</p>
+                      <p className="text-xs text-slate-500">{t('Timestamp of your most recent access')}</p>
                     </div>
                     <span className="text-sm font-medium text-slate-700 bg-slate-100 px-3 py-1 rounded-full">
                       {profile?.lastLogin ? new Date(profile.lastLogin).toLocaleString() : 'Never'}
@@ -325,7 +327,7 @@ export default function Profile({ user }: ProfileProps) {
                   <div className="flex items-center justify-between py-3 border-b border-slate-100">
                     <div>
                       <p className="text-sm font-bold text-slate-800">Member Since</p>
-                      <p className="text-xs text-slate-500">The date you joined BBEAMS</p>
+                      <p className="text-xs text-slate-500">{t('The date you joined BBEAMS')}</p>
                     </div>
                     <span className="text-sm font-medium text-slate-700 bg-slate-100 px-3 py-1 rounded-full">
                       {profile?.dateJoined ? new Date(profile.dateJoined).toLocaleDateString() : 'Unknown'}
@@ -334,7 +336,7 @@ export default function Profile({ user }: ProfileProps) {
                   <div className="flex items-center justify-between py-3">
                     <div>
                       <p className="text-sm font-bold text-slate-800">Biometric Enrollment</p>
-                      <p className="text-xs text-slate-500">Status of your face recognition setup</p>
+                      <p className="text-xs text-slate-500">{t('Status of your face recognition setup')}</p>
                     </div>
                     <span className={cn(
                       "text-sm font-bold px-3 py-1 rounded-full",
@@ -352,7 +354,7 @@ export default function Profile({ user }: ProfileProps) {
             <div className="professional-card p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div>
                 <h3 className="text-lg font-bold text-slate-900 mb-1">Notification Preferences</h3>
-                <p className="text-sm text-slate-500">Choose how you want to be notified about updates.</p>
+                <p className="text-sm text-slate-500">{t('Choose how you want to be notified about updates.')}</p>
               </div>
               
               <div className="space-y-4">
@@ -394,7 +396,7 @@ export default function Profile({ user }: ProfileProps) {
             <div className="professional-card p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div>
                 <h3 className="text-lg font-bold text-slate-900 mb-1">Language & Region</h3>
-                <p className="text-sm text-slate-500">Customize your display language and local timezone.</p>
+                <p className="text-sm text-slate-500">{t('Customize your display language and local timezone.')}</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

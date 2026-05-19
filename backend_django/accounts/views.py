@@ -97,8 +97,11 @@ def get_session_timeout_minutes(config=None):
     return max(1, timeout_minutes)
 
 
-def apply_session_timeout(request, config=None):
-    request.session.set_expiry(get_session_timeout_minutes(config) * 60)
+def apply_session_timeout(request, config=None, remember=False):
+    if remember:
+        request.session.set_expiry(30 * 24 * 60 * 60) # 30 days in seconds
+    else:
+        request.session.set_expiry(get_session_timeout_minutes(config) * 60)
 
 
 def get_max_login_attempts(config=None):
@@ -288,6 +291,7 @@ def api_login(request):
             identifier = (data.get('identifier') or data.get('username') or data.get('email') or '').strip()
             password = data.get('password')
             requested_role = normalize_role_input(data.get('role'))
+            remember = bool(data.get('remember', False))
 
             if not identifier or not password:
                 return JsonResponse({'success': False, 'error': 'Username/email and password are required.'}, status=400)
@@ -365,7 +369,7 @@ def api_login(request):
                     user.save()
 
                 login(request, user)
-                apply_session_timeout(request, config)
+                apply_session_timeout(request, config, remember=remember)
                 log_audit_event(
                     'LOGIN_SUCCESS',
                     f'User "{user.username}" signed in as {requested_role or get_frontend_role_slug(user)}.',

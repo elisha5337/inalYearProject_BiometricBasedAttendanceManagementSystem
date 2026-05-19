@@ -33,8 +33,11 @@ interface SidebarProps {
   onToggleCollapse?: () => void;
 }
 
+import { useLanguage } from '../lib/translations';
+
 export default function Sidebar({ user, onClose, isCollapsed, onToggleCollapse }: SidebarProps) {
   const location = useLocation();
+  const { t } = useLanguage();
 
   const menuItems: Record<string, { label: string; icon: any; path: string }[]> = {
     employee: [
@@ -122,7 +125,7 @@ export default function Sidebar({ user, onClose, isCollapsed, onToggleCollapse }
             >
               <item.icon className="w-5 h-5 shrink-0" />
               {!isCollapsed && (
-                <span className="truncate">{item.label}</span>
+                <span className="truncate">{t(item.label)}</span>
               )}
             </Link>
           );

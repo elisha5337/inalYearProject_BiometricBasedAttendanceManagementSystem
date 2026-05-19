@@ -1,3 +1,4 @@
+import { useLanguage } from '../lib/translations';
 ﻿import { useEffect, useState } from 'react';
 import { Search, HelpCircle, Book, MessageCircle, Phone, ExternalLink, ChevronRight, FileText } from 'lucide-react';
 import { fetchFAQs } from '../lib/admin';
@@ -11,6 +12,7 @@ const iconMap: Record<string, any> = {
 };
 
 export default function HelpCenter() {
+  const { t } = useLanguage();
   const [categories, setCategories] = useState<{ title: string; icon: string; items: string[] }[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -35,8 +37,8 @@ export default function HelpCenter() {
   return (
     <div className="max-w-5xl mx-auto space-y-12">
       <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold text-slate-900">How can we help you?</h1>
-        <p className="text-lg text-slate-500 max-w-2xl mx-auto">Search our knowledge base or browse categories below to find answers to your questions.</p>
+        <h1 className="text-4xl font-bold text-slate-900">{t('How can we help you?')}</h1>
+        <p className="text-lg text-slate-500 max-w-2xl mx-auto">{t('Search our knowledge base or browse categories below to find answers to your questions.')}</p>
         
         <div className="relative max-w-2xl mx-auto mt-8">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -119,7 +121,7 @@ export default function HelpCenter() {
             </div>
             <div>
               <h4 className="font-bold text-slate-900">User Manual</h4>
-              <p className="text-sm text-slate-500">Download the full PDF guide</p>
+              <p className="text-sm text-slate-500">{t('Download the full PDF guide')}</p>
             </div>
           </div>
           <ExternalLink className="w-5 h-5 text-slate-300 group-hover:text-indigo-600 transition-colors" />
@@ -131,7 +133,7 @@ export default function HelpCenter() {
             </div>
             <div>
               <h4 className="font-bold text-slate-900">API Documentation</h4>
-              <p className="text-sm text-slate-500">For technical integrations</p>
+              <p className="text-sm text-slate-500">{t('For technical integrations')}</p>
             </div>
           </div>
           <ExternalLink className="w-5 h-5 text-slate-300 group-hover:text-indigo-600 transition-colors" />

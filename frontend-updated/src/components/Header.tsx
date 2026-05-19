@@ -3,6 +3,7 @@ import { LogOut, Bell, Search, Menu, History, Settings, RefreshCw } from 'lucide
 import { User } from '../types';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
+import { useLanguage } from '../lib/translations';
 import {
   buildStaticHeaderSearchResults,
   loadDynamicHeaderSearchResults,
@@ -17,6 +18,7 @@ interface HeaderProps {
 }
 
 export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
+  const { t } = useLanguage();
   const userRole = user.role ?? 'employee';
   const isAdmin = userRole === 'admin';
   const navigate = useNavigate();
@@ -120,7 +122,7 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
             onChange={e => { setQuery(e.target.value); setIsSearchOpen(true); }}
             onFocus={() => { setIsSearchOpen(true); void loadDynamicResults(); }}
             onKeyDown={handleSearchKeyDown}
-            placeholder="Search records..."
+            placeholder={t("Search records...")}
             className="w-full pl-10 pr-4 py-2 bg-surface-bg border border-surface-border rounded-2xl text-sm outline-none text-surface-text placeholder:text-surface-muted focus:border-brand focus:ring-1 focus:ring-brand transition-colors"
             style={{ '--tw-ring-color': '#0073CE' } as React.CSSProperties}
           />
@@ -128,7 +130,7 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
           {isSearchOpen && query.trim() ? (
             <div className="absolute top-full left-0 right-0 z-40 mt-2 overflow-hidden rounded-2xl border border-surface-border bg-surface-card shadow-xl">
               <div className="border-b border-surface-divider px-4 py-3 text-xs font-semibold uppercase tracking-widest text-surface-muted">
-                Search Results
+                {t("Search Results")}
               </div>
               {matchingResults.length > 0 ? (
                 <div className="max-h-96 overflow-y-auto py-2">
@@ -144,14 +146,14 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
                       </div>
                     </button>
                   ))}
-                  {isSearchLoading && <div className="px-4 py-3 text-xs text-surface-muted">Loading more...</div>}
+                  {isSearchLoading && <div className="px-4 py-3 text-xs text-surface-muted">{t("Loading live records...")}</div>}
                 </div>
               ) : isSearchLoading ? (
-                <div className="px-4 py-4 text-sm text-surface-muted">Loading live records...</div>
+                <div className="px-4 py-4 text-sm text-surface-muted">{t("Loading live records...")}</div>
               ) : searchError ? (
                 <div className="px-4 py-4 text-sm text-amber-600">{searchError}</div>
               ) : (
-                <div className="px-4 py-4 text-sm text-surface-muted">No matching records found.</div>
+                <div className="px-4 py-4 text-sm text-surface-muted">{t("No matching records found.")}</div>
               )}
             </div>
           ) : null}
@@ -162,7 +164,7 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
       <div className="flex items-center gap-2 md:gap-3">
         <div className="hidden md:flex items-center gap-1">
           {isAdmin ? (
-            <button type="button" onClick={() => window.location.reload()} title="Refresh System" className={iconBtn}>
+            <button type="button" onClick={() => window.location.reload()} title={t("Refresh System")} className={iconBtn}>
               <RefreshCw className="w-5 h-5" />
             </button>
           ) : (
@@ -171,7 +173,7 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
             </Link>
           )}
 
-          <Link to={isAdmin ? '/admin/policies' : '/hr/dashboard'} title="Settings" className={iconBtn}>
+          <Link to={isAdmin ? '/admin/policies' : '/hr/dashboard'} title={t("Settings")} className={iconBtn}>
             <Settings className="w-5 h-5" />
           </Link>
         </div>
@@ -206,7 +208,7 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
         <button onClick={onLogout}
           className="flex items-center gap-2 px-2 py-1.5 text-sm font-medium text-surface-muted hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-colors">
           <LogOut className="w-4 h-4" />
-          <span className="hidden lg:inline">Sign Out</span>
+          <span className="hidden lg:inline">{t("Sign Out")}</span>
         </button>
       </div>
     </header>

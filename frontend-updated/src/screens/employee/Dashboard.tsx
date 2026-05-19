@@ -9,8 +9,10 @@ import {
 } from '../../lib/attendance';
 import { fetchMyLeaveRequests, type LeaveSummary } from '../../lib/leave';
 import SkeletonLoader from '../../components/SkeletonLoader';
+import { useLanguage } from '../../lib/translations';
 
 export default function EmployeeDashboard({ user }: { user: User }) {
+  const { t } = useLanguage();
   const [stats, setStats] = useState<EmployeeDashboardStats | null>(null);
   const [leaveSummary, setLeaveSummary] = useState<LeaveSummary | null>(null);
   const [weeklyData, setWeeklyData] = useState<{ name: string; hours: number }[]>([]);
@@ -82,9 +84,9 @@ export default function EmployeeDashboard({ user }: { user: User }) {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-page-title">Welcome back, {firstName}!</h1>
+          <h1 className="text-page-title">{t('Welcome back,')} {firstName}!</h1>
           <p className="text-page-sub">
-            Attendance summary for {new Date().toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}.
+            {t('Attendance summary for')} {new Date().toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}.
           </p>
         </div>
         <div className={cn(
@@ -92,7 +94,7 @@ export default function EmployeeDashboard({ user }: { user: User }) {
           currentlyCheckedIn ? 'bg-emerald-500/15 text-emerald-500' : 'bg-surface-accent text-surface-muted'
         )}>
           <div className={cn('w-2 h-2 rounded-full', currentlyCheckedIn ? 'bg-emerald-500 animate-pulse' : 'bg-surface-muted')} />
-          {currentlyCheckedIn ? 'Currently Checked In' : 'Awaiting Check-in'}
+          {currentlyCheckedIn ? t('Currently Checked In') : t('Awaiting Check-in')}
         </div>
       </div>
 
@@ -112,7 +114,7 @@ export default function EmployeeDashboard({ user }: { user: User }) {
             </span>
           </div>
           <div className="mt-4">
-            <p className="text-body">Today's Hours</p>
+            <p className="text-body">{t("Today's Hours")}</p>
             <h3 className="text-value">{todayHours}</h3>
           </div>
         </div>
@@ -125,7 +127,7 @@ export default function EmployeeDashboard({ user }: { user: User }) {
             <span className="text-xs font-bold text-surface-muted">{stats?.month_name || 'This Month'}</span>
           </div>
           <div className="mt-4">
-            <p className="text-body">Days Present</p>
+            <p className="text-body">{t('Days Present')}</p>
             <h3 className="text-value">{stats?.present_days ?? 0} Days</h3>
           </div>
         </div>
@@ -140,7 +142,7 @@ export default function EmployeeDashboard({ user }: { user: User }) {
             </span>
           </div>
           <div className="mt-4">
-            <p className="text-body">Late Arrivals</p>
+            <p className="text-body">{t('Late Arrivals')}</p>
             <h3 className="text-value">{stats?.late_count ?? 0}</h3>
           </div>
         </div>
@@ -153,7 +155,7 @@ export default function EmployeeDashboard({ user }: { user: User }) {
             <span className="text-xs font-bold text-surface-muted">Available</span>
           </div>
           <div className="mt-4">
-            <p className="text-body">Leave Balance</p>
+            <p className="text-body">{t('Leave Balance')}</p>
             <h3 className="text-value">{leaveSummary?.annual_left ?? 0} Days</h3>
           </div>
         </div>
@@ -163,7 +165,7 @@ export default function EmployeeDashboard({ user }: { user: User }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 professional-card p-8">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-card-title">Weekly Activity</h3>
+            <h3 className="text-card-title">{t('Weekly Activity')}</h3>
             <select className="text-sm bg-surface-bg border border-surface-border rounded-2xl px-3 py-1 outline-none font-medium text-surface-muted">
               <option>Last 7 Days</option>
             </select>
@@ -186,7 +188,7 @@ export default function EmployeeDashboard({ user }: { user: User }) {
         </div>
 
         <div className="professional-card p-8">
-          <h3 className="text-card-title mb-6">Recent Activity</h3>
+          <h3 className="text-card-title mb-6">{t('Recent Activity')}</h3>
           <div className="space-y-5">
             {recentActivity.length > 0 ? recentActivity.map(item => (
               <div key={item.id} className="flex items-start gap-4">

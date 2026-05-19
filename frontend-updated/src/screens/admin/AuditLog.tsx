@@ -1,3 +1,4 @@
+import { useLanguage } from '../../lib/translations';
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -16,6 +17,7 @@ import { ApiError } from '../../lib/api';
 import { fetchAuditLogs, type AuditLogEntry } from '../../lib/admin';
 
 export default function AuditLog() {
+  const { t } = useLanguage();
   const [searchParams] = useSearchParams();
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,8 +101,8 @@ export default function AuditLog() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-page-title">System Audit Logs</h1>
-          <p className="text-page-sub">Track all administrative actions and system events</p>
+          <h1 className="text-page-title">{t('System Audit Logs')}</h1>
+          <p className="text-page-sub">{t('Track all administrative actions and system events')}</p>
         </div>
         <button onClick={handleExport} className="secondary-button gap-2 w-full md:w-auto justify-center">
           <Download className="w-4 h-4" /> Export Logs

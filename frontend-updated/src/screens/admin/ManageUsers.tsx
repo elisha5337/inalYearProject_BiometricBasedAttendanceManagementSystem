@@ -1,5 +1,6 @@
-﻿import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useLanguage } from '../../lib/translations';
 
 import { ApiError, apiRequest } from '../../lib/api';
 import {
@@ -96,6 +97,7 @@ function applyUserChanges(
 }
 
 export default function ManageUsers() {
+  const { t } = useLanguage();
   const [searchParams] = useSearchParams();
   const [users, setUsers] = useState<ManagedUserRecord[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -323,12 +325,6 @@ export default function ManageUsers() {
 
         setSuccessMessage('User updated successfully.');
       } else {
-        if (!payload.password?.trim()) {
-          setError('A password is required when creating a new user.');
-          setSaving(false);
-          return;
-        }
-
         await createUser(payload);
         const refreshedUsers = await fetchUsers();
         setUsers(refreshedUsers);
@@ -352,18 +348,18 @@ export default function ManageUsers() {
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="space-y-2">
-            <p className="text-sm font-medium uppercase tracking-[0.22em] text-slate-500">Administration</p>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Manage Users</h1>
-            <p className="max-w-2xl text-sm text-slate-600">Browse employee database and manage profile details in a single workspace.</p>
+            <p className="text-sm font-medium uppercase tracking-[0.22em] text-slate-500">{t('Administration')}</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{t('Manage Users')}</h1>
+            <p className="max-w-2xl text-sm text-slate-600">{t('Browse employee database and manage profile details in a single workspace.')}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <div className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Total Users</p>
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">{t('Total Users')}</p>
               <p className="mt-2 text-2xl font-semibold text-slate-900">{stats.total}</p>
             </div>
             <div className="rounded-2xl bg-violet-50 p-4">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-violet-700">Admin</p>
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-violet-700">{t('Admin')}</p>
               <p className="mt-2 text-2xl font-semibold text-violet-900">{stats.admins}</p>
             </div>
             <div className="rounded-2xl bg-sky-50 p-4">
@@ -371,7 +367,7 @@ export default function ManageUsers() {
               <p className="mt-2 text-2xl font-semibold text-sky-900">{stats.hr}</p>
             </div>
             <div className="rounded-2xl bg-emerald-50 p-4">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-emerald-700">Employees</p>
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-emerald-700">{t('Employees')}</p>
               <p className="mt-2 text-2xl font-semibold text-emerald-900">{stats.employees}</p>
             </div>
           </div>
@@ -385,24 +381,24 @@ export default function ManageUsers() {
             <div className="p-6 border-b border-slate-200 bg-white shrink-0">
               <div className="grid gap-4 md:grid-cols-[1fr_200px]">
                 <label className="space-y-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Search Database</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('Search Database')}</span>
                   <input
                     type="text"
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
-                    placeholder="Search by name, position, or department..."
+                    placeholder={t('Search by name, position, or department...')}
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white"
                   />
                 </label>
 
                 <label className="space-y-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Filter Role</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('Filter Role')}</span>
                   <select
                     value={roleFilter}
                     onChange={(event) => setRoleFilter(event.target.value as 'all' | AppUserRole)}
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white"
                   >
-                    <option value="all">All roles</option>
+                    <option value="all">{t('All roles')}</option>
                     <option value="admin">Admin</option>
                     <option value="hr">HR</option>
                     <option value="employee">Employee</option>
@@ -528,7 +524,7 @@ export default function ManageUsers() {
                 </label>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4">
                 <label className="space-y-1.5">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Access Role</span>
                   <select value={formState.role} onChange={(event) => setRoleFilter(event.target.value as any)} className="hidden invisible" tabIndex={-1} aria-hidden="true" />
@@ -537,10 +533,6 @@ export default function ManageUsers() {
                     <option value="hr">HR</option>
                     <option value="employee">Employee</option>
                   </select>
-                </label>
-                <label className="space-y-1.5">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Password</span>
-                  <input type="password" value={formState.password ?? ''} onChange={(event) => setFormState((current) => ({ ...current, password: event.target.value }))} placeholder={editingUserId ? 'Leave blank' : 'Required'} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white" />
                 </label>
               </div>
 

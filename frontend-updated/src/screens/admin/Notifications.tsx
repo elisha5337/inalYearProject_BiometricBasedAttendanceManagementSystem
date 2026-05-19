@@ -1,3 +1,4 @@
+import { useLanguage } from '../../lib/translations';
 ﻿import { useEffect, useMemo, useState } from 'react';
 import {
   Bell,
@@ -52,6 +53,7 @@ function deriveCategory(notification: AppNotificationRecord): NotificationCatego
 }
 
 export default function Notifications() {
+  const { t } = useLanguage();
   const [notifications, setNotifications] = useState<AdminNotificationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -190,10 +192,8 @@ export default function Notifications() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">System Notifications</h1>
-          <p className="text-slate-500 mt-1">
-            Monitor system alerts, security events, and administrative messages
-          </p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('System Notifications')}</h1>
+          <p className="text-slate-500 mt-1">{t('Monitor system alerts, security events, and administrative messages')}</p>
         </div>
         <div className="flex gap-3">
           <button onClick={handleMarkAllAsRead} className="secondary-button gap-2">
@@ -374,9 +374,7 @@ export default function Notifications() {
                   <Bell className="w-8 h-8 text-slate-300" />
                 </div>
                 <h3 className="text-lg font-bold text-slate-900">No notifications found</h3>
-                <p className="text-slate-500 mt-1">
-                  Try adjusting your filters or search query
-                </p>
+                <p className="text-slate-500 mt-1">{t('Try adjusting your filters or search query')}</p>
               </div>
             )}
           </div>

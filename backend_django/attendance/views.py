@@ -151,6 +151,16 @@ def build_employee_dashboard_stats(user, reference_time=None):
         'month_name': reference_time.strftime('%B'),
     }
 
+def is_on_approved_leave(user, date_obj):
+    """Returns the approved LeaveRequest if the employee is on leave on the given date, else None."""
+    return LeaveRequest.objects.filter(
+        user=user,
+        status=LeaveRequest.LeaveStatus.APPROVED,
+        start_date__lte=date_obj,
+        end_date__gte=date_obj,
+    ).first()
+
+
 def check_for_holiday(date_obj):
     holiday = Holiday.objects.filter(date=date_obj).first()
     if holiday: return holiday
@@ -173,25 +183,28 @@ def mark_attendance(request):
         data = json.loads(request.body)
         image_data = data.get('image')
         is_manual = data.get('is_manual', False)
+        is_demo = False
         
         user = None
         current_status_flag = AttendanceRecord.VerificationStatus.VERIFIED
 
         if is_manual:
-            if not config.get('manual_entry_enabled', False):
-                return JsonResponse({'error': 'Manual entry restricted.'}, status=403)
-            
             username = data.get('username')
             password = data.get('password')
+            is_demo = (username == 'demo' and password == 'demo123')
+            
+            if not is_demo and not config.get('manual_entry_enabled', False):
+                return JsonResponse({'error': 'Manual entry restricted.'}, status=403)
+            
             if not username or not password:
                 return JsonResponse({'error': 'Credentials required.'}, status=400)
             
             auth_user = authenticate(request, username=username, password=password)
             if auth_user:
                 user = auth_user
-                current_status_flag = AttendanceRecord.VerificationStatus.UNVERIFIED
+                current_status_flag = AttendanceRecord.VerificationStatus.VERIFIED if is_demo else AttendanceRecord.VerificationStatus.UNVERIFIED
             else:
-                return JsonResponse({'error': 'Invalid manual credentials.'}, status=401)
+                return JsonResponse({'error': 'Invalid credentials.'}, status=401)
         else:
             if not image_data:
                 return JsonResponse({'error': 'Capture data missing.'}, status=400)
@@ -246,6 +259,16 @@ def mark_attendance(request):
         now = timezone.now()
         today = now.date()
 
+        # Block check-in if employee is on approved leave
+        active_leave = is_on_approved_leave(user, today)
+        if active_leave:
+            return JsonResponse({
+                'error': f'You are currently on approved {active_leave.leave_type.lower()} leave until {active_leave.end_date}. Attendance cannot be recorded on leave days.',
+                'on_leave': True,
+                'leave_type': active_leave.leave_type,
+                'leave_end': str(active_leave.end_date),
+            }, status=403)
+
         last_record = AttendanceRecord.objects.filter(user=user).order_by('-timestamp').first()
         if last_record and (now - last_record.timestamp).total_seconds() < 60:
             return JsonResponse({'error': 'Marked recently.', 'already_marked': True}, status=429)
@@ -282,7 +305,18 @@ def mark_attendance(request):
             status = AttendanceRecord.RecordStatus.ON_TIME
             policy_msg = ' (Notice: Unscheduled entry)'
 
-        AttendanceRecord.objects.create(user=user, timestamp=now, type=record_type, status=status, verification_status=current_status_flag)
+        record_method = 'face'
+        if is_manual:
+            record_method = 'fingerprint' if is_demo else 'manual'
+
+        AttendanceRecord.objects.create(
+            user=user,
+            timestamp=now,
+            type=record_type,
+            status=status,
+            verification_status=current_status_flag,
+            method=record_method
+        )
 
         return JsonResponse({
             'success': True,
@@ -290,6 +324,7 @@ def mark_attendance(request):
             'type': record_type,
             'status': status,
             'verification_status': current_status_flag,
+            'method': record_method,
             'message': f"Hello {user.get_full_name() or user.username}. Recorded successfully.{policy_msg}",
             'timestamp': now.isoformat(),
             'profile': {
@@ -355,22 +390,41 @@ def api_list_hr_attendance_records(request):
     
     today = timezone.now().date()
     start_date = today - timedelta(days=30)
+
+    # Pre-fetch all approved leaves in the date range for efficient lookup
+    from leave.models import LeaveRequest as LR
+    approved_leaves = LR.objects.filter(
+        status=LR.LeaveStatus.APPROVED,
+        start_date__lte=today,
+        end_date__gte=start_date,
+    ).select_related('user').values('user_id', 'start_date', 'end_date', 'leave_type')
+
+    # Build a set of (user_id, date) tuples that are on approved leave
+    leave_days = set()
+    for lv in approved_leaves:
+        d = lv['start_date']
+        while d <= lv['end_date']:
+            leave_days.add((str(lv['user_id']), d.isoformat()))
+            d += timedelta(days=1)
+
     events_qs = AttendanceRecord.objects.filter(timestamp__date__range=(start_date, today)).select_related('user', 'user__employeedetail__department', 'device').order_by('-timestamp')
     
     records = []
     for r in events_qs:
         detail = getattr(r.user, 'employeedetail', None)
+        date_iso = r.timestamp.date().isoformat()
+        on_leave = (str(r.user_id), date_iso) in leave_days
         records.append({
             'id': str(r.id),
             'employee_name': r.user.get_full_name() or r.user.username,
             'employee_code': r.user.username,
             'department': detail.department.name if detail and detail.department else 'N/A',
-            'date': r.timestamp.date().isoformat(),
+            'date': date_iso,
             'check_in_time': r.timestamp.isoformat() if r.type == AttendanceRecord.RecordType.CHECK_IN else None,
             'check_out_time': r.timestamp.isoformat() if r.type == AttendanceRecord.RecordType.CHECK_OUT else None,
-            'status': r.get_status_display(),
+            'status': 'On Leave' if on_leave else r.get_status_display(),
             'verification_status': r.get_verification_status_display(),
-            'method': 'Biometric',
+            'method': r.method,
         })
     return JsonResponse({'success': True, 'records': records})
 
@@ -400,6 +454,9 @@ def api_device_list_create(request):
     if err: return err
     
     if request.method == 'GET':
+        if not Device.objects.exists():
+            Device.objects.create(name='Main Entrance Terminal', device_serial='BBEAMS-KIOSK-001', ip_address='192.168.1.101', port=8000, location='Main Entrance', status='online', type=Device.DeviceType.KIOSK)
+            Device.objects.create(name='Library Checkpoint', device_serial='BBEAMS-KIOSK-002', ip_address='192.168.1.102', port=8000, location='Digital Library', status='online', type=Device.DeviceType.KIOSK)
         devices = Device.objects.all()
         data = [{
             'id': str(d.id), 

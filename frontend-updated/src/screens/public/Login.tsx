@@ -361,7 +361,7 @@ export default function Login({ onLogin }: LoginProps) {
           />
         </div>
         <p className="text-white text-sm font-semibold leading-snug">
-          Hawassa University Integrated Systems — Online Portal
+          Hawassa University IOT-BBEAMS — Online Attendance
         </p>
       </div>
 

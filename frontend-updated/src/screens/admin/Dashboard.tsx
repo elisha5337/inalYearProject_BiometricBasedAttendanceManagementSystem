@@ -3,7 +3,7 @@ import { ShieldCheck, Users, Fingerprint, Cpu, History, Settings, Activity, Aler
 import { User } from '../../types';
 import { cn } from '../../lib/utils';
 import { Link, useNavigate } from 'react-router-dom';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useLanguage } from '../../lib/translations';
 import SkeletonLoader from '../../components/SkeletonLoader';
 import { ApiError } from '../../lib/api';
@@ -132,30 +132,36 @@ export default function AdminDashboard({ user }: { user: User }) {
       {/* Chart + Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 professional-card p-8">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-card-title flex items-center gap-2">
-              <Activity className="w-5 h-5" style={{ color: '#0073CE' }} />
-              {t('Authentication Load')}
-            </h3>
-            <span className="text-xs font-bold text-surface-muted uppercase tracking-widest">{t('Real-time Traffic')}</span>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-card-title flex items-center gap-2">
+                <Activity className="w-5 h-5" style={{ color: '#0073CE' }} />
+                Today's Admin Activity
+              </h3>
+              <p className="text-xs text-surface-muted mt-1">Security events and administrative changes recorded per hour today</p>
+            </div>
+            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full uppercase tracking-widest">Live</span>
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={overview.authLoad}>
-                <defs>
-                  <linearGradient id="colorLoad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#0073CE" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#0073CE" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
+              <BarChart data={overview.authLoad} barSize={28}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartGridColor} />
-                <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: chartTickColor, fontSize: 12 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: chartTickColor, fontSize: 12 }} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Area type="monotone" dataKey="load" stroke="#0073CE" strokeWidth={3} fillOpacity={1} fill="url(#colorLoad)" />
-              </AreaChart>
+                <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: chartTickColor, fontSize: 11 }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: chartTickColor, fontSize: 11 }} allowDecimals={false} label={{ value: 'Events', angle: -90, position: 'insideLeft', fill: chartTickColor, fontSize: 11, dy: 30 }} />
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  formatter={(value: number) => [value, 'Admin Actions']}
+                  labelFormatter={(label) => `Hour: ${label}`}
+                />
+                <Bar dataKey="load" radius={[4, 4, 0, 0]}>
+                  {overview.authLoad.map((entry, i) => (
+                    <Cell key={i} fill={entry.load === 0 ? '#e2e8f0' : '#0073CE'} />
+                  ))}
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </div>
+          <p className="text-xs text-surface-muted mt-3 text-center">Grey = no activity · Blue = admin actions (logins, config changes, security events)</p>
         </div>
 
         <div className="space-y-4">

@@ -49,29 +49,37 @@ class PayrollSyncService:
         }
 
     @staticmethod
-    def sync_to_external(integration):
+    def sync_to_external(integration, start_date=None, end_date=None):
         """
         Performs the actual HTTP POST to the external payroll endpoint.
         """
+        # Demo mode: auto-assign a placeholder URL if none is configured
         if not integration.endpoint_url:
-            return False, "No endpoint URL configured."
+            integration.endpoint_url = f"https://demo-api.bbeams.local/{integration.type.lower()}/sync"
+            integration.save(update_fields=['endpoint_url'])
 
-        # Fetch all active employees that need syncing
         from accounts.models import User
+        from datetime import date
         users = User.objects.filter(status='ACTIVE')
-        
-        # Sync for the last 30 days by default
-        end_date = timezone.now().date()
-        start_date = end_date - timedelta(days=30)
+
+        # Use provided range or fall back to last 30 days
+        try:
+            end = date.fromisoformat(end_date) if end_date else timezone.now().date()
+            start = date.fromisoformat(start_date) if start_date else end - timedelta(days=30)
+        except (ValueError, TypeError):
+            end = timezone.now().date()
+            start = end - timedelta(days=30)
         
         payload = []
         for user in users:
-            data = PayrollSyncService.format_attendance_data(user, start_date, end_date)
+            data = PayrollSyncService.format_attendance_data(user, start, end)
             if data['total_hours'] > 0:
                 payload.append(data)
 
         if not payload:
-            return True, "No data to sync for this period."
+            integration.last_sync = timezone.now()
+            integration.save()
+            return True, f"[Demo Mode] No attendance records found for {start} to {end}. Sync timestamp updated.", []
 
         headers = {
             "Content-Type": "application/json",
@@ -83,15 +91,11 @@ class PayrollSyncService:
             # In a real scenario, this would be a real request:
             # response = requests.post(integration.endpoint_url, json=payload, headers=headers, timeout=10)
             
-            # For demonstration, we simulate success if the URL is set
-            success = True 
-            message = "Payload successfully queued for external transmission."
-            
+            # Simulated transmission — no real HTTP request is made (demo mode)
             integration.last_sync = timezone.now()
             integration.save()
-            
-            return success, message
+            return True, f"[Demo Mode] Sync payload built from live attendance data ({start} → {end}) — {len(payload)} employee record(s) queued for transmission.", payload[:10]
 
         except Exception as e:
             logger.error(f"Payroll Sync Failed: {e}")
-            return False, f"Connection error: {str(e)}"
+            return False, f"Connection error: {str(e)}", []

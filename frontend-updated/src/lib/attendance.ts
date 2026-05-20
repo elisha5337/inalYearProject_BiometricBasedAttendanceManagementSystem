@@ -1,4 +1,4 @@
-﻿import { apiRequest } from './api';
+import { apiRequest } from './api';
 
 export interface AttendanceMarkResponse {
   success: boolean;
@@ -14,6 +14,7 @@ export interface AttendanceMarkResponse {
     position: string;
     profile_photo: string | null;
   };
+  method?: string;
 }
 
 export interface MarkAttendancePayload {

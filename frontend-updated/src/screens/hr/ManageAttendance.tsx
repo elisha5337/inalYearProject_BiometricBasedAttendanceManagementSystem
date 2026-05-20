@@ -29,6 +29,7 @@ function getStatusClasses(status: string) {
 
 function getVerificationClasses(status: string) {
   const normalized = status.toLowerCase();
+  if (normalized === 'rejected') return 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200';
   if (normalized.includes('pending') || normalized.includes('unverified')) return 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200';
   if (normalized.includes('reject') || normalized.includes('fail')) return 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200';
   return 'bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200';
@@ -71,16 +72,20 @@ export default function ManageAttendance() {
 
   useEffect(() => { loadAttendanceRecords(); }, []);
 
-  const handleVerifyAction = async (id: string, newStatus: 'VERIFIED' | 'UNVERIFIED') => {
+  const handleVerifyAction = async (id: string, action: 'approve' | 'reject') => {
     setActionLoading(id);
     try {
       await apiRequest(`/api/attendance/verify-manual/${id}/`, {
         method: 'POST',
-        body: { status: newStatus }
+        body: { status: action === 'approve' ? 'VERIFIED' : 'UNVERIFIED' },
       });
-      await loadAttendanceRecords();
+      setRecords(prev => prev.map(r =>
+        r.id === id
+          ? { ...r, verificationStatus: action === 'approve' ? 'Verified (Bypass)' : 'Rejected' }
+          : r
+      ));
     } catch (err) {
-      alert("Verification update failed.");
+      setError(action === 'approve' ? 'Failed to verify record.' : 'Failed to reject record.');
     } finally {
       setActionLoading(null);
     }
@@ -169,7 +174,14 @@ export default function ManageAttendance() {
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
                 {filteredRecords.map((record) => {
-                  const isUnverified = record.verificationStatus.toLowerCase().includes('pending') || record.verificationStatus.toLowerCase().includes('unverified');
+                  // Show action buttons for any record that hasn't been reviewed by HR yet.
+                  // 'Unverified (Bypass)' from backend = pending review.
+                  // Hide buttons only after HR acts: approved → 'Verified (Bypass)', rejected → 'Flagged'
+                  const needsReview = record.verificationStatus.toLowerCase().includes('unverified') ||
+                    record.verificationStatus.toLowerCase().includes('pending');
+                  const isReviewed = record.verificationStatus === 'Verified (Bypass)' ||
+                    record.verificationStatus === 'Rejected';
+                  const showActions = needsReview && !isReviewed;
                   return (
                     <tr key={record.id} className="align-top hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-5">
@@ -188,16 +200,26 @@ export default function ManageAttendance() {
                       <td className="px-6 py-5"><span className={cn("inline-flex rounded-full px-3 py-1 text-[10px] font-black uppercase", getStatusClasses(record.status))}>{record.status}</span></td>
                       <td className="px-6 py-5">
                         <span className={cn("inline-flex rounded-full px-3 py-1 text-[10px] font-black uppercase flex items-center gap-1.5", getVerificationClasses(record.verificationStatus))}>
-                          {isUnverified && <ShieldAlert className="w-3 h-3" />} {record.verificationStatus}
+                          {needsReview && <ShieldAlert className="w-3 h-3" />} {record.verificationStatus}
                         </span>
                       </td>
                       <td className="px-6 py-5 text-right">
-                        {isUnverified ? (
+                        {showActions ? (
                           <div className="flex gap-1 justify-end">
-                            <button onClick={() => handleVerifyAction(record.id, 'VERIFIED')} disabled={!!actionLoading} className="p-1.5 bg-emerald-500 text-white rounded-2xl hover:bg-emerald-600 shadow-sm transition-all">
+                            <button
+                              onClick={() => handleVerifyAction(record.id, 'approve')}
+                              disabled={!!actionLoading}
+                              title="Approve — mark as verified"
+                              className="p-1.5 bg-emerald-500 text-white rounded-2xl hover:bg-emerald-600 shadow-sm transition-all"
+                            >
                               {actionLoading === record.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                             </button>
-                            <button onClick={() => handleVerifyAction(record.id, 'UNVERIFIED')} disabled={!!actionLoading} className="p-1.5 bg-slate-100 text-slate-400 rounded-2xl hover:bg-rose-50 hover:text-rose-500 transition-all">
+                            <button
+                              onClick={() => handleVerifyAction(record.id, 'reject')}
+                              disabled={!!actionLoading}
+                              title="Reject — flag as unverified bypass"
+                              className="p-1.5 bg-slate-100 text-slate-400 rounded-2xl hover:bg-rose-50 hover:text-rose-500 transition-all"
+                            >
                               <X className="w-3.5 h-3.5" />
                             </button>
                           </div>

@@ -267,7 +267,7 @@ export default function HRDashboard({ user }: { user: User }) {
             })}
           </div>
           <div className="p-4 border-t border-surface-divider bg-surface-thead">
-            <Link to="/admin/notifications" className="w-full py-2 text-sm font-bold flex items-center justify-center rounded-2xl hover:bg-surface-hover transition-colors" style={{ color: '#0073CE' }}>
+            <Link to={`/${user.role}/notifications`} className="w-full py-2 text-sm font-bold flex items-center justify-center rounded-2xl hover:bg-surface-hover transition-colors" style={{ color: '#0073CE' }}>
               View All Notifications
             </Link>
           </div>

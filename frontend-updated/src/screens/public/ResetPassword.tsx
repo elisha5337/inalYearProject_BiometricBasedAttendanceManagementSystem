@@ -27,7 +27,7 @@ export default function ResetPassword() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    console.log("ResetPassword Registry Handshake:", { uid, token });
+    // uid and token loaded from URL params
   }, [uid, token]);
 
   const handleReset = async (e: React.FormEvent) => {
@@ -94,7 +94,7 @@ export default function ResetPassword() {
           />
         </div>
         <p className="text-white text-sm font-semibold leading-snug">
-          HU-IOT BBEAMS — Online Attendance Managment System
+          HU-IOT BBEAMS — Online Attendance Management System
         </p>
       </div>
 

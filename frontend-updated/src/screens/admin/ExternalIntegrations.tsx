@@ -26,6 +26,7 @@ import {
   updateIntegrationConfig,
   type IntegrationFormPayload,
   type IntegrationRecord,
+  type SyncRecord,
 } from '../../lib/admin';
 
 function getIntegrationIcon(type: string) {
@@ -48,6 +49,11 @@ export default function ExternalIntegrations() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState<string | null>(null);
+  const [syncResult, setSyncResult] = useState<{ id: string; message: string; records: SyncRecord[] } | null>(null);
+  const [syncLog, setSyncLog] = useState<{ service: string; event: string; status: string; time: string }[]>([]);
+  const defaultEnd = new Date().toISOString().slice(0, 10);
+  const defaultStart = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const [syncRange, setSyncRange] = useState({ start: defaultStart, end: defaultEnd });
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showConfigureModal, setShowConfigureModal] = useState<string | null>(null);
@@ -96,14 +102,25 @@ export default function ExternalIntegrations() {
       .includes(searchQuery.toLowerCase()),
   );
 
-  const activityLogs = buildIntegrationActivity(integrations);
+  const activityLogs = [...syncLog, ...buildIntegrationActivity(integrations)];
 
   const handleSync = async (id: string) => {
     try {
       setIsSyncing(id);
+      setSyncResult(null);
       setError(null);
-      await syncIntegration(id);
+      const result = await syncIntegration(id, syncRange.start, syncRange.end);
+      const synced = integrations.find((i) => i.id === id);
       await loadIntegrations();
+      setSyncResult({ id, message: result.message ?? 'Sync completed (simulated).', records: result.records ?? [] });
+      if (synced) {
+        setSyncLog((prev) => [{
+          service: synced.name,
+          event: `Data sync — ${result.records?.length ?? 0} record(s) queued`,
+          status: 'Synced',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }, ...prev]);
+      }
     } catch (syncError) {
       setError(syncError instanceof ApiError ? syncError.message : 'Unable to synchronize integration.');
     } finally {
@@ -184,6 +201,77 @@ export default function ExternalIntegrations() {
         </div>
       ) : null}
 
+      {syncResult ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 overflow-hidden">
+          <div className="px-5 py-4 flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <span className="text-xs font-black text-amber-700 uppercase tracking-widest bg-amber-200 px-2 py-1 rounded-full shrink-0 mt-0.5">Demo Mode</span>
+              <p className="text-sm font-medium text-amber-800">{syncResult.message}</p>
+            </div>
+            <button
+              onClick={() => setSyncResult(null)}
+              className="p-1 text-amber-500 hover:text-amber-800 hover:bg-amber-200 rounded-lg transition-all shrink-0"
+              title="Dismiss"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          {syncResult.records.length > 0 && (
+            <div className="border-t border-amber-200 overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-amber-100/60">
+                    <th className="px-4 py-2 text-[10px] font-bold text-amber-700 uppercase tracking-widest">Employee</th>
+                    <th className="px-4 py-2 text-[10px] font-bold text-amber-700 uppercase tracking-widest">Period</th>
+                    <th className="px-4 py-2 text-[10px] font-bold text-amber-700 uppercase tracking-widest">Hours</th>
+                    <th className="px-4 py-2 text-[10px] font-bold text-amber-700 uppercase tracking-widest">Days</th>
+                    <th className="px-4 py-2 text-[10px] font-bold text-amber-700 uppercase tracking-widest">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-amber-100">
+                  {syncResult.records.map((rec) => (
+                    <tr key={rec.employee_id}>
+                      <td className="px-4 py-2 text-xs font-bold text-slate-800">{rec.username}</td>
+                      <td className="px-4 py-2 text-xs text-slate-500 font-mono">{rec.period_start} → {rec.period_end}</td>
+                      <td className="px-4 py-2 text-xs font-bold text-indigo-700">{rec.total_hours} hrs</td>
+                      <td className="px-4 py-2 text-xs text-slate-600">{rec.days_present} days</td>
+                      <td className="px-4 py-2">
+                        <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-full">{rec.verification_status}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      <div className="professional-card p-4 flex flex-wrap items-center gap-4">
+        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Sync Period</span>
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-slate-500">From</label>
+          <input
+            type="date"
+            value={syncRange.start}
+            max={syncRange.end}
+            onChange={(e) => setSyncRange((r) => ({ ...r, start: e.target.value }))}
+            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-slate-500">To</label>
+          <input
+            type="date"
+            value={syncRange.end}
+            min={syncRange.start}
+            onChange={(e) => setSyncRange((r) => ({ ...r, end: e.target.value }))}
+            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <span className="text-xs text-slate-400">Click ↻ on a connected integration to sync this period</span>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading ? (
           <div className="professional-card p-6 text-sm text-slate-500">Loading integrations...</div>
@@ -235,9 +323,9 @@ export default function ExternalIntegrations() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleSync(integration.id)}
-                      disabled={isSyncing === integration.id}
-                      className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all disabled:opacity-50"
-                      title="Sync Now"
+                      disabled={isSyncing === integration.id || integration.status !== 'connected'}
+                      className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                      title={integration.status !== 'connected' ? 'Connect this integration first to sync' : 'Simulated Sync — payload is built from real attendance data'}
                     >
                       <RefreshCw className={cn('w-4 h-4', isSyncing === integration.id && 'animate-spin')} />
                     </button>

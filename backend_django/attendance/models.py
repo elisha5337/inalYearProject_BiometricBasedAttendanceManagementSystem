@@ -53,6 +53,11 @@ class AttendanceRecord(models.Model):
         choices=VerificationStatus.choices, 
         default=VerificationStatus.VERIFIED
     )
+    method = models.CharField(
+        max_length=50,
+        default='face',
+        help_text="Method used: face, fingerprint, manual"
+    )
 
     def save(self, *args, **kwargs):
         # Capture the name snapshot automatically on first save

@@ -241,21 +241,31 @@ function titleCase(value: string) {
 function deriveAuditSeverity(action: string, details: string): AuditLogEntry['severity'] {
   const content = `${action} ${details}`.toLowerCase();
 
+  // Critical security events
   if (
-    content.includes('failed') ||
-    content.includes('error') ||
-    content.includes('unauthorized') ||
-    content.includes('suspend') ||
-    content.includes('delete')
+    content.includes('failed_login') ||
+    content.includes('locked') ||
+    content.includes('suspended') ||
+    content.includes('login_blocked') ||
+    content.includes('login_role_denied') ||
+    content.includes('user_deleted') ||
+    content.includes('unauthorized')
   ) {
     return 'high';
   }
 
+  // Important administrative changes
   if (
-    content.includes('update') ||
-    content.includes('change') ||
-    content.includes('sync') ||
-    content.includes('warning')
+    content.includes('user_created') ||
+    content.includes('user_role_changed') ||
+    content.includes('user_status_changed') ||
+    content.includes('biometric_enrolled') ||
+    content.includes('password_changed') ||
+    content.includes('password_reset') ||
+    content.includes('global_config') ||
+    content.includes('shift_deleted') ||
+    content.includes('leave_approved') ||
+    content.includes('leave_rejected')
   ) {
     return 'medium';
   }
@@ -415,21 +425,35 @@ export async function fetchDashboardOverview() {
     fetchDevices().catch(() => [] as DeviceRecord[]),
   ]);
 
-  const authLoadMap = new Map<string, number>();
   const recentLogs = auditLogs.slice(0, 7);
 
-  recentLogs
-    .slice()
-    .reverse()
-    .forEach((log) => {
-      const parsed = new Date(log.time);
-      const label = Number.isNaN(parsed.getTime())
-        ? log.time.slice(11, 16) || log.time
-        : parsed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      authLoadMap.set(label, (authLoadMap.get(label) ?? 0) + 1);
-    });
+  const CRITICAL_ACTIONS = new Set([
+    'FAILED_LOGIN', 'FAILED_LOGIN_LOCKED', 'LOGIN_BLOCKED_SUSPENDED', 'LOGIN_ROLE_DENIED',
+    'USER_CREATED', 'USER_DELETED', 'USER_STATUS_CHANGED', 'USER_ROLE_CHANGED',
+    'BIOMETRIC_ENROLLED', 'PASSWORD_CHANGED', 'PASSWORD_RESET', 'GLOBAL_CONFIG_UPDATED',
+    'SHIFT_CREATED', 'SHIFT_DELETED', 'ASSIGNMENT_CREATED', 'ASSIGNMENT_DELETED',
+    'LEAVE_APPROVED', 'LEAVE_REJECTED',
+  ]);
 
-  const authLoad = Array.from(authLoadMap.entries()).map(([time, load]) => ({ time, load }));
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const hourMap = new Map<number, number>();
+  for (let h = 6; h <= 18; h++) hourMap.set(h, 0);
+
+  auditLogs.forEach((log) => {
+    if (!CRITICAL_ACTIONS.has(log.action)) return;
+    const parsed = new Date(log.time);
+    if (isNaN(parsed.getTime())) return;
+    if (parsed.toISOString().slice(0, 10) !== todayStr) return;
+    const hour = parsed.getHours();
+    if (hour >= 6 && hour <= 18) hourMap.set(hour, (hourMap.get(hour) ?? 0) + 1);
+  });
+
+  const authLoad = Array.from(hourMap.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([hour, count]) => ({
+      time: `${String(hour).padStart(2, '0')}:00`,
+      load: count,
+    }));
 
   return {
     stats: {
@@ -753,11 +777,22 @@ export function toggleIntegration(integrationId: string) {
   );
 }
 
-export function syncIntegration(integrationId: string) {
-  return apiRequest<{ success: boolean; message: string; last_sync?: string }>(
+export interface SyncRecord {
+  employee_id: string;
+  username: string;
+  period_start: string;
+  period_end: string;
+  total_hours: number;
+  days_present: number;
+  verification_status: string;
+}
+
+export function syncIntegration(integrationId: string, startDate?: string, endDate?: string) {
+  return apiRequest<{ success: boolean; message: string; last_sync?: string; records?: SyncRecord[] }>(
     `/accounts/api/integrations/${integrationId}/sync/`,
     {
       method: 'POST',
+      body: { start_date: startDate, end_date: endDate },
     },
   );
 }

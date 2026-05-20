@@ -55,7 +55,7 @@ export default function Profile({ user }: { user: UserType }) {
               </div>
               <div className="flex items-center gap-3 text-slate-600">
                 <Phone className="w-4 h-4 text-slate-400" />
-                <span className="text-sm">+251 911 234 567</span>
+                <span className="text-sm"></span>
               </div>
               <div className="flex items-center gap-3 text-slate-600">
                 <Building2 className="w-4 h-4 text-slate-400" />
@@ -108,7 +108,7 @@ export default function Profile({ user }: { user: UserType }) {
                 <input
                   type="text"
                   disabled
-                  defaultValue="HU-IOT-2024-0486"
+                  defaultValue="{user.username?.toUpperCase()}"
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none opacity-60"
                 />
               </div>
@@ -126,7 +126,7 @@ export default function Profile({ user }: { user: UserType }) {
                 <input
                   type="tel"
                   disabled={!isEditing}
-                  defaultValue="+251 911 234 567"
+                  defaultValue=""
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60"
                 />
               </div>

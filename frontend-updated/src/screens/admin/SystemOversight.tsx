@@ -228,7 +228,7 @@ export default function SystemOversight() {
                 <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                   <div
                     className={cn('h-full rounded-full', parseInt(node.load, 10) > 80 ? 'bg-rose-500' : 'bg-indigo-500')}
-                    style={{ width: node.load }}
+                    style={{ width: `${Math.max(0, parseInt(node.load, 10) || 0)}%` }}
                   ></div>
                 </div>
               </div>

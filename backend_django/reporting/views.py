@@ -135,6 +135,20 @@ def attendance_report_export(request):
     except ValueError:
         return JsonResponse({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
 
+    # Pre-fetch approved leaves for the date range
+    from leave.models import LeaveRequest as LR
+    approved_leaves = LR.objects.filter(
+        status=LR.LeaveStatus.APPROVED,
+        start_date__lte=end_date,
+        end_date__gte=start_date,
+    ).values('user_id', 'start_date', 'end_date', 'leave_type')
+    leave_days = set()
+    for lv in approved_leaves:
+        d = lv['start_date']
+        while d <= lv['end_date']:
+            leave_days.add((str(lv['user_id']), d.isoformat()))
+            d += timedelta(days=1)
+
     # Query attendance events in the requested window.
     events_qs = (
         AttendanceRecord.objects.filter(timestamp__date__range=(start_date, end_date))
@@ -162,6 +176,7 @@ def attendance_report_export(request):
         if key not in daily:
             detail = getattr(r.user, 'employeedetail', None)
             daily[key] = {
+                'uid': str(r.user_id),
                 'name': r.user.get_full_name() or r.user.username,
                 'dept': detail.department.name if detail and detail.department else 'N/A',
                 'date': day_iso,
@@ -182,8 +197,10 @@ def attendance_report_export(request):
         if row['in'] and row['out']:
             hours = round((row['out'] - row['in']).total_seconds() / 3600.0, 2)
         
+        on_leave = (str(row['uid']), row['date']) in leave_days
         status = 'Present'
-        if row['late']: status = 'Late'
+        if on_leave: status = 'On Leave'
+        elif row['late']: status = 'Late'
         elif row['early']: status = 'Early Leave'
         elif not row['in']: status = 'Absent'
 
@@ -440,16 +457,17 @@ def generate_system_notifications_for_user(user):
         )
 
     if not is_admin(user) and not is_hr(user):
-        leave_timestamp_field = 'updated_at' if any(field.name == 'updated_at' for field in LeaveRequest._meta.fields) else 'created_at'
+        # Notify employee about any processed leave (not just recent ones)
         processed_leaves = LeaveRequest.objects.filter(
-            user=user,
-            **{f'{leave_timestamp_field}__date__gte': today - timedelta(days=3)}
+            user=user
         ).exclude(status=LeaveRequest.LeaveStatus.PENDING)
         
         for req in processed_leaves:
+            notif_title = f'Leave Request {req.status.title()}'
+            # Use get_or_create with title+user to avoid duplicates
             Notification.objects.get_or_create(
                 user=user,
-                title=f'Leave Request {req.status.title()}',
+                title=notif_title,
                 message=f'Your application for {req.leave_type} leave starting {req.start_date} has been {req.status.lower()}.',
                 defaults={'type': 'SUCCESS' if req.status == 'APPROVED' else 'WARNING'}
             )
@@ -509,7 +527,9 @@ def get_audit_logs(request):
     if not is_admin(user): return JsonResponse({'error': 'Admin required'}, status=403)
 
     action_filter = request.GET.get('action')
-    logs = AuditLog.objects.all().select_related('user').order_by('-timestamp')
+    logs = AuditLog.objects.exclude(
+        action__in=['LOGIN_SUCCESS', 'LOGOUT']
+    ).select_related('user').order_by('-timestamp')
     
     if action_filter:
         logs = logs.filter(action__icontains=action_filter)
@@ -550,12 +570,20 @@ def get_system_health(request):
     user, auth_error = require_staff(request)
     if auth_error: return auth_error
     
-    active_terminals = Device.objects.filter(status='active').count()
+    active_terminals = Device.objects.filter(status='online').count()
+    start = timezone.now()
+    try:
+        from django.db import connection as _conn
+        with _conn.cursor() as _cur:
+            _cur.execute('SELECT 1')
+        latency_ms = round((timezone.now() - start).total_seconds() * 1000)
+    except Exception:
+        latency_ms = 0
     return JsonResponse({
         'success': True,
         'health': {
             'db_status': 'OPTIMAL',
-            'api_latency': '24ms',
+            'api_latency': f'{latency_ms}ms',
             'active_terminals': f'{active_terminals:02d} ACTIVE',
             'uptime': format_uptime(timezone.now() - SERVER_START_TIME),
             'last_sync': timezone.now().isoformat()

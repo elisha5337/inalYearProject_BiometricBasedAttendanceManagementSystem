@@ -23,13 +23,7 @@ urlpatterns = [
     path('api/password-reset/request/', views.api_forgot_password_request, name='api_forgot_password_request'),
     path('api/password-reset/confirm/<str:uidb64>/<str:token>/', views.api_reset_password_confirm, name='api_reset_password_confirm'),
 
-    # Workflow API
-    path('api/workflows/', views.api_list_workflows, name='api_workflow_list'),
-    path('api/workflows/create/', views.api_create_workflow, name='api_workflow_create'),
-    path('api/workflows/<uuid:workflow_id>/update/', views.api_update_workflow, name='api_workflow_update'),
-    path('api/workflows/<uuid:workflow_id>/delete/', views.api_delete_workflow, name='api_workflow_delete'),
-    
-    # Integrations
+
     path('api/integrations/hub-register/', views.api_create_integration, name='api_integration_create'),
     path('api/integrations/', views.api_list_integrations, name='api_integration_list'),
     path('api/integrations/<uuid:integration_id>/toggle/', views.api_toggle_integration, name='api_integration_toggle'),

@@ -1,306 +1,167 @@
-import { useLanguage } from '../../lib/translations';
-﻿import { useEffect, useState } from 'react';
-import {
-  GitBranch,
-  Play,
-  Settings,
-  CheckCircle2,
-  AlertCircle,
-  Plus,
-  ArrowRight,
-  Zap,
-  RefreshCw,
-  Pause,
-  X,
-  Terminal,
-  Save,
-  Trash2,
-} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Clock, Users, GitBranch, RefreshCw, ChevronRight, CheckCircle2, AlertCircle, Calendar, ArrowRight, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { ApiError } from '../../lib/api';
-import {
-  createWorkflow,
-  deleteWorkflow,
-  fetchWorkflows,
-  updateWorkflow,
-  type WorkflowFormPayload,
-  type WorkflowRecord,
-} from '../../lib/admin';
+import { ApiError, apiRequest } from '../../lib/api';
+
+interface ShiftWorkflow {
+  id: string;
+  name: string;
+  description: string;
+  department: string;
+  trigger: string;
+  condition: string;
+  action: string;
+  work_days: string;
+  start_time: string;
+  end_time: string;
+  grace_period: number;
+  assigned_employees: number;
+  status: 'active';
+}
 
 export default function ManageWorkflows() {
-  const { t } = useLanguage();
-  const [workflows, setWorkflows] = useState<WorkflowRecord[]>([]);
+  const [workflows, setWorkflows] = useState<ShiftWorkflow[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showConfigureModal, setShowConfigureModal] = useState<string | null>(null);
-  const [isTesting, setIsTesting] = useState<string | null>(null);
-  const [testResult, setTestResult] = useState<{ id: string; success: boolean } | null>(null);
+  const [selected, setSelected] = useState<ShiftWorkflow | null>(null);
 
-  const [newWorkflow, setNewWorkflow] = useState<WorkflowFormPayload>({
-    name: '',
-    description: '',
-    status: 'active',
-    trigger: 'On Attendance Check-in',
-    action: 'Send Notification',
-    retryPolicy: 'Exponential Backoff (3 retries)',
-    timeoutSeconds: 30,
-  });
-
-  const [editWorkflow, setEditWorkflow] = useState<WorkflowFormPayload>({
-    name: '',
-    description: '',
-    status: 'active',
-    trigger: 'On Attendance Check-in',
-    action: 'Send Notification',
-    retryPolicy: 'Exponential Backoff (3 retries)',
-    timeoutSeconds: 30,
-  });
-
-  async function loadWorkflows(showRefreshState = false) {
+  async function load(refresh = false) {
     try {
-      if (showRefreshState) {
-        setIsRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+      refresh ? setIsRefreshing(true) : setLoading(true);
       setError(null);
-
-      const data = await fetchWorkflows();
-      setWorkflows(data);
-    } catch (loadError) {
-      setError(loadError instanceof ApiError ? loadError.message : 'Unable to load workflows right now.');
+      const res = await apiRequest<{ success: boolean; workflows: ShiftWorkflow[] }>(
+        '/api/scheduling/shift-workflows/'
+      );
+      setWorkflows(res.workflows ?? []);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Unable to load workflows.');
     } finally {
       setLoading(false);
       setIsRefreshing(false);
     }
   }
 
-  useEffect(() => {
-    loadWorkflows();
-  }, []);
-
-  const selectedWorkflow = workflows.find((workflow) => workflow.id === showConfigureModal);
-
-  useEffect(() => {
-    if (selectedWorkflow) {
-      setEditWorkflow({
-        name: selectedWorkflow.name,
-        description: selectedWorkflow.description,
-        status: selectedWorkflow.status,
-        trigger: selectedWorkflow.trigger,
-        action: selectedWorkflow.action,
-        retryPolicy: selectedWorkflow.retryPolicy,
-        timeoutSeconds: selectedWorkflow.timeoutSeconds,
-      });
-    }
-  }, [selectedWorkflow]);
-
-  const handleCreateWorkflow = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    try {
-      setError(null);
-      await createWorkflow(newWorkflow);
-      setShowCreateModal(false);
-      setNewWorkflow({
-        name: '',
-        description: '',
-        status: 'active',
-        trigger: 'On Attendance Check-in',
-        action: 'Send Notification',
-        retryPolicy: 'Exponential Backoff (3 retries)',
-        timeoutSeconds: 30,
-      });
-      await loadWorkflows();
-    } catch (createError) {
-      setError(createError instanceof ApiError ? createError.message : 'Unable to create workflow.');
-    }
-  };
-
-  const toggleStatus = async (workflow: WorkflowRecord) => {
-    const nextStatus = workflow.status === 'active' ? 'paused' : 'active';
-
-    try {
-      setError(null);
-      await updateWorkflow(workflow.id, {
-        name: workflow.name,
-        description: workflow.description,
-        status: nextStatus,
-        trigger: workflow.trigger,
-        action: workflow.action,
-        retryPolicy: workflow.retryPolicy,
-        timeoutSeconds: workflow.timeoutSeconds,
-      });
-      setWorkflows((current) =>
-        current.map((item) => (item.id === workflow.id ? { ...item, status: nextStatus } : item)),
-      );
-    } catch (toggleError) {
-      setError(toggleError instanceof ApiError ? toggleError.message : 'Unable to update workflow status.');
-    }
-  };
-
-  const handleTestRun = (id: string) => {
-    setIsTesting(id);
-    setTestResult(null);
-    setTimeout(() => {
-      setIsTesting(null);
-      setTestResult({ id, success: true });
-      setTimeout(() => setTestResult(null), 3000);
-    }, 1500);
-  };
-
-  const handleDeleteWorkflow = async (id: string) => {
-    try {
-      setError(null);
-      await deleteWorkflow(id);
-      setWorkflows((current) => current.filter((workflow) => workflow.id !== id));
-      setShowConfigureModal(null);
-    } catch (deleteError) {
-      setError(deleteError instanceof ApiError ? deleteError.message : 'Unable to delete workflow.');
-    }
-  };
-
-  const handleSaveWorkflow = async () => {
-    if (!selectedWorkflow) {
-      return;
-    }
-
-    try {
-      setError(null);
-      await updateWorkflow(selectedWorkflow.id, editWorkflow);
-      setShowConfigureModal(null);
-      await loadWorkflows();
-    } catch (saveError) {
-      setError(saveError instanceof ApiError ? saveError.message : 'Unable to update workflow.');
-    }
-  };
+  useEffect(() => { load(); }, []);
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{t('Automation Workflows')}</h1>
-          <p className="text-slate-500">{t('Manage automated business logic and system triggers')}</p>
+          <h1 className="text-2xl font-bold text-slate-900">Attendance Workflows</h1>
+          <p className="text-slate-500 mt-1">
+            Each shift defines a live attendance rule — the system automatically evaluates every check-in against these rules in real time.
+          </p>
         </div>
-
-        <div className="flex gap-3">
-          <button onClick={() => loadWorkflows(true)} className="secondary-button p-2.5" title="Refresh Status">
-            <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
-          </button>
-          <button onClick={() => setShowCreateModal(true)} className="primary-button gap-2 flex-1 md:flex-none justify-center">
-            <Plus className="w-4 h-4" />
-            Create Workflow
-          </button>
-        </div>
+        <button onClick={() => load(true)} className="secondary-button p-2.5" title="Refresh">
+          <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
+        </button>
       </div>
 
-      {error ? (
+      {error && (
         <div className="rounded-2xl border border-rose-100 bg-red-50 px-5 py-4 text-sm font-medium text-rose-700">
           {error}
         </div>
-      ) : null}
+      )}
 
+      {/* How it works banner */}
+      <div className="professional-card p-5 bg-indigo-50 border-indigo-100">
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shrink-0">
+            <GitBranch className="w-5 h-5 text-indigo-600" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-indigo-900 mb-1">How Attendance Workflows Work</p>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-indigo-700">
+              <span className="bg-indigo-100 px-2 py-1 rounded-lg font-semibold">1. Employee checks in via biometric terminal</span>
+              <ArrowRight className="w-3 h-3 shrink-0" />
+              <span className="bg-indigo-100 px-2 py-1 rounded-lg font-semibold">2. System finds their assigned shift</span>
+              <ArrowRight className="w-3 h-3 shrink-0" />
+              <span className="bg-indigo-100 px-2 py-1 rounded-lg font-semibold">3. Check-in time compared against shift start + grace period</span>
+              <ArrowRight className="w-3 h-3 shrink-0" />
+              <span className="bg-indigo-100 px-2 py-1 rounded-lg font-semibold">4. Record marked ON_TIME or LATE automatically</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Workflow cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {loading ? (
-          <div className="professional-card p-6 text-sm text-slate-500">Loading workflows...</div>
-        ) : workflows.map((workflow) => (
-          <div key={workflow.id} className="professional-card group hover:border-indigo-200 transition-all">
+          [1, 2].map((i) => (
+            <div key={i} className="professional-card p-6 space-y-4 animate-pulse">
+              <div className="h-5 w-40 bg-slate-100 rounded" />
+              <div className="h-4 w-full bg-slate-100 rounded" />
+              <div className="h-16 bg-slate-50 rounded-2xl" />
+            </div>
+          ))
+        ) : workflows.length === 0 ? (
+          <div className="professional-card p-8 text-center col-span-2">
+            <GitBranch className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+            <p className="text-sm font-bold text-slate-500">No shifts configured yet</p>
+            <p className="text-xs text-slate-400 mt-1">Go to Manage Shifts to create shifts — they will appear here as attendance workflows.</p>
+          </div>
+        ) : workflows.map((wf) => (
+          <div
+            key={wf.id}
+            className="professional-card hover:border-indigo-200 transition-all cursor-pointer"
+            onClick={() => setSelected(wf)}
+          >
             <div className="p-6">
+              {/* Card header */}
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div
-                    className={cn(
-                      'w-10 h-10 rounded-2xl flex items-center justify-center',
-                      workflow.status === 'active'
-                        ? 'bg-green-50 text-emerald-600'
-                        : workflow.status === 'error'
-                          ? 'bg-red-50 text-rose-600'
-                          : 'bg-slate-100 text-slate-500',
-                    )}
-                  >
-                    <GitBranch className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <CheckCircle2 className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900">{workflow.name}</h3>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={cn(
-                          'w-1.5 h-1.5 rounded-full',
-                          workflow.status === 'active'
-                            ? 'bg-emerald-500 animate-pulse'
-                            : workflow.status === 'error'
-                              ? 'bg-rose-500'
-                              : 'bg-slate-400',
-                        )}
-                      ></span>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                        {workflow.status}
-                      </span>
-                    </div>
+                    <h3 className="font-bold text-slate-900">{wf.name}</h3>
+                    <p className="text-xs text-slate-500">{wf.department}</p>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleTestRun(workflow.id)}
-                    disabled={isTesting === workflow.id}
-                    className="p-2 border border-slate-200 rounded-2xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all disabled:opacity-50"
-                    title="Test Run"
-                  >
-                    <Play className={cn('w-4 h-4', isTesting === workflow.id && 'animate-pulse')} />
-                  </button>
-                  <button
-                    onClick={() => toggleStatus(workflow)}
-                    className={cn(
-                      'p-2 rounded-2xl border transition-colors',
-                      workflow.status === 'active'
-                        ? 'border-amber-100 text-amber-600 hover:bg-amber-50'
-                        : 'border-emerald-100 text-emerald-600 hover:bg-green-50',
-                    )}
-                    title={workflow.status === 'active' ? 'Pause Workflow' : 'Activate Workflow'}
-                  >
-                    {workflow.status === 'active' ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                  </button>
-                  <button
-                    onClick={() => setShowConfigureModal(workflow.id)}
-                    className="p-2 border border-slate-200 rounded-2xl text-slate-400 hover:text-slate-600 hover:bg-slate-50"
-                    title="Configure"
-                  >
-                    <Settings className="w-4 h-4" />
-                  </button>
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 uppercase tracking-widest bg-green-50 px-2 py-1 rounded-full">
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                    Active
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
                 </div>
               </div>
 
-              <p className="text-sm text-slate-600 mb-6 line-clamp-2 leading-relaxed">
-                {workflow.description}
-              </p>
+              <p className="text-sm text-slate-500 mb-5 line-clamp-2">{wf.description}</p>
 
-              <div className="grid grid-cols-3 gap-4 p-4 bg-slate-50 rounded-2xl relative">
-                {testResult?.id === workflow.id && (
-                  <div
-                    className={cn(
-                      'absolute inset-0 rounded-2xl flex items-center justify-center gap-2 animate-in fade-in zoom-in-95 duration-200',
-                      testResult.success ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white',
-                    )}
-                  >
-                    {testResult.success ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                    <span className="text-xs font-bold uppercase tracking-widest">
-                      {testResult.success ? 'Test Passed' : 'Test Failed'}
-                    </span>
-                  </div>
-                )}
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Success Rate</p>
-                  <p className="text-sm font-bold text-slate-900">{workflow.successRate}%</p>
+              {/* Rule summary */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest w-16 shrink-0">Trigger</span>
+                  <span className="text-xs font-semibold text-slate-700">{wf.trigger}</span>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Avg. Latency</p>
-                  <p className="text-sm font-bold text-slate-900">{workflow.avgTime}</p>
+                <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-xl">
+                  <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest w-16 shrink-0">Rule</span>
+                  <span className="text-xs font-semibold text-amber-800">
+                    ON_TIME if within {wf.grace_period} min of {wf.start_time} · LATE if after
+                  </span>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Last Run</p>
-                  <p className="text-sm font-bold text-slate-900">{workflow.lastRun}</p>
+                <div className="flex items-center gap-3 p-3 bg-indigo-50 rounded-xl">
+                  <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest w-16 shrink-0">Action</span>
+                  <span className="text-xs font-semibold text-indigo-800">Mark attendance record + update employee status</span>
+                </div>
+              </div>
+
+              {/* Footer stats */}
+              <div className="flex items-center gap-4 mt-5 pt-4 border-t border-slate-100">
+                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <Clock className="w-3.5 h-3.5" />
+                  {wf.start_time} – {wf.end_time}
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <Calendar className="w-3.5 h-3.5" />
+                  {wf.work_days}
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 ml-auto">
+                  <Users className="w-3.5 h-3.5" />
+                  {wf.assigned_employees} assigned
                 </div>
               </div>
             </div>
@@ -308,194 +169,108 @@ export default function ManageWorkflows() {
         ))}
       </div>
 
-      <div className="professional-card p-8 bg-gradient-to-br from-indigo-600 to-indigo-700 text-white overflow-hidden relative">
-        <div className="relative z-10 max-w-lg">
-          <div className="flex items-center gap-2 mb-4">
-            <Zap className="w-5 h-5 text-amber-300 fill-current" />
-            <span className="text-xs font-bold uppercase tracking-widest text-indigo-100">New Feature</span>
-          </div>
-          <h2 className="text-2xl font-bold mb-2">Visual Workflow Builder</h2>
-          <p className="text-indigo-100 mb-6 leading-relaxed">
-            Create complex automation logic using our drag-and-drop interface. Connect triggers, conditions, and actions without writing a single line of code.
-          </p>
-          <button className="px-6 py-3 bg-white text-indigo-600 rounded-2xl font-bold text-sm hover:bg-indigo-50 transition-colors flex items-center gap-2">
-            Open Builder
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
-        <div className="absolute bottom-0 right-10 w-32 h-32 bg-indigo-400/20 rounded-full translate-y-1/2 blur-2xl"></div>
-        <GitBranch className="absolute -right-10 top-1/2 -translate-y-1/2 w-64 h-64 text-white/5 -rotate-12" />
-      </div>
-
-      {showCreateModal && (
+      {/* Detail panel */}
+      {selected && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowCreateModal(false)} />
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setSelected(null)} />
           <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center text-white">
-                  <Plus className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">Create New Workflow</h3>
-                  <p className="text-xs text-slate-500">{t('Define a new automation trigger and action')}</p>
-                </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">{selected.name}</h3>
+                <p className="text-xs text-slate-500">{selected.department} · Attendance Workflow</p>
               </div>
-              <button onClick={() => setShowCreateModal(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-2xl transition-all">
+              <button onClick={() => setSelected(null)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-2xl transition-all">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateWorkflow} className="flex-1 overflow-y-auto p-6 space-y-6">
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">Workflow Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g., Late Arrival Alert"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                  value={newWorkflow.name}
-                  onChange={(e) => setNewWorkflow((current) => ({ ...current, name: e.target.value }))}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">Description</label>
-                <textarea
-                  required
-                  rows={3}
-                  placeholder="Describe what this workflow does..."
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none"
-                  value={newWorkflow.description}
-                  onChange={(e) => setNewWorkflow((current) => ({ ...current, description: e.target.value }))}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Trigger</label>
-                  <select
-                    value={newWorkflow.trigger}
-                    onChange={(e) => setNewWorkflow((current) => ({ ...current, trigger: e.target.value }))}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                  >
-                    <option>On Attendance Check-in</option>
-                    <option>On Leave Request</option>
-                    <option>On Device Offline</option>
-                    <option>Scheduled (Daily)</option>
-                  </select>
+            <div className="flex-1 overflow-y-auto p-6 space-y-5">
+              {/* Shift timing */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="p-3 bg-slate-50 rounded-2xl text-center">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Start</p>
+                  <p className="text-lg font-black text-slate-900">{selected.start_time}</p>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Action</label>
-                  <select
-                    value={newWorkflow.action}
-                    onChange={(e) => setNewWorkflow((current) => ({ ...current, action: e.target.value }))}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                  >
-                    <option>Send Notification</option>
-                    <option>Update User Status</option>
-                    <option>Generate Report</option>
-                    <option>Trigger Webhook</option>
-                  </select>
+                <div className="p-3 bg-slate-50 rounded-2xl text-center">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">End</p>
+                  <p className="text-lg font-black text-slate-900">{selected.end_time}</p>
+                </div>
+                <div className="p-3 bg-amber-50 rounded-2xl text-center">
+                  <p className="text-[10px] font-bold text-amber-500 uppercase tracking-wider mb-1">Grace</p>
+                  <p className="text-lg font-black text-amber-700">{selected.grace_period}m</p>
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-4 sticky bottom-0 bg-white pb-2">
-                <button type="button" onClick={() => setShowCreateModal(false)} className="secondary-button flex-1 py-3">
-                  Cancel
-                </button>
-                <button type="submit" className="primary-button flex-1 py-3 shadow-lg shadow-indigo-200">
-                  Create Workflow
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+              {/* Full rule logic */}
+              <div className="space-y-3">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Rule Logic</p>
 
-      {showConfigureModal && selectedWorkflow && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowConfigureModal(null)} />
-          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-slate-900 rounded-2xl flex items-center justify-center text-white">
-                  <Settings className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">Configure Workflow</h3>
-                  <p className="text-xs text-slate-500">{selectedWorkflow.name}</p>
-                </div>
-              </div>
-              <button onClick={() => setShowConfigureModal(null)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-2xl transition-all">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              <div className="space-y-4">
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Terminal className="w-4 h-4 text-slate-400" />
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Configuration Payload</span>
+                <div className="flex gap-3 items-start">
+                  <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-xs font-black text-slate-500 shrink-0 mt-0.5">1</div>
+                  <div className="flex-1 p-3 bg-slate-50 rounded-xl">
+                    <p className="text-xs font-bold text-slate-700">Trigger</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{selected.trigger} via biometric terminal</p>
                   </div>
-                  <pre className="text-xs font-mono text-slate-600 bg-slate-100 p-3 rounded-2xl overflow-x-auto">
-{JSON.stringify(
-  {
-    trigger: editWorkflow.trigger,
-    action: editWorkflow.action,
-    retryPolicy: editWorkflow.retryPolicy,
-    timeoutSeconds: editWorkflow.timeoutSeconds,
-    status: editWorkflow.status,
-  },
-  null,
-  2,
-)}
-                  </pre>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Retry Policy</label>
-                  <select
-                    value={editWorkflow.retryPolicy}
-                    onChange={(e) => setEditWorkflow((current) => ({ ...current, retryPolicy: e.target.value }))}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                  >
-                    <option>Exponential Backoff (3 retries)</option>
-                    <option>Immediate Retry (1 time)</option>
-                    <option>No Retry</option>
-                  </select>
+                <div className="flex gap-3 items-start">
+                  <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center text-xs font-black text-amber-600 shrink-0 mt-0.5">2</div>
+                  <div className="flex-1 p-3 bg-amber-50 rounded-xl">
+                    <p className="text-xs font-bold text-amber-800">Condition</p>
+                    <p className="text-xs text-amber-700 mt-0.5">{selected.condition}</p>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Timeout (Seconds)</label>
-                  <input
-                    type="number"
-                    value={editWorkflow.timeoutSeconds}
-                    onChange={(e) =>
-                      setEditWorkflow((current) => ({
-                        ...current,
-                        timeoutSeconds: Number(e.target.value || 0),
-                      }))
-                    }
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                  />
+                <div className="flex gap-3 items-start">
+                  <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-xs font-black text-emerald-600 shrink-0 mt-0.5">3</div>
+                  <div className="flex-1 p-3 bg-emerald-50 rounded-xl">
+                    <p className="text-xs font-bold text-emerald-800">Action</p>
+                    <p className="text-xs text-emerald-700 mt-0.5">{selected.action}</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-4 border-t border-slate-100 sticky bottom-0 bg-white pb-2">
-                <button onClick={() => handleDeleteWorkflow(selectedWorkflow.id)} className="p-3 text-rose-600 hover:bg-red-50 rounded-2xl transition-all" title="Delete Workflow">
-                  <Trash2 className="w-5 h-5" />
-                </button>
-                <button onClick={() => setShowConfigureModal(null)} className="secondary-button flex-1 py-3">
-                  Cancel
-                </button>
-                <button onClick={handleSaveWorkflow} className="primary-button flex-1 py-3 shadow-lg shadow-indigo-200">
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Config
-                </button>
+              {/* Outcome table */}
+              <div>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Possible Outcomes</p>
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="bg-slate-50">
+                      <th className="px-3 py-2 font-bold text-slate-500 rounded-l-xl">Check-in Time</th>
+                      <th className="px-3 py-2 font-bold text-slate-500">Result</th>
+                      <th className="px-3 py-2 font-bold text-slate-500 rounded-r-xl">Recorded As</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    <tr>
+                      <td className="px-3 py-2 text-slate-600">Before or at {selected.start_time} + {selected.grace_period}m</td>
+                      <td className="px-3 py-2"><span className="text-emerald-600 font-bold">✓ On Time</span></td>
+                      <td className="px-3 py-2 font-mono text-emerald-700">ON_TIME</td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-2 text-slate-600">After {selected.start_time} + {selected.grace_period}m</td>
+                      <td className="px-3 py-2"><span className="text-amber-600 font-bold">⚠ Late</span></td>
+                      <td className="px-3 py-2 font-mono text-amber-700">LATE</td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-2 text-slate-600">Checkout before {selected.end_time} - 5m</td>
+                      <td className="px-3 py-2"><span className="text-rose-600 font-bold">↩ Early Exit</span></td>
+                      <td className="px-3 py-2 font-mono text-rose-700">EARLY_EXIT</td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-2 text-slate-600">No check-in recorded</td>
+                      <td className="px-3 py-2"><span className="text-slate-500 font-bold">✗ Absent</span></td>
+                      <td className="px-3 py-2 font-mono text-slate-500">ABSENT</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex items-center gap-2 p-3 bg-indigo-50 rounded-xl">
+                <AlertCircle className="w-4 h-4 text-indigo-500 shrink-0" />
+                <p className="text-xs text-indigo-700">
+                  This rule runs automatically on every biometric check-in. {selected.assigned_employees} employee(s) are currently assigned to this shift.
+                </p>
               </div>
             </div>
           </div>

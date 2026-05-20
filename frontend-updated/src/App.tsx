@@ -17,6 +17,7 @@ import EmployeeDashboard from './screens/employee/Dashboard';
 import ViewAttendance from './screens/employee/ViewAttendance';
 import SubmitLeave from './screens/employee/SubmitLeave';
 import LeaveHistory from './screens/employee/LeaveHistory';
+import MySchedule from './screens/employee/MySchedule';
 
 // HR Screens
 import HRDashboard from './screens/hr/Dashboard';
@@ -33,11 +34,9 @@ import AuditLogView from './screens/admin/AuditLog';
 import SetPolicies from './screens/admin/SetPolicies';
 import EnrollBiometrics from './screens/admin/EnrollBiometrics';
 import ManageDevices from './screens/admin/ManageDevices';
-import ManageWorkflows from './screens/admin/ManageWorkflows';
 import AdminNotifications from './screens/admin/Notifications';
 import ExternalIntegrations from './screens/admin/ExternalIntegrations';
 import LeaveManagement from './screens/admin/LeaveManagement';
-import SystemOversight from './screens/admin/SystemOversight';
 
 // Common Screens
 import Notifications from './screens/Notifications';
@@ -132,6 +131,7 @@ function AppContent({ user, onLogin, onLogout }: { user: User | null, onLogin: (
                 <Route path="attendance" element={<ViewAttendance user={user} />} />
                 <Route path="leave/submit" element={<SubmitLeave user={user} />} />
                 <Route path="leave/history" element={<LeaveHistory user={user} />} />
+                <Route path="schedule" element={<MySchedule user={user} />} />
                 <Route path="profile" element={<Profile user={user} />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="help" element={<HelpCenter />} />
@@ -166,11 +166,9 @@ function AppContent({ user, onLogin, onLogout }: { user: User | null, onLogin: (
                 <Route path="policies" element={<SetPolicies />} />
                 <Route path="enroll" element={<EnrollBiometrics />} />
                 <Route path="devices" element={<ManageDevices />} />
-                <Route path="workflows" element={<ManageWorkflows />} />
                 <Route path="notifications" element={<AdminNotifications />} />
                 <Route path="integrations" element={<ExternalIntegrations />} />
                 <Route path="leave" element={<LeaveManagement />} />
-                <Route path="oversight" element={<SystemOversight />} />
                 <Route path="profile" element={<Profile user={user} />} />
                 <Route path="help" element={<HelpCenter />} />
               </Routes>

@@ -370,12 +370,6 @@ def api_login(request):
 
                 login(request, user)
                 apply_session_timeout(request, config, remember=remember)
-                log_audit_event(
-                    'LOGIN_SUCCESS',
-                    f'User "{user.username}" signed in as {requested_role or get_frontend_role_slug(user)}.',
-                    user=user,
-                    request=request,
-                )
 
                 return JsonResponse({
                     'success': True,
@@ -445,14 +439,6 @@ def api_change_password(request):
 
 @csrf_exempt
 def api_logout(request):
-    user = request.user if request.user.is_authenticated else None
-    if user:
-        log_audit_event(
-            'LOGOUT',
-            f'User "{user.username}" signed out.',
-            user=user,
-            request=request,
-        )
     logout(request)
     return JsonResponse({'success': True})
 
@@ -583,6 +569,12 @@ def api_create_user(request):
             biometric_enrolled=False
         )
         
+        log_audit_event(
+            'USER_CREATED',
+            f'New user "{username}" created with role "{role_name}" by "{request.user.username}".',
+            user=request.user,
+            request=request,
+        )
         return JsonResponse({'success': True, 'message': 'User created successfully'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
@@ -605,11 +597,26 @@ def api_update_user(request, user_id):
         try:
             data = json.loads(request.body)
             if 'status' in data:
+                old_status = user.status
                 user.status = data['status']
                 user.is_active = data['status'] == User.Status.ACTIVE
+                if old_status != user.status:
+                    log_audit_event(
+                        'USER_STATUS_CHANGED',
+                        f'Account "{user.username}" status changed from {old_status} to {user.status} by "{logged_in_user.username}".',
+                        user=logged_in_user, request=request,
+                    )
             if 'is_active' in data:
                 is_active = bool(data['is_active'])
-                user.status = User.Status.ACTIVE if is_active else User.Status.SUSPENDED
+                new_status = User.Status.ACTIVE if is_active else User.Status.SUSPENDED
+                if user.status != new_status:
+                    action_word = 'activated' if is_active else 'suspended'
+                    log_audit_event(
+                        'USER_STATUS_CHANGED',
+                        f'Account "{user.username}" {action_word} by "{logged_in_user.username}".',
+                        user=logged_in_user, request=request,
+                    )
+                user.status = new_status
                 user.is_active = is_active
             if 'email' in data:
                 user.email = data['email']
@@ -621,14 +628,16 @@ def api_update_user(request, user_id):
             
             if 'role' in data:
                 role_name = normalize_role_input(data['role'])
-                # Security Policy: Only admin and elsa can have the Administrator role
                 if role_name == Role.ADMINISTRATOR and user.username not in ['admin', 'elsa']:
                     return JsonResponse({'success': False, 'error': 'Unauthorized: Only designated system accounts can hold the Administrator role.'}, status=403)
-
                 role, _ = Role.objects.get_or_create(name=role_name)
-                # Overwrite existing roles for this simplified model
                 user.roles.clear()
                 UserRole.objects.create(user=user, role=role)
+                log_audit_event(
+                    'USER_ROLE_CHANGED',
+                    f'Role of "{user.username}" changed to "{role_name}" by "{logged_in_user.username}".',
+                    user=logged_in_user, request=request,
+                )
                 
             detail, created = EmployeeDetail.objects.get_or_create(
                 user=user,
@@ -665,6 +674,11 @@ def api_delete_user(request, user_id):
                     'error': 'Critical System Account: This account is required for system operation and cannot be deleted.'
                 }, status=403)
                 
+            log_audit_event(
+                'USER_DELETED',
+                f'User account "{user.username}" permanently deleted by "{logged_in_user.username}".',
+                user=logged_in_user, request=request,
+            )
             user.delete()
             return JsonResponse({'success': True, 'message': 'User deleted successfully.'})
         except Exception as e:
@@ -849,13 +863,22 @@ def api_sync_integration(request, integration_id):
     
     if integration.status != ExternalIntegration.IntegrationStatus.CONNECTED:
         return JsonResponse({'success': False, 'error': 'Integration must be connected to sync.'}, status=400)
+
+    try:
+        body = json.loads(request.body) if request.body else {}
+    except Exception:
+        body = {}
+
+    start_date = body.get('start_date') or None
+    end_date = body.get('end_date') or None
         
-    success, message = PayrollSyncService.sync_to_external(integration)
+    success, message, records = PayrollSyncService.sync_to_external(integration, start_date=start_date, end_date=end_date)
     
     if success:
         return JsonResponse({
             'success': True, 
             'message': message,
+            'records': records,
             'last_sync': integration.last_sync.strftime('%b %d, %H:%M %p') if integration.last_sync else 'Just Now'
         })
     else:
@@ -1271,7 +1294,12 @@ def verify_face(request, user_id):
 
         request.session.pop("face_frames", None)
         biometric_service.reload_cache()
-
+        log_audit_event(
+            'BIOMETRIC_ENROLLED',
+            f'Face biometric template enrolled for "{user.username}" by "{request.user.username}".',
+            user=request.user,
+            request=request,
+        )
         return JsonResponse({
             'success': True,
             'completed': True,

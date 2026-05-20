@@ -1,5 +1,5 @@
-﻿import { useLocation, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { CheckCircle2, XCircle, Clock, User, Building2, Briefcase, Calendar } from 'lucide-react';
 import { motion } from 'motion/react';
 import type { AttendanceMarkResponse } from '../../lib/attendance';
@@ -18,11 +18,14 @@ export default function VerificationStatus() {
     error?: string;
   } = location.state || { success: false };
 
+  const [countdown, setCountdown] = useState(8);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       navigate('/terminal');
-    }, 8000); // Increased to 8s to allow reading profile info
-    return () => clearTimeout(timer);
+    }, 8000);
+    const tick = setInterval(() => setCountdown(c => Math.max(0, c - 1)), 1000);
+    return () => { clearTimeout(timer); clearInterval(tick); };
   }, [navigate]);
 
   return (
@@ -32,7 +35,7 @@ export default function VerificationStatus() {
         animate={{ opacity: 1, scale: 1 }}
         className="w-full max-w-xl bg-surface-card rounded-[3rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] overflow-hidden border border-white/10"
       >
-        <div className={success ? "bg-emerald-500 p-8 md:p-12 text-center relative overflow-hidden" : "bg-rose-500 p-8 md:p-12 text-center relative overflow-hidden"}>
+        <div className={success ? "bg-[#0073CE] p-8 md:p-12 text-center relative overflow-hidden" : "bg-rose-500 p-8 md:p-12 text-center relative overflow-hidden"}>
           <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
             <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-surface-card blur-3xl"></div>
             <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-surface-card blur-3xl"></div>
@@ -70,7 +73,7 @@ export default function VerificationStatus() {
             <>
               {/* Profile Card */}
               <div className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-surface-bg rounded-[2rem] border border-slate-100 relative group transition-all hover:bg-slate-100/50">
-                <div className="shrink-0 w-28 h-28 rounded-2xl overflow-hidden bg-indigo-100 border-4 border-white shadow-xl rotate-[-2deg] group-hover:rotate-0 transition-transform duration-500">
+                <div className="shrink-0 w-28 h-28 rounded-2xl overflow-hidden bg-blue-50 border-4 border-white shadow-xl rotate-[-2deg] group-hover:rotate-0 transition-transform duration-500">
                   {result?.profile?.profile_photo ? (
                     <img 
                       src={result.profile.profile_photo} 
@@ -78,21 +81,25 @@ export default function VerificationStatus() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-indigo-600 bg-gradient-to-br from-indigo-50 to-indigo-200">
+                    <div className="w-full h-full flex items-center justify-center text-[#0073CE] bg-gradient-to-br from-blue-50 to-blue-100">
                       <User className="w-14 h-14" />
                     </div>
                   )}
                 </div>
                 <div className="text-center sm:text-left flex-1 min-w-0">
-                  <p className="text-[9px] font-black text-indigo-600 uppercase tracking-[0.25em] mb-1">Identified Personnel</p>
+                  <p className="text-[9px] font-black text-[#0073CE] uppercase tracking-[0.25em] mb-1">Identified Personnel</p>
                   <h3 className="text-3xl font-black text-surface-text leading-none truncate mb-3 tracking-tighter">{result?.profile?.full_name}</h3>
                   <div className="flex flex-wrap justify-center sm:justify-start gap-2">
                     <span className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-card rounded-2xl text-[10px] font-black text-slate-600 uppercase tracking-wider border border-slate-200 shadow-sm">
-                      <Building2 className="w-3 h-3 text-indigo-500" />
+                      <User className="w-3 h-3 text-[#0073CE]" />
+                      ID: {result?.username}
+                    </span>
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-card rounded-2xl text-[10px] font-black text-slate-600 uppercase tracking-wider border border-slate-200 shadow-sm">
+                      <Building2 className="w-3 h-3 text-[#0073CE]" />
                       {result?.profile?.department}
                     </span>
                     <span className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-card rounded-2xl text-[10px] font-black text-slate-600 uppercase tracking-wider border border-slate-200 shadow-sm">
-                      <Briefcase className="w-3 h-3 text-indigo-500" />
+                      <Briefcase className="w-3 h-3 text-[#0073CE]" />
                       {result?.profile?.position}
                     </span>
                   </div>
@@ -130,14 +137,36 @@ export default function VerificationStatus() {
                 </div>
               </div>
 
-              <div className="p-5 bg-slate-900 rounded-[1.5rem] shadow-xl shadow-slate-200/50 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
-                <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.25em]">Security Fingerprint</p>
-                <div className="flex items-center justify-between mt-3 relative z-10">
-                  <span className="text-white text-sm font-black tracking-widest font-mono opacity-80">{result?.verification_status || 'BIOMETRIC_3D_FACE'}</span>
-                  <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 rounded-md border border-emerald-500/20 text-[8px] font-black text-emerald-400 uppercase tracking-widest">
-                    <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse"></div>
-                    Encrypted
+              <div className="p-6 bg-slate-900 rounded-[2rem] shadow-xl relative overflow-hidden space-y-4">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-[#0073CE]/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+                
+                <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.25em] relative z-10">Verification Protocol Details</p>
+                
+                <div className="grid grid-cols-2 gap-4 relative z-10">
+                  <div>
+                    <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Authentication Method</p>
+                    <p className="text-white text-sm font-black uppercase mt-1.5 tracking-wider font-mono">
+                      {result?.method || 'face'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Verification Status</p>
+                    <p className={cn(
+                      "text-sm font-black uppercase mt-1.5 tracking-wider font-mono",
+                      result?.verification_status === 'VERIFIED' ? "text-emerald-400" : "text-amber-400"
+                    )}>
+                      {result?.verification_status || 'VERIFIED'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="border-t border-white/5 pt-3 flex items-center justify-between relative z-10 text-[9px]">
+                  <span className="text-slate-400 font-black uppercase tracking-widest">
+                    Registry Event: <span className="text-white font-black">{result?.type?.replace('_', ' ')}</span>
+                  </span>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 rounded-md border border-emerald-500/20 text-[8px] font-black text-emerald-400 uppercase tracking-widest">
+                    <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse pointer-events-none"></div>
+                    Secure Log
                   </div>
                 </div>
               </div>
@@ -155,11 +184,11 @@ export default function VerificationStatus() {
               
               <div className="grid gap-3 max-w-xs mx-auto">
                 <div className="flex items-center gap-4 p-4 bg-surface-bg rounded-2xl text-left border border-slate-100 transition-transform hover:scale-[1.02]">
-                  <div className="w-8 h-8 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shrink-0 font-black text-xs shadow-lg shadow-indigo-200">01</div>
+                  <div className="w-8 h-8 bg-[#0073CE] text-white rounded-2xl flex items-center justify-center shrink-0 font-black text-xs shadow-lg shadow-blue-200">01</div>
                   <p className="text-[10px] font-black text-surface-text uppercase tracking-tight">Check Lighting</p>
                 </div>
                 <div className="flex items-center gap-4 p-4 bg-surface-bg rounded-2xl text-left border border-slate-100 transition-transform hover:scale-[1.02]">
-                  <div className="w-8 h-8 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shrink-0 font-black text-xs shadow-lg shadow-indigo-200">02</div>
+                  <div className="w-8 h-8 bg-[#0073CE] text-white rounded-2xl flex items-center justify-center shrink-0 font-black text-xs shadow-lg shadow-blue-200">02</div>
                   <p className="text-[10px] font-black text-surface-text uppercase tracking-tight">Stay within Guide</p>
                 </div>
               </div>
@@ -169,11 +198,11 @@ export default function VerificationStatus() {
           <div className="pt-8 flex flex-col items-center gap-6 border-t border-slate-100">
             <div className="flex items-center gap-2 text-slate-400 text-[10px] font-black uppercase tracking-[0.4em]">
               <Clock className="w-3 h-3 animate-spin-slow" />
-              Auto Reset: 8s
+              Auto Reset: {countdown}s
             </div>
             <button 
               onClick={() => navigate('/terminal')}
-              className="w-full py-5 bg-slate-900 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-[0.3em] shadow-[0_20px_40px_-12px_rgba(15,23,42,0.3)] active:scale-95 transition-all hover:bg-indigo-600 hover:shadow-indigo-200"
+              className="w-full py-5 bg-slate-900 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-[0.3em] shadow-[0_20px_40px_-12px_rgba(15,23,42,0.3)] active:scale-95 transition-all hover:bg-[#0073CE] hover:shadow-blue-200"
             >
               Return to Core Terminal
             </button>

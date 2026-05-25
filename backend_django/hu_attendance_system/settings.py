@@ -20,6 +20,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'corsheaders',
+    'rest_framework',
     'accounts.apps.AccountsConfig',
     'attendance',
     'leave',
@@ -59,7 +60,7 @@ CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_SECURE = False   
 CSRF_COOKIE_SECURE = False
 
-SESSION_SAVE_EVERY_REQUEST = True
+SESSION_SAVE_EVERY_REQUEST = False
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 ROOT_URLCONF = 'hu_attendance_system.urls'
@@ -90,6 +91,7 @@ DATABASES = {
         'PASSWORD': '53372545',
         'HOST': 'localhost',
         'PORT': '5432',
+        'CONN_MAX_AGE': 60,
     }
 }
 
@@ -112,6 +114,17 @@ MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR 
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# JWT Configuration — enables independent per-tab sessions
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=8),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
 
 # Email Configuration (Gmail SMTP)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

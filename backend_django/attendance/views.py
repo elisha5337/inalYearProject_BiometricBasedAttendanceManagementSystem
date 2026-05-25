@@ -49,12 +49,106 @@ def resolve_numeric_policy_value(name, fallback, department_id=None):
     val = PolicyResolver.extract_numeric_value(policy.value)
     return (val if val > 0 else fallback), policy
 
+def score_face_quality(face_img, landmarks=None):
+    """
+    Returns a quality score 0-100 and a human-readable tip.
+    Combines sharpness, brightness, contrast, and eye geometry.
+    """
+    try:
+        gray = cv2.cvtColor(face_img, cv2.COLOR_RGB2GRAY)
+
+        # 1. Sharpness (Laplacian variance)
+        sharpness = cv2.Laplacian(gray, cv2.CV_64F).var()
+        sharpness_score = min(100, sharpness * 2.5)  # 40 variance = 100 score
+
+        # 2. Brightness (mean pixel value, ideal 80-180)
+        brightness = float(np.mean(gray))
+        if brightness < 50:
+            brightness_score = brightness * 1.0   # too dark
+        elif brightness > 200:
+            brightness_score = max(0, 100 - (brightness - 200) * 2)  # too bright
+        else:
+            brightness_score = 100.0
+
+        # 3. Contrast (std deviation)
+        contrast = float(np.std(gray))
+        contrast_score = min(100, contrast * 2.0)  # 50 std = 100 score
+
+        # 4. Eye geometry (face is well-aligned)
+        geometry_score = 100.0
+        if landmarks:
+            l_eye = np.array(landmarks.get('left_eye', [0, 0]))
+            r_eye = np.array(landmarks.get('right_eye', [0, 0]))
+            eye_dist = float(np.linalg.norm(l_eye - r_eye))
+            if eye_dist < 20:
+                geometry_score = 30.0  # face too small / too far
+            elif eye_dist < 35:
+                geometry_score = 70.0
+
+        # Weighted average
+        score = (
+            sharpness_score * 0.40 +
+            brightness_score * 0.25 +
+            contrast_score  * 0.20 +
+            geometry_score  * 0.15
+        )
+        score = max(0.0, min(100.0, score))
+
+        # Generate actionable tip
+        if sharpness < 5:
+            tip = 'Hold still — image is blurry.'
+        elif brightness < 50:
+            tip = 'Too dark — move to better lighting.'
+        elif brightness > 200:
+            tip = 'Too bright — avoid direct light behind you.'
+        elif contrast < 20:
+            tip = 'Low contrast — ensure even lighting on your face.'
+        elif landmarks and eye_dist < 35:
+            tip = 'Move closer to the camera.'
+        else:
+            tip = 'Good quality.'
+
+        return round(score, 1), tip
+    except Exception:
+        return 50.0, 'Quality check skipped.'
+
+
+def detect_faces_fast(image_array, detector):
+    """
+    Detect faces on a 640x480 downscaled copy for speed,
+    then scale bounding boxes back to original resolution.
+    """
+    orig_h, orig_w = image_array.shape[:2]
+    target_w, target_h = 640, 480
+    if orig_w <= target_w and orig_h <= target_h:
+        return detector.detect_faces(image_array)
+    scale_x = orig_w / target_w
+    scale_y = orig_h / target_h
+    small = cv2.resize(image_array, (target_w, target_h))
+    faces_small = detector.detect_faces(small)
+    faces = []
+    for f in faces_small:
+        x, y, w, h = f['box']
+        scaled = dict(f)
+        scaled['box'] = [
+            int(x * scale_x), int(y * scale_y),
+            int(w * scale_x), int(h * scale_y)
+        ]
+        kp = f.get('keypoints', {})
+        scaled['keypoints'] = {
+            k: (int(v[0] * scale_x), int(v[1] * scale_y))
+            for k, v in kp.items()
+        }
+        faces.append(scaled)
+    return faces
+
+
 def is_live_face(face_img, landmarks=None):
     """
     Harden Liveness: Combines texture variance with eye-geometric symmetry.
     """
     try:
-        # 1. Texture Check (Blocks Paper/Static Screen)
+        # 1. Texture Check (Blocks Paper/Static Screen) - Lowered threshold
         gray = cv2.cvtColor(face_img, cv2.COLOR_RGB2GRAY)
         variance = cv2.Laplacian(gray, cv2.CV_64F).var()
         
@@ -66,20 +160,30 @@ def is_live_face(face_img, landmarks=None):
             if dist < 25: 
                 return False, "Scale failure"
 
-        return (variance >= 4.0), f"{variance:.1f}"
+        # Lowered variance threshold for better usability
+        return (variance >= 2.5), f"{variance:.1f}"
     except Exception:
         return True, "Skipped"
 
 def extract_embedding(image_rgb):
+    """
+    Extract a normalized Facenet512 embedding from a preprocessed 160x160 face image.
+    The image must already be cropped and resized by preprocess_face().
+    Returns a normalized unit vector, or None on failure.
+    """
     try:
-        resized_image = cv2.resize(image_rgb, (160, 160))
+        # image_rgb is already 160x160 from preprocess_face() — do NOT resize again.
         embedding_objs = DeepFace.represent(
-            img_path=resized_image, 
+            img_path=image_rgb,
             model_name='Facenet512',
             enforce_detection=False,
             detector_backend='skip'
         )
-        return embedding_objs[0]['embedding']
+        emb = np.array(embedding_objs[0]['embedding'], dtype=np.float32)
+        norm = np.linalg.norm(emb)
+        if norm == 0:
+            return None
+        return (emb / norm).tolist()
     except Exception as e:
         logger.error(f"DeepFace error: {e}")
         return None
@@ -87,11 +191,19 @@ def extract_embedding(image_rgb):
 from .config_utils import read_global_config
 
 def resolve_verification_threshold(department_id=None, strict_mode=False):
+    """
+    Returns a cosine distance threshold for face matching.
+    Lower = stricter (fewer false positives). Higher = more lenient (fewer false negatives).
+    With properly normalized embeddings, 0.50 is a strong match threshold for Facenet512.
+    """
     sensitivity_value, _ = resolve_numeric_policy_value('Verification Sensitivity', 75.0, department_id)
     sensitivity = max(0.0, min(100.0, float(sensitivity_value)))
-    threshold = 0.9 - ((sensitivity / 100.0) * 0.3)
+    # sensitivity=100 -> threshold=0.55 (most lenient)
+    # sensitivity=75  -> threshold=0.50 (default, balanced)
+    # sensitivity=0   -> threshold=0.40 (strictest)
+    threshold = 0.40 + ((sensitivity / 100.0) * 0.15)
     if strict_mode: threshold -= 0.05
-    return max(0.5, min(0.9, threshold))
+    return max(0.35, min(0.55, threshold))
 
 def resolve_active_shift(user, date_obj):
     assignment = Assignment.objects.filter(
@@ -206,52 +318,95 @@ def mark_attendance(request):
             else:
                 return JsonResponse({'error': 'Invalid credentials.'}, status=401)
         else:
-            if not image_data:
+            # Accept multi-frame array OR single image (legacy fallback)
+            frames_data = data.get('frames', [])
+            if not frames_data and image_data:
+                frames_data = [image_data]
+            if not frames_data:
                 return JsonResponse({'error': 'Capture data missing.'}, status=400)
 
-            try:
-                _, imgstr = image_data.split(';base64,')
-                image = Image.open(io.BytesIO(base64.b64decode(imgstr))).convert('RGB')
-                image_array = np.array(image)
-                # Global enhancement removed in favor of per-face enhancement in preprocess_face
-            except Exception:
-                return JsonResponse({'error': 'Format error.'}, status=400)
+            best_face_img = None
+            best_score = -1.0
+            best_landmarks = None
+            best_image_array = None
 
-            try:
-                faces = face_detector.detect_faces(image_array)
-            except Exception:
-                faces = []
+            for frame_raw in frames_data:
+                try:
+                    _, imgstr = frame_raw.split(';base64,')
+                    image = Image.open(io.BytesIO(base64.b64decode(imgstr))).convert('RGB')
+                    image_array = np.array(image)
+                except Exception:
+                    continue
 
-            if not faces:
-                image_array = cv2.convertScaleAbs(image_array, alpha=1.5, beta=20)
-                faces = face_detector.detect_faces(image_array)
+                try:
+                    enhanced = biometric_service.enhance_image(image_array)
+                    if face_detector is None:
+                        return JsonResponse({'error': 'Face detector not available. Please restart the server.'}, status=500)
+                    faces = detect_faces_fast(enhanced, face_detector)
+                    if not faces:
+                        adjusted = cv2.convertScaleAbs(image_array, alpha=1.2, beta=15)
+                        faces = detect_faces_fast(adjusted, face_detector)
+                        if faces:
+                            image_array = adjusted
+                except Exception:
+                    faces = []
 
-            if not faces:
-                return JsonResponse({'error': 'Face not detected. Please align.'}, status=400)
-            
-            face_data = faces[0]
-            face_img = biometric_service.preprocess_face(image_array, face_data['box'], padding=20)
-            if face_img is None:
-                return JsonResponse({'error': 'Biometric quality too low.'}, status=500)
-            
-            landmarks = face_data['keypoints']
+                if not faces:
+                    continue
 
-            is_live, l_score = is_live_face(face_img, landmarks)
+                face_data = faces[0]
+                face_img = biometric_service.preprocess_face(image_array, face_data['box'], padding=20)
+                if face_img is None:
+                    continue
+
+                score, _ = score_face_quality(face_img, face_data.get('keypoints'))
+                if score > best_score:
+                    best_score = score
+                    best_face_img = face_img
+                    best_landmarks = face_data.get('keypoints')
+                    best_image_array = image_array
+
+            if best_face_img is None:
+                return JsonResponse({
+                    'error': 'Face not detected. Ensure good lighting and look directly at the camera.',
+                    'tip': 'Move closer, face the camera directly, and ensure your face is well-lit.'
+                }, status=400)
+
+            # Quality gate: reject very poor quality frames
+            if best_score < 15.0:
+                return JsonResponse({
+                    'error': 'Image quality too low for reliable recognition.',
+                    'tip': 'Improve lighting and hold still.',
+                    'quality_score': best_score
+                }, status=400)
+
+            is_live, l_score = is_live_face(best_face_img, best_landmarks)
             if not is_live and biometric_lock_active:
-                return JsonResponse({'error': 'Security Alert: Liveness verification failed.'}, status=403)
+                return JsonResponse({
+                    'error': 'Liveness check failed. Please use a live face.',
+                    'tip': 'Blink naturally and ensure you are not using a photo.'
+                }, status=403)
 
-            live_embedding = extract_embedding(face_img)
+            live_embedding = extract_embedding(best_face_img)
             if live_embedding is None:
-                return JsonResponse({'error': 'Biometric quality too low.'}, status=500)
+                return JsonResponse({'error': 'Biometric quality too low.', 'tip': 'Try again in better lighting.'}, status=500)
 
             threshold = resolve_verification_threshold(strict_mode=is_strict)
             match, distance = biometric_service.find_match(live_embedding, threshold=threshold)
-            
+
             if not match:
-                return JsonResponse({'error': 'Identity unrecognized.'}, status=401)
-            
+                if biometric_service.embeddings_matrix is None:
+                    return JsonResponse({'error': 'No biometric templates enrolled. Contact administrator.'}, status=500)
+                return JsonResponse({
+                    'error': 'Face not recognized.',
+                    'tip': 'Ensure you are enrolled. Try better lighting or move closer.',
+                    'quality_score': best_score,
+                    'distance': round(distance, 4)
+                }, status=401)
+
             user = User.objects.get(id=match['id'])
             current_status_flag = AttendanceRecord.VerificationStatus.VERIFIED
+            logger.info(f"Face match: {user.username} dist={distance:.4f} quality={best_score:.1f}")
 
         if user.status == User.Status.SUSPENDED:
             return JsonResponse({'error': 'Account locked.'}, status=403)

@@ -1,9 +1,16 @@
 from django.urls import path
+from rest_framework_simplejwt.views import TokenRefreshView
 from . import views
 
 app_name = 'accounts'
 
 urlpatterns = [
+    # JWT token refresh — required for per-tab session independence
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+    # Public self-registration
+    path('api/register/', views.api_register, name='api_register'),
+
     # API Auth
     path('api/csrf/', views.get_csrf, name='get_csrf'),
     path('api/me/', views.api_me, name='api_me'),

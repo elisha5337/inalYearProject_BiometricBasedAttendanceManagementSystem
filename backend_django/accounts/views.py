@@ -207,42 +207,96 @@ def serialize_profile_for_frontend(user):
 # AUTHENTICATION Endpoints for SPA
 # =====================================
 
+@csrf_exempt
+def api_register(request):
+    """Public self-registration endpoint for employees only."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    try:
+        data = json.loads(request.body)
+        username   = (data.get('username') or '').strip()
+        email      = (data.get('email') or '').strip()
+        first_name = (data.get('first_name') or '').strip()
+        last_name  = (data.get('last_name') or '').strip()
+        password   = data.get('password') or ''
+        dept_id    = data.get('department_id') or None
+        position   = (data.get('position') or '').strip() or None
+
+        if not username or not email or not password or not first_name or not last_name:
+            return JsonResponse({'success': False, 'error': 'All fields are required.'}, status=400)
+        if len(password) < 8:
+            return JsonResponse({'success': False, 'error': 'Password must be at least 8 characters.'}, status=400)
+        if User.objects.filter(username__iexact=username).exists():
+            return JsonResponse({'success': False, 'error': 'Username already taken.'}, status=400)
+        if User.objects.filter(email__iexact=email).exists():
+            return JsonResponse({'success': False, 'error': 'Email already registered.'}, status=400)
+
+        new_user = User.objects.create_user(
+            username=username, password=password, email=email,
+            first_name=first_name, last_name=last_name,
+            must_change_password=False,
+        )
+        new_user.status = User.Status.ACTIVE
+        new_user.save()
+
+        role, _ = Role.objects.get_or_create(name=Role.EMPLOYEE)
+        UserRole.objects.create(user=new_user, role=role)
+
+        EmployeeDetail.objects.create(
+            user=new_user,
+            department_id=dept_id,
+            position=position,
+            hire_date=timezone.now().date(),
+            biometric_enrolled=False,
+        )
+
+        log_audit_event(
+            'USER_SELF_REGISTERED',
+            f'New employee "{username}" self-registered.',
+            request=request,
+        )
+        return JsonResponse({'success': True, 'message': 'Account created. You can now log in.'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
 @ensure_csrf_cookie
 def get_csrf(request):
     return JsonResponse({'success': 'CSRF cookie set'})
 
 
 def api_me(request):
-    if not request.user.is_authenticated:
-        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
-
-    enforce_password_expiry(request.user)
+    user, err = require_auth(request)
+    if err:
+        return err
+    enforce_password_expiry(user)
     return JsonResponse({
         'success': True,
-        'user': serialize_user_for_frontend(request.user)
+        'user': serialize_user_for_frontend(user)
     })
 
 
 def api_profile(request):
-    if not request.user.is_authenticated:
-        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
-    enforce_password_expiry(request.user)
+    user, err = require_auth(request)
+    if err:
+        return err
+    enforce_password_expiry(user)
     return JsonResponse({
         'success': True,
-        'profile': serialize_profile_for_frontend(request.user),
+        'profile': serialize_profile_for_frontend(user),
     })
 
 
 @csrf_exempt
 def api_update_profile(request):
-    if not request.user.is_authenticated:
-        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+    user, err = require_auth(request)
+    if err:
+        return err
     if request.method not in ['POST', 'PATCH']:
         return JsonResponse({'error': 'POST or PATCH required'}, status=405)
 
     try:
         data = json.loads(request.body)
-        user = request.user
 
         if 'first_name' in data:
             user.first_name = str(data.get('first_name') or '').strip()
@@ -371,9 +425,21 @@ def api_login(request):
                 login(request, user)
                 apply_session_timeout(request, config, remember=remember)
 
+                # Issue JWT tokens for independent per-tab sessions
+                try:
+                    from rest_framework_simplejwt.tokens import RefreshToken
+                    refresh = RefreshToken.for_user(user)
+                    tokens = {
+                        'access': str(refresh.access_token),
+                        'refresh': str(refresh),
+                    }
+                except Exception:
+                    tokens = None
+
                 return JsonResponse({
                     'success': True,
-                    'user': serialize_user_for_frontend(user)
+                    'user': serialize_user_for_frontend(user),
+                    'tokens': tokens,
                 })
             else:
                 attempts = register_failed_login(
@@ -405,8 +471,9 @@ def api_login(request):
 
 @csrf_exempt
 def api_change_password(request):
-    if not request.user.is_authenticated:
-        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+    user, err = require_auth(request)
+    if err:
+        return err
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -415,12 +482,10 @@ def api_change_password(request):
             if not new_password or len(new_password) < 8:
                 return JsonResponse({'success': False, 'error': 'Password must be at least 8 characters long.'}, status=400)
 
-            user = request.user
             user.set_password(new_password)
             user.must_change_password = False
             user.save()
             
-            # Re-authenticate the user with the new password to keep them logged in
             login(request, user)
             apply_session_timeout(request)
             clear_failed_login_attempts(username=user.username, email=user.email)
@@ -492,25 +557,18 @@ def api_list_users(request):
 
 
 def api_list_departments(request):
-    user, err = require_staff(request)
-    if err:
-        return err
+    # Public access allowed — needed for self-registration form
     departments = Department.objects.all().values('id', 'name')
-    # Convert UUIDs to strings explicitly
     data = [{'id': str(d['id']), 'name': d['name']} for d in departments]
     return JsonResponse({'success': True, 'departments': data})
 
 def api_list_positions(request):
-    user, err = require_staff(request)
-    if err:
-        return err
+    # Public access allowed — needed for self-registration form
     department_id = request.GET.get('departmentId')
     if department_id:
         positions = Position.objects.filter(department_id=department_id).values('id', 'name').order_by('name')
     else:
         positions = Position.objects.all().values('id', 'name').order_by('name')
-    
-    # Convert UUIDs to strings explicitly
     data = [{'id': str(p['id']), 'name': p['name']} for p in positions]
     return JsonResponse({'success': True, 'positions': data})
 
@@ -1059,6 +1117,42 @@ def check_face(request):
 # ENROLLMENT
 # =====================================
 
+def detect_faces_fast(image_array, detector):
+    """
+    Detect faces on a 640x480 downscaled copy for speed,
+    then scale bounding boxes back to original resolution.
+    MTCNN is 2-4x faster on 640x480 vs 1280x720.
+    """
+    orig_h, orig_w = image_array.shape[:2]
+    target_w, target_h = 640, 480
+
+    if orig_w <= target_w and orig_h <= target_h:
+        # Already small enough — detect directly
+        return detector.detect_faces(image_array)
+
+    scale_x = orig_w / target_w
+    scale_y = orig_h / target_h
+    small = cv2.resize(image_array, (target_w, target_h))
+    faces_small = detector.detect_faces(small)
+
+    # Scale bounding boxes and keypoints back to original resolution
+    faces = []
+    for f in faces_small:
+        x, y, w, h = f['box']
+        scaled = dict(f)
+        scaled['box'] = [
+            int(x * scale_x), int(y * scale_y),
+            int(w * scale_x), int(h * scale_y)
+        ]
+        kp = f.get('keypoints', {})
+        scaled['keypoints'] = {
+            k: (int(v[0] * scale_x), int(v[1] * scale_y))
+            for k, v in kp.items()
+        }
+        faces.append(scaled)
+    return faces
+
+
 @staff_member_required
 def capture_face(request, user_id):
     user = get_object_or_404(
@@ -1114,9 +1208,7 @@ def capture_face(request, user_id):
 
             img_np = np.array(img)
 
-            faces = detector.detect_faces(
-                img_np
-            )
+            faces = detect_faces_fast(img_np, detector)
 
             # --- [STRICT ENROLLMENT] Reject if multiple faces detected ---
             if len(faces) > 1:
@@ -1131,9 +1223,11 @@ def capture_face(request, user_id):
             face = faces[0]
 
             x, y, w, h = face["box"]
-
+            # Clamp all box values — MTCNN can return negatives
             x = max(0, x)
             y = max(0, y)
+            w = max(1, w)
+            h = max(1, h)
 
             nose = face["keypoints"][
                 "nose"
@@ -1183,15 +1277,24 @@ def capture_face(request, user_id):
             request.session["face_frames"] = {}
 
         face_data = []
+        best_quality_frame = None
+        best_quality_score = -1.0
 
         for f in valid_frames:
             face = biometric_service.preprocess_face(f["image"], f["box"], padding=20)
             if face is None: continue
 
+            # Score quality to pick best frame for profile photo
+            from attendance.views import score_face_quality
+            q_score, _ = score_face_quality(face, {'left_eye': f['eyes'][0], 'right_eye': f['eyes'][1]})
+            if q_score > best_quality_score:
+                best_quality_score = q_score
+                best_quality_frame = face
+
             _, buf = cv2.imencode(
                 ".jpg",
                 cv2.cvtColor(face, cv2.COLOR_RGB2BGR),
-                [int(cv2.IMWRITE_JPEG_QUALITY), 80],
+                [int(cv2.IMWRITE_JPEG_QUALITY), 95],  # 95 quality — minimal lossy degradation
             )
 
             face_data.append(base64.b64encode(buf).decode())
@@ -1229,19 +1332,30 @@ def verify_face(request, user_id):
         for i in range(len(CHALLENGES)):
             step_f = session_frames.get(str(i), [])
             if step_f:
-                sample_frames.extend(step_f[:3])
+                # Take ALL frames from each challenge step, not just 3
+                sample_frames.extend(step_f)
 
         if not sample_frames:
             return JsonResponse({"success": False, "error": "Insufficient biometric data"})
 
         embeddings = []
-        best_frame_b64 = sample_frames[0] # To be used as profile photo
+        best_frame_b64 = sample_frames[0]  # fallback
+        best_frame_score = -1.0
 
         for f in sample_frames:
             img_bytes = base64.b64decode(f)
             img_np = cv2.imdecode(np.frombuffer(img_bytes, np.uint8), cv2.IMREAD_COLOR)
             img_rgb = cv2.cvtColor(img_np, cv2.COLOR_BGR2RGB)
 
+            # Score quality — pick sharpest frame as profile photo
+            gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
+            sharpness = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+            if sharpness > best_frame_score:
+                best_frame_score = sharpness
+                best_frame_b64 = f
+
+            # img_rgb is already a preprocessed 160x160 face crop from capture_face.
+            # Pass directly to DeepFace — do NOT resize again.
             try:
                 rep = DeepFace.represent(
                     img_path=img_rgb,
@@ -1249,28 +1363,38 @@ def verify_face(request, user_id):
                     enforce_detection=False,
                     detector_backend="skip",
                 )
-                embeddings.append(rep[0]["embedding"])
+                emb = np.array(rep[0]["embedding"], dtype=np.float32)
+                # Normalize each individual embedding before averaging
+                norm = np.linalg.norm(emb)
+                if norm > 0:
+                    embeddings.append(emb / norm)
             except Exception as e:
                 logger.error(f"DeepFace error: {e}")
 
-        if len(embeddings) < 5:
+        if len(embeddings) < 3:
             return JsonResponse({"success": False, "error": "Insufficient high-quality biometrics. Please recapture."})
 
+        # Average of already-normalized embeddings, then re-normalize.
+        # This produces a robust mean-face vector that is more discriminative
+        # than averaging raw embeddings.
         avg_embedding = np.mean(embeddings, axis=0)
-        # Unit normalization for robust duplicate check
-        avg_embedding = avg_embedding / np.linalg.norm(avg_embedding)
+        norm = np.linalg.norm(avg_embedding)
+        if norm == 0:
+            return JsonResponse({"success": False, "error": "Embedding computation failed. Please recapture."})
+        avg_embedding = avg_embedding / norm
 
-        # --- HARDENED DUPLICATE CHECK ---
-        all_templates = BiometricTemplate.objects.all()
+        # --- DUPLICATE CHECK with select_related to avoid N+1 queries ---
+        all_templates = BiometricTemplate.objects.exclude(user_id=user.id).select_related('user')
         for template in all_templates:
-            if str(template.user_id) == str(user.id): continue
-            other_vec = np.array(template.template_data)
-            other_vec = other_vec / np.linalg.norm(other_vec)
-            distance = 1 - np.dot(avg_embedding, other_vec)
-            if distance < 0.55:
+            other_vec = np.array(template.template_data, dtype=np.float32)
+            other_norm = np.linalg.norm(other_vec)
+            if other_norm == 0: continue
+            other_vec = other_vec / other_norm
+            distance = float(1 - np.dot(avg_embedding, other_vec))
+            if distance < 0.40:
                 return JsonResponse({
-                    "success": False, 
-                    "error": f"Registration Blocked: Face already enrolled to '{template.user.username}'."
+                    "success": False,
+                    "error": f"Registration Blocked: This face is already enrolled to '{template.user.username}'. Each person can only have one biometric profile."
                 })
 
         BiometricTemplate.objects.update_or_create(
@@ -1279,8 +1403,6 @@ def verify_face(request, user_id):
             defaults={"template_data": avg_embedding.tolist()},
         )
 
-        # --- [NEW] AUTOMATIC PROFILE PHOTO UPDATE ---
-        # We store the captured frame as the user's official profile photo
         profile_photo_data = f"data:image/jpeg;base64,{best_frame_b64}"
 
         EmployeeDetail.objects.update_or_create(
@@ -1357,8 +1479,18 @@ def api_forgot_password_request(request):
                     )
                     return JsonResponse({'success': True, 'message': 'A password reset link has been sent to your university email.'})
                 except Exception as mail_err:
-                    logger.error(f"Mail delivery failed: {mail_err}")
-                    return JsonResponse({'success': False, 'error': 'System could not deliver reset email. Please contact support.'}, status=500)
+                    logger.warning(f"Mail delivery failed (offline/local fallback): {mail_err}")
+                    print("\n" + "="*80)
+                    print("⚠️  OFFLINE / LOCAL DEMO MODE DETECTED (SMTP DELIVERY SKIPPED)  ⚠️")
+                    print(f"🔑 Password reset link generated for: {user.email}")
+                    print(f"🔗 Link: {reset_link}")
+                    print("="*80 + "\n")
+                    
+                    # Return success with a clear indication that it has been printed to the server logs
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'A password reset link has been generated. Due to the local/offline environment, real email delivery was bypassed, but the reset link has been printed to the server terminal logs for easy demo testing!'
+                    })
             else:
                 # Proper error message for non-existing emails as requested
                 return JsonResponse({'success': False, 'error': 'No account found with this institutional email address.'}, status=404)

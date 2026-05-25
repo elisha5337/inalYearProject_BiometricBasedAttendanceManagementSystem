@@ -166,10 +166,10 @@ export default function ManageEmployees() {
   const filtered = allEmployees.filter((emp) => {
     const matchesQuery =
       !query ||
-      emp.full_name.toLowerCase().includes(query.toLowerCase()) ||
-      emp.email.toLowerCase().includes(query.toLowerCase()) ||
-      emp.department.toLowerCase().includes(query.toLowerCase()) ||
-      emp.position.toLowerCase().includes(query.toLowerCase());
+      (emp.full_name ?? '').toLowerCase().includes(query.toLowerCase()) ||
+      (emp.email ?? '').toLowerCase().includes(query.toLowerCase()) ||
+      (emp.department ?? '').toLowerCase().includes(query.toLowerCase()) ||
+      (emp.position ?? '').toLowerCase().includes(query.toLowerCase());
     const matchesDept = !filterDept || emp.department === filterDept;
     const matchesStatus = !filterStatus || emp.status?.toLowerCase() === filterStatus.toLowerCase();
     const matchesType = !filterType || emp.employment_type?.toLowerCase() === filterType.toLowerCase();

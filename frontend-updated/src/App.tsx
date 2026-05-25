@@ -11,6 +11,7 @@ import Login from './screens/public/Login';
 import ResetPassword from './screens/public/ResetPassword';
 import BiometricTerminal from './screens/public/BiometricTerminal';
 import VerificationStatus from './screens/public/VerificationStatus';
+import Register from './screens/public/Register';
 
 // Employee Screens
 import EmployeeDashboard from './screens/employee/Dashboard';
@@ -116,6 +117,7 @@ function AppContent({ user, onLogin, onLogout }: { user: User | null, onLogin: (
           {/* Root: redirect to login or dashboard */}
           <Route path="/" element={<Navigate to={user ? `/${user.role}/dashboard` : '/login'} replace />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/register" element={user ? <Navigate to={`/${user.role}/dashboard`} /> : <Register />} />
           <Route path="/terminal" element={<BiometricTerminal />} />
           <Route path="/verification" element={<VerificationStatus />} />
           
@@ -130,7 +132,7 @@ function AppContent({ user, onLogin, onLogout }: { user: User | null, onLogin: (
                 <Route path="dashboard" element={<EmployeeDashboard user={user} />} />
                 <Route path="attendance" element={<ViewAttendance user={user} />} />
                 <Route path="leave/submit" element={<SubmitLeave user={user} />} />
-                <Route path="leave/history" element={<LeaveHistory user={user} />} />
+                <Route path="leave/history" element={<LeaveHistory />} />
                 <Route path="schedule" element={<MySchedule user={user} />} />
                 <Route path="profile" element={<Profile user={user} />} />
                 <Route path="notifications" element={<Notifications />} />
@@ -187,7 +189,7 @@ function Layout({ children, user, onLogout }: { children: React.ReactNode, user:
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
-      <SessionManager onLogout={onLogout} userRole={user.role} />
+      <SessionManager onLogout={onLogout} />
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div

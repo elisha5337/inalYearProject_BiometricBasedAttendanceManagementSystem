@@ -6,14 +6,14 @@ import { cn } from '../lib/utils';
 
 interface SessionManagerProps {
   onLogout: () => void;
-  userRole: string;
 }
 
-export default function SessionManager({ onLogout, userRole }: SessionManagerProps) {
+export default function SessionManager({ onLogout }: SessionManagerProps) {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
-  const [totalTimeout, setTotalTimeout] = useState<number>(60); // minutes
+  const [totalTimeout, setTotalTimeout] = useState<number>(60);
   const [isWarning, setIsWarning] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const onLogoutRef = useRef(onLogout);
+  onLogoutRef.current = onLogout; // always up-to-date without being a dep
   const activityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const resetTimer = useCallback(() => {
@@ -62,29 +62,26 @@ export default function SessionManager({ onLogout, userRole }: SessionManagerPro
     };
   }, [resetTimer]);
 
-  // Countdown logic
+  // Countdown tick
+  useEffect(() => {
+    if (timeLeft === null || timeLeft <= 0) return;
+    const id = setInterval(() => {
+      setTimeLeft(prev => (prev !== null && prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [timeLeft === null]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Warning threshold
   useEffect(() => {
     if (timeLeft === null) return;
-
-    if (timeLeft <= 0) {
-      onLogout();
-      return;
-    }
-
-    // Warn in the last 2 minutes or 20% of time
     const warningThreshold = Math.min(120, totalTimeout * 60 * 0.2);
-    if (timeLeft <= warningThreshold && !isWarning) {
-      setIsWarning(true);
-    }
+    if (timeLeft <= warningThreshold && !isWarning) setIsWarning(true);
+  }, [timeLeft, totalTimeout, isWarning]);
 
-    timerRef.current = setInterval(() => {
-      setTimeLeft(prev => (prev !== null ? prev - 1 : null));
-    }, 1000);
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [timeLeft, onLogout, isWarning, totalTimeout]);
+  // Logout when timer expires
+  useEffect(() => {
+    if (timeLeft === 0) onLogoutRef.current();
+  }, [timeLeft]);
 
   if (timeLeft === null || timeLeft > 300) return null; // Only show if < 5 mins left or if warning active
 
@@ -118,7 +115,7 @@ export default function SessionManager({ onLogout, userRole }: SessionManagerPro
               "text-[10px] font-black uppercase tracking-[0.2em]",
               isWarning ? "text-rose-500" : "text-slate-400"
             )}>
-              {isWarning ? "Security Warning" : "Session Identity"}
+              {isWarning ? "Session Expiring" : "Auto Logout In"}
             </p>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-black tabular-nums tracking-tighter">

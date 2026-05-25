@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   User as UserIcon,
   KeyRound,
@@ -24,9 +24,9 @@ interface LoginProps {
 type UserRole = "admin" | "hr" | "employee";
 
 const TABS: { id: UserRole; label: string }[] = [
-  { id: "admin", label: "Admin Login" },
-  { id: "employee", label: "Employee Login" },
-  { id: "hr", label: "HR Login" },
+  { id: "admin", label: "Admin" },
+  { id: "employee", label: "Employee" },
+  { id: "hr", label: "HR" },
 ];
 
 export default function Login({ onLogin }: LoginProps) {
@@ -43,6 +43,7 @@ export default function Login({ onLogin }: LoginProps) {
     "idle" | "loading" | "success"
   >("idle");
   const [forgotPasswordError, setForgotPasswordError] = useState("");
+  const [forgotPasswordSuccessMessage, setForgotPasswordSuccessMessage] = useState("");
 
   const [forcePasswordReset, setForcePasswordReset] = useState(false);
   const [resettingUser, setResettingUser] = useState<User | null>(null);
@@ -52,6 +53,8 @@ export default function Login({ onLogin }: LoginProps) {
   const [resetSuccess, setResetSuccess] = useState("");
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const registrationSuccess = (location.state as { registrationSuccess?: string } | null)?.registrationSuccess ?? "";
 
   useEffect(() => {
     const saved =
@@ -361,7 +364,7 @@ export default function Login({ onLogin }: LoginProps) {
           />
         </div>
         <p className="text-white text-sm font-semibold leading-snug">
-          Hawassa University IOT-BBEAMS — Online Attendance
+          Hawassa University IOT-BBEAMS
         </p>
       </div>
 
@@ -407,6 +410,17 @@ export default function Login({ onLogin }: LoginProps) {
           <p className="text-sm text-gray-600">
             Use your user name and password to log in.
           </p>
+
+          {/* Registration success */}
+          {registrationSuccess && (
+            <div
+              className="flex items-center gap-2 p-3 bg-green-50 text-green-700 text-sm"
+              style={{ border: "1px solid #86EFAC" }}
+            >
+              <CheckCircle className="w-4 h-4 shrink-0" />
+              {registrationSuccess}
+            </div>
+          )}
 
           {/* Error */}
           {error && (
@@ -568,6 +582,14 @@ export default function Login({ onLogin }: LoginProps) {
               style={{ color: "#2A70A6" }}
             >
               Forget your password?
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/register")}
+              className="text-sm text-left hover:underline"
+              style={{ color: "#2A70A6" }}
+            >
+              New employee? Create an account
             </button>
           </div>
         </div>

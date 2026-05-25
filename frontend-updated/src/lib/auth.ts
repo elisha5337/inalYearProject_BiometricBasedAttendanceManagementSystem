@@ -1,4 +1,4 @@
-import { apiRequest, ensureCsrfCookie } from './api';
+import { apiRequest, ensureCsrfCookie, TokenStore, ApiError } from './api';
 import type { AppUserRole, User } from '../types';
 
 type BackendUser = {
@@ -17,6 +17,7 @@ type BackendUser = {
 type AuthEnvelope = {
   success: boolean;
   user: BackendUser;
+  tokens?: { access: string; refresh: string } | null;
 };
 
 const roleMap: Record<string, AppUserRole> = {
@@ -67,15 +68,27 @@ export async function loginUser(payload: {
     body: payload,
   });
 
+  // Store tokens in sessionStorage — isolated per browser tab
+  if (response.tokens) {
+    TokenStore.set(response.tokens.access, response.tokens.refresh);
+  }
+
   return mapBackendUser(response.user);
 }
 
 export async function fetchCurrentUser() {
+  // If this tab has no token (e.g. never logged in, or cleared on logout),
+  // do not fall through to the shared cookie session — that is what caused
+  // all tabs to show the same user after a refresh.
+  if (!TokenStore.hasToken()) {
+    throw new ApiError('No session', 401, null);
+  }
   const response = await apiRequest<AuthEnvelope>('/accounts/api/me/');
   return mapBackendUser(response.user);
 }
 
 export function logoutUser() {
+  TokenStore.clear(); // Clear this tab's token immediately
   return apiRequest<{ success: boolean }>('/accounts/api/logout/', {
     method: 'POST',
   });
@@ -88,6 +101,22 @@ export async function changePassword(newPassword: string) {
     body: { new_password: newPassword },
   });
   return response.success;
+}
+
+export async function registerUser(payload: {
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  password: string;
+  department_id?: string;
+  position?: string;
+}) {
+  await ensureCsrfCookie();
+  return apiRequest<{ success: boolean; message: string }>('/accounts/api/register/', {
+    method: 'POST',
+    body: payload,
+  });
 }
 
 export async function requestPasswordReset(email: string) {

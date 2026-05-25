@@ -100,7 +100,7 @@ export default function HRDashboard({ user }: { user: User }) {
   }, [todayKey]);
 
   const offlineCount  = devices.filter(d => d.status !== 'online').length;
-  const lateToday     = chartData.reduce((s, b) => s + b.late, 0);
+  const lateToday = chartData.reduce((s, b) => s + (b.late ?? 0), 0);
   const presentPct    = dashboardStats && dashboardStats.totalEmployees > 0 ? Math.round((dashboardStats.presentToday / dashboardStats.totalEmployees) * 100) : 0;
 
   const chartGridColor = '#f1f5f9';
@@ -163,7 +163,7 @@ export default function HRDashboard({ user }: { user: User }) {
           </div>
           <div className="mt-4">
             <p className="text-body">{t('Total Employees')}</p>
-            <h3 className="text-value">{dashboardStats?.totalEmployees.toLocaleString() ?? 0}</h3>
+            <h3 className="text-value">{(dashboardStats?.totalEmployees ?? 0).toLocaleString()}</h3>
           </div>
         </Link>
 
@@ -178,7 +178,7 @@ export default function HRDashboard({ user }: { user: User }) {
           </div>
           <div className="mt-4">
             <p className="text-body">{t('Present Today')}</p>
-            <h3 className="text-value">{dashboardStats?.presentToday.toLocaleString() ?? 0}</h3>
+            <h3 className="text-value">{(dashboardStats?.presentToday ?? 0).toLocaleString()}</h3>
           </div>
         </Link>
 
@@ -193,7 +193,7 @@ export default function HRDashboard({ user }: { user: User }) {
           </div>
           <div className="mt-4">
             <p className="text-body">{t('Late Arrivals')}</p>
-            <h3 className="text-value">{lateToday.toLocaleString()}</h3>
+            <h3 className="text-value">{(lateToday || 0).toLocaleString()}</h3>
           </div>
         </Link>
 
@@ -206,7 +206,7 @@ export default function HRDashboard({ user }: { user: User }) {
           </div>
           <div className="mt-4">
             <p className="text-body">Leave Requests</p>
-            <h3 className="text-value">{dashboardStats?.pendingLeaves.toLocaleString() ?? 0}</h3>
+            <h3 className="text-value">{(dashboardStats?.pendingLeaves ?? 0).toLocaleString()}</h3>
           </div>
         </Link>
       </div>

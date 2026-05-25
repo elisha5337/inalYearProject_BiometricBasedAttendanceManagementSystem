@@ -14,6 +14,7 @@ export interface HrAttendanceRecord {
   method?: string;
   location: string;
   assignment: string;
+  shiftStartTime: string | null;
 }
 
 const attendanceListPaths = [
@@ -80,6 +81,7 @@ function mapAttendanceRecord(raw: unknown): HrAttendanceRecord {
     method: item.method ? String(item.method) : undefined,
     location: String(item.location ?? 'Main Office'),
     assignment: String(item.assignment ?? 'Standard Shift'),
+    shiftStartTime: item.shift_start_time ? String(item.shift_start_time) : null,
   };
 }
 

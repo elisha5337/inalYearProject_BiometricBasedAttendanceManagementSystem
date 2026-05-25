@@ -18,7 +18,8 @@ export interface AttendanceMarkResponse {
 }
 
 export interface MarkAttendancePayload {
-  image: string;
+  image?: string;
+  frames?: string[];
   username?: string;
   password?: string;
   is_manual?: boolean;

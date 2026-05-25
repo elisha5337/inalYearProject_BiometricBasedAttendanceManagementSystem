@@ -1,34 +1,35 @@
+import { useLanguage } from '../../lib/translations';
 import { useEffect, useState, useMemo } from 'react';
-import { 
-  CheckCircle2, 
-  XCircle, 
-  Clock, 
-  MessageSquare, 
-  ChevronLeft, 
-  ChevronRight, 
-  Check, 
-  X, 
-  ArrowLeft, 
-  Download, 
-  FileText, 
-  Table as TableIcon, 
+import {
+  CheckCircle2,
+  XCircle,
+  Clock,
+  MessageSquare,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  ArrowLeft,
+  Download,
+  FileText,
+  Table as TableIcon,
   FileSpreadsheet,
   RefreshCw,
   Mail,
   User,
-  Paperclip,
   ChevronDown,
   ChevronUp,
   ExternalLink,
   Briefcase,
   Eye,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Plane,
+  Save,
+  RotateCcw,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Link } from 'react-router-dom';
 import { apiRequest, API_BASE } from '../../lib/api';
-import { formatRelativeTime } from '../../lib/admin';
-import { useLanguage } from '../../lib/translations';
+import { formatRelativeTime, fetchPolicies, createPolicy, updatePolicy, type LeavePolicyRecord } from '../../lib/admin';
 
 interface LeaveRequest {
   id: string;
@@ -58,6 +59,56 @@ export default function ManageLeave() {
   const [expandedRequestId, setExpandedRequestId] = useState<string | null>(null);
   const [previewFile, setPreviewFile] = useState<{ url: string; type: string } | null>(null);
 
+  // ── Leave Entitlements policy state ──
+  const [annualLeave, setAnnualLeave] = useState(20);
+  const [sickLeave, setSickLeave] = useState(12);
+  const [policyRecords, setPolicyRecords] = useState<LeavePolicyRecord[]>([]);
+  const [policySaving, setPolicySaving] = useState(false);
+  const [policySuccess, setPolicySuccess] = useState(false);
+  const [policyError, setPolicyError] = useState<string | null>(null);
+
+  function extractNumber(value: string, fallback: number) {
+    const match = value.match(/\d+/);
+    return match ? Number(match[0]) : fallback;
+  }
+
+  async function loadLeavePolicies() {
+    try {
+      const records = await fetchPolicies();
+      setPolicyRecords(records);
+      const annual = records.find(p => p.name.toLowerCase() === 'annual leave');
+      const sick   = records.find(p => p.name.toLowerCase().includes('sick leave'));
+      if (annual) setAnnualLeave(extractNumber(annual.value, 20));
+      if (sick)   setSickLeave(extractNumber(sick.value, 12));
+    } catch { /* silent */ }
+  }
+
+  async function handlePolicySave() {
+    try {
+      setPolicySaving(true);
+      setPolicyError(null);
+      const upsert = async (name: string, value: string, description: string) => {
+        const existing = policyRecords.find(p => p.name.toLowerCase() === name.toLowerCase());
+        if (existing) {
+          await updatePolicy(existing.id, { ...existing, category: 'LEAVE', value, description });
+        } else {
+          await createPolicy({ name, category: 'LEAVE', value, description, urgency: 'MEDIUM', isActive: true, rules: {} });
+        }
+      };
+      await Promise.all([
+        upsert('Annual Leave', `${annualLeave} Days`, 'Standard yearly leave entitlement.'),
+        upsert('Sick Leave',   `${sickLeave} Days`,   'Standard yearly medical leave quota.'),
+      ]);
+      await loadLeavePolicies();
+      setPolicySuccess(true);
+      setTimeout(() => setPolicySuccess(false), 3000);
+    } catch {
+      setPolicyError('Failed to save leave entitlements.');
+    } finally {
+      setPolicySaving(false);
+    }
+  }
+
   const fetchRequests = async () => {
     setIsRefreshing(true);
     try {
@@ -75,6 +126,7 @@ export default function ManageLeave() {
 
   useEffect(() => {
     fetchRequests();
+    loadLeavePolicies();
   }, []);
 
   const handleRefresh = () => {
@@ -167,6 +219,57 @@ export default function ManageLeave() {
           </div>
         </div>
       )}
+
+      {/* Leave Entitlements */}
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="p-5 bg-slate-50 border-b border-slate-100 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600">
+              <Plane className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 text-sm uppercase tracking-tight">Leave Entitlements</h3>
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">Define standard yearly leave allocations</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {policySuccess && (
+              <span className="flex items-center gap-1.5 text-emerald-600 text-xs font-bold">
+                <CheckCircle2 className="w-4 h-4" /> Saved!
+              </span>
+            )}
+            {policyError && <span className="text-rose-500 text-xs font-bold">{policyError}</span>}
+            <button
+              onClick={handlePolicySave}
+              disabled={policySaving}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-xs uppercase tracking-widest transition-all disabled:opacity-50 shadow-md"
+            >
+              {policySaving ? <RotateCcw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              {policySaving ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        </div>
+        <div className="p-5 grid grid-cols-2 gap-5">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Annual Leave Days</label>
+            <input
+              type="number" min={0} value={annualLeave}
+              onChange={e => setAnnualLeave(Math.max(0, parseInt(e.target.value || '0')))}
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-slate-900 text-sm"
+            />
+            <p className="text-[9px] text-slate-400 italic">Global default for all staff members.</p>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Sick Leave Days</label>
+            <input
+              type="number" min={0} value={sickLeave}
+              onChange={e => setSickLeave(Math.max(0, parseInt(e.target.value || '0')))}
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-slate-900 text-sm"
+            />
+            <p className="text-[9px] text-slate-400 italic">Medical leave allowance per year.</p>
+          </div>
+        </div>
+      </div>
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">

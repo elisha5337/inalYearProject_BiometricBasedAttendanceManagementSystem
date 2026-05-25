@@ -1,7 +1,6 @@
 import { useLanguage } from '../../lib/translations';
 import { useEffect, useMemo, useState } from "react";
 import {
-  Clock,
   Lock,
   Fingerprint,
   Save,
@@ -14,7 +13,6 @@ import {
   Trash2,
   Pencil,
   ShieldAlert,
-  Plane,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { ApiError } from "../../lib/api";
@@ -327,57 +325,7 @@ export default function SetPolicies() {
 
       <div className="grid grid-cols-1 gap-8">
 
-        {/* LEAVE QUOTAS SECTION (NEW) */}
-        <div className="professional-card overflow-hidden border-2 border-transparent hover:border-emerald-100 transition-all">
-          <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm">
-              <Plane className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-black text-slate-900 uppercase tracking-tight">Leave Entitlements</h3>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">{t('Define standard yearly leave allocations')}</p>
-            </div>
-          </div>
-          <div className="p-8 space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Annual Leave Days</label>
-                <input type="number" value={policies.annualLeaveQuota} onChange={(e) => setPolicies(c => ({...c, annualLeaveQuota: parseInt(e.target.value || "0")}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold" />
-                <p className="text-[9px] text-slate-400 italic">Global default for all staff members.</p>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Sick Leave Days</label>
-                <input type="number" value={policies.sickLeaveQuota} onChange={(e) => setPolicies(c => ({...c, sickLeaveQuota: parseInt(e.target.value || "0")}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold" />
-                <p className="text-[9px] text-slate-400 italic">Medical leave allowance per year.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ATTENDANCE SECTION (RESTORED) */}
-        <div className="professional-card overflow-hidden">
-          <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm">
-              <Clock className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-slate-900 uppercase">Attendance Rules</h3>
-              <p className="text-xs text-slate-500">{t('Thresholds for lateness and grace periods')}</p>
-            </div>
-          </div>
-          <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700">Grace Period (Minutes)</label>
-              <input type="number" value={policies.gracePeriod} onChange={(e) => setPolicies(c => ({...c, gracePeriod: parseInt(e.target.value || "0")}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700">Late Threshold (Minutes)</label>
-              <input type="number" value={policies.lateThreshold} onChange={(e) => setPolicies(c => ({...c, lateThreshold: parseInt(e.target.value || "0")}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold" />
-            </div>
-          </div>
-        </div>
-
-        {/* SECURITY SECTION (RESTORED) */}
+        {/* SECURITY SECTION */}
         <div className="professional-card overflow-hidden">
           <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center gap-3">
             <div className="w-10 h-10 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-600 shadow-sm">

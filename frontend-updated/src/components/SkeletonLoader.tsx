@@ -1,10 +1,10 @@
-﻿import React from 'react';
+import React from 'react';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
 
 interface SkeletonLoaderProps {
   className?: string; // Optional custom wrapper classes
-  rows?: int;         // For tables
+  rows?: number;         // For tables
   type?: 'card' | 'table' | 'text';
 }
 

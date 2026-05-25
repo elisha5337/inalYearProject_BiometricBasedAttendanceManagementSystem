@@ -53,27 +53,41 @@ class BiometricRegistry:
         """
         try:
             x, y, w, h = box
+            # Clamp all values — MTCNN can return negatives
+            x = max(0, int(x))
+            y = max(0, int(y))
+            w = max(1, int(w))
+            h = max(1, int(h))
+
             # Apply padding while respecting image boundaries
             y1 = max(0, y - padding)
             y2 = min(image_array.shape[0], y + h + padding)
             x1 = max(0, x - padding)
             x2 = min(image_array.shape[1], x + w + padding)
-            
+
+            # Guard against zero-size crop
+            if y2 <= y1 or x2 <= x1:
+                logger.warning("preprocess_face: zero-size crop, skipping")
+                return None
+
             face_img = image_array[y1:y2, x1:x2]
-            
+
             # 1. Enhance
             face_img = BiometricRegistry.enhance_image(face_img)
-            
+
             # 2. Resize to FaceNet standard
             face_img = cv2.resize(face_img, (160, 160))
-            
+
             return face_img
         except Exception as e:
             logger.error(f"Preprocessing error: {e}")
             return None
 
     def reload_cache(self):
-        """Reloads and pre-normalizes all active face templates."""
+        """Reloads all active face templates into memory.
+        Templates are stored as normalized unit vectors at enrollment time,
+        so we load them directly without re-normalizing.
+        """
         with self.load_lock:
             try:
                 templates = BiometricTemplate.objects.filter(
@@ -91,13 +105,16 @@ class BiometricRegistry:
                     for t in templates
                 ]
 
-                # Pre-calculate normalized matrix for O(1) matching performance
-                embeddings = [np.array(t.template_data) for t in templates]
-                matrix = np.array(embeddings)
-                
-                norms = np.linalg.norm(matrix, axis=1, keepdims=True)
-                norms[norms == 0] = 1.0 # Protect against zero vectors
-                self.embeddings_matrix = matrix / norms
+                embeddings = []
+                for t in templates:
+                    vec = np.array(t.template_data, dtype=np.float32)
+                    norm = np.linalg.norm(vec)
+                    # Normalize only if not already a unit vector (safety guard)
+                    if norm > 0 and abs(norm - 1.0) > 1e-4:
+                        vec = vec / norm
+                    embeddings.append(vec)
+
+                self.embeddings_matrix = np.array(embeddings, dtype=np.float32)
 
                 logger.info(f"BiometricRegistry: Synchronized {len(self.user_data)} templates.")
                 return True
@@ -105,22 +122,31 @@ class BiometricRegistry:
                 logger.error(f"BiometricRegistry: Load error: {e}")
                 return False
 
-    def find_match(self, query_embedding, threshold=0.75):
-        """Vectorized cosine similarity matching."""
+    def find_match(self, query_embedding, threshold=0.50):
+        """
+        Vectorized cosine similarity matching.
+        Both stored templates and query_embedding are pre-normalized unit vectors.
+        Distance = 1 - cosine_similarity. Lower distance = better match.
+        Threshold 0.50 means cosine similarity >= 0.50 required for a match.
+        """
         if self.embeddings_matrix is None or not self.user_data:
+            logger.warning("No biometric templates enrolled in system")
             return None, 1.0
 
         try:
-            q = np.array(query_embedding)
+            q = np.array(query_embedding, dtype=np.float32)
             q_norm = np.linalg.norm(q)
             if q_norm == 0: return None, 1.0
+            q = q / q_norm  # ensure normalized
             
             # Dot product of normalized vectors = Cosine Similarity
-            similarities = np.dot(self.embeddings_matrix, q / q_norm)
-            distances = 1 - similarities
+            similarities = np.dot(self.embeddings_matrix, q)
+            distances = 1.0 - similarities
             
-            best_idx = np.argmin(distances)
+            best_idx = int(np.argmin(distances))
             min_dist = float(distances[best_idx])
+
+            logger.debug(f"Best match: {self.user_data[best_idx]['username']} distance={min_dist:.4f} threshold={threshold}")
 
             if min_dist <= threshold:
                 return self.user_data[best_idx], min_dist

@@ -254,6 +254,23 @@
         <div class="corner bot-l"></div>
         <div class="corner bot-r"></div>
         <div class="live-badge"><div class="dot"></div> LIVE</div>
+        <!-- Camera selector inside viewfinder top-left -->
+        <div id="camera-selector-wrap" style="position:absolute;top:10px;left:10px;z-index:20;display:none;">
+            <select id="camera-select" style="
+                background:rgba(15,23,42,0.75);
+                color:#fff;
+                border:1px solid rgba(255,255,255,0.2);
+                border-radius:8px;
+                padding:4px 8px;
+                font-size:10px;
+                font-weight:700;
+                text-transform:uppercase;
+                letter-spacing:0.05em;
+                outline:none;
+                max-width:160px;
+                cursor:pointer;
+            "></select>
+        </div>
     </div>
  <div class="status-container">
         <div class="status" id="status">Initializing camera...</div>
@@ -291,23 +308,93 @@
     let statusText = document.getElementById("status");
     let bar = document.getElementById("bar");
     let msg = document.getElementById("msg");
+    let cameraSelect = document.getElementById("camera-select");
+    let cameraSelectorWrap = document.getElementById("camera-selector-wrap");
 
     let step = 0;
     let capturing = false;
     let stableCount = 0;
     let lastCheck = 0;
+    let currentStream = null;
 
-    navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480, facingMode: "user" }
-    }).then(stream => {
-        video.srcObject = stream;
-        statusText.innerText = "Align your face in the box";
-        startAutoCheck();
-    }).catch(err => {
-        console.error(err);
-        statusText.innerText = "Camera access denied";
-        msg.innerText = "Please enable camera permissions and refresh.";
-    });
+    // ── Enumerate cameras and open the selected one ──
+    async function loadCameras() {
+        try {
+            // Request permission first so device labels are populated
+            const tempStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }).catch(() => null);
+            if (tempStream) tempStream.getTracks().forEach(t => t.stop());
+
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = devices.filter(d => d.kind === 'videoinput');
+
+            if (videoDevices.length === 0) {
+                statusText.innerText = "No camera found";
+                return;
+            }
+
+            // Populate dropdown
+            cameraSelect.innerHTML = '';
+            videoDevices.forEach((dev, i) => {
+                const opt = document.createElement('option');
+                opt.value = dev.deviceId;
+                opt.textContent = dev.label || `Camera ${i + 1}`;
+                cameraSelect.appendChild(opt);
+            });
+
+            // Auto-select DroidCam / iVCam / EpocCam if present
+            const droidcam = videoDevices.find(d =>
+                d.label.toLowerCase().includes('droid') ||
+                d.label.toLowerCase().includes('ivcam') ||
+                d.label.toLowerCase().includes('epoccam')
+            );
+            if (droidcam) cameraSelect.value = droidcam.deviceId;
+
+            // Show selector only when multiple cameras exist
+            if (videoDevices.length > 1) cameraSelectorWrap.style.display = 'block';
+
+            // Open the selected camera
+            await openCamera(cameraSelect.value);
+
+            // Switch camera when user changes selection
+            cameraSelect.addEventListener('change', () => openCamera(cameraSelect.value));
+
+        } catch (err) {
+            console.error(err);
+            statusText.innerText = "Camera access denied";
+            msg.innerText = "Please enable camera permissions and refresh.";
+        }
+    }
+
+    async function openCamera(deviceId) {
+        // Stop any existing stream
+        if (currentStream) {
+            currentStream.getTracks().forEach(t => t.stop());
+            currentStream = null;
+            video.srcObject = null;
+        }
+        stableCount = 0;
+        capturing = false;
+        statusText.innerText = "Starting camera...";
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    deviceId: { exact: deviceId },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                },
+                audio: false
+            });
+            currentStream = stream;
+            video.srcObject = stream;
+            statusText.innerText = "Align your face in the box";
+        } catch (err) {
+            console.error(err);
+            statusText.innerText = "Could not open camera";
+            msg.innerText = err.message;
+        }
+    }
+
+    loadCameras().then(() => startAutoCheck());
 
     function startAutoCheck() {
         setInterval(() => {
@@ -345,12 +432,15 @@
         msg.innerText = challenge.instruction;
 
         let frames = [];
-        let totalFrames = 10;
+        let totalFrames = 6;
 
         for (let i = 0; i < totalFrames; i++) {
             bar.style.width = ((i + 1) / totalFrames) * 100 + "%";
-            ctx.drawImage(video, 0, 0, 320, 240);
-            frames.push(canvas.toDataURL("image/jpeg", 0.7));
+            // 640x480 is sufficient — face crops are resized to 160x160 anyway
+            canvas.width = 640;
+            canvas.height = 480;
+            ctx.drawImage(video, 0, 0, 640, 480);
+            frames.push(canvas.toDataURL("image/jpeg", 0.95));
             await new Promise(r => setTimeout(r, 150));
         }
         sendFrames(frames, challenge.type);

@@ -18,6 +18,10 @@ export default function SubmitLeave({ user }: { user: User }) {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
+  // Get current date string in YYYY-MM-DD format for constraints
+  const todayDateStr = new Date().toISOString().split('T')[0];
+
+
   useEffect(() => {
     let active = true;
 
@@ -46,8 +50,20 @@ export default function SubmitLeave({ user }: { user: User }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
     setError('');
+    setSuccessMessage('');
+
+    if (formData.startDate < todayDateStr) {
+      setError('Leave start date cannot be in the past.');
+      return;
+    }
+
+    if (formData.endDate < formData.startDate) {
+      setError('End date cannot be before start date.');
+      return;
+    }
+
+    setSubmitting(true);
     setSuccessMessage('');
 
     try {
@@ -154,6 +170,7 @@ export default function SubmitLeave({ user }: { user: User }) {
                   <input
                     type="date"
                     required
+                    min={todayDateStr}
                     className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500"
                     value={formData.startDate}
                     onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
@@ -167,6 +184,7 @@ export default function SubmitLeave({ user }: { user: User }) {
                   <input
                     type="date"
                     required
+                    min={formData.startDate || todayDateStr}
                     className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500"
                     value={formData.endDate}
                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
@@ -214,7 +232,7 @@ export default function SubmitLeave({ user }: { user: User }) {
             </h3>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-indigo-100 text-sm">Annual Leave</span>
+                <span className="text-indigo-100 text-sm">Total Leave</span>
                 <span className="font-bold text-xl">{leaveBalance.annual_left} Days</span>
               </div>
               <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden">
@@ -223,16 +241,8 @@ export default function SubmitLeave({ user }: { user: User }) {
                   style={{ width: `${Math.max(5, Math.min(100, (leaveBalance.annual_left / 20) * 100))}%` }}
                 ></div>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-indigo-100 text-sm">Sick Leave</span>
-                <span className="font-bold text-xl">{leaveBalance.sick_left} Days</span>
-              </div>
-              <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden">
-                <div
-                  className="bg-white h-full transition-all duration-500"
-                  style={{ width: `${Math.max(5, Math.min(100, (leaveBalance.sick_left / 12) * 100))}%` }}
-                ></div>
-              </div>
+
+
             </div>
           </div>
 

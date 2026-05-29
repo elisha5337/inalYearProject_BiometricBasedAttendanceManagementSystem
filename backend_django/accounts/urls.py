@@ -10,9 +10,8 @@ urlpatterns = [
 
     # Public self-registration
     path('api/register/', views.api_register, name='api_register'),
-
     # API Auth
-    path('api/csrf/', views.get_csrf, name='get_csrf'),
+    path('api/csrf/',views.get_csrf, name='get_csrf'),
     path('api/me/', views.api_me, name='api_me'),
     path('api/profile/', views.api_profile, name='api_profile'),
     path('api/profile/update/', views.api_update_profile, name='api_update_profile'),
@@ -37,7 +36,8 @@ urlpatterns = [
     path('api/integrations/<uuid:integration_id>/sync/', views.api_sync_integration, name='api_integration_sync'),
     path('api/integrations/<uuid:integration_id>/update-config/', views.api_update_integration_config, name='api_integration_update_config'),
     path('api/integrations/<uuid:integration_id>/delete/', views.api_delete_integration, name='api_integration_delete'),
-    
+
+
     # Biometrics
     path('user/<uuid:user_id>/capture/', views.capture_face, name='capture_face'),
     path('user/<uuid:user_id>/verify/', views.verify_face, name='verify_face'),

@@ -17,7 +17,7 @@ def submit_leave_request(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Invalid request method'}, status=405)
 
-    user, auth_err = require_auth(request)
+    requester, auth_err = require_auth(request)
     if auth_err: return auth_err
 
     try:
@@ -28,7 +28,15 @@ def submit_leave_request(request):
             data = json.loads(request.body)
             attachment = None
 
-        raw_leave_type = data.get('leaveType', data.get('leave_type', '')).upper().replace('_LEAVE', '')
+        # Allow staff (admin/HR) to submit on behalf of another user by supplying `userId`.
+        target_user = requester
+        if (is_admin(requester) or is_hr(requester)) and data.get('userId'):
+            try:
+                target_user = User.objects.get(id=data.get('userId'))
+            except User.DoesNotExist:
+                return JsonResponse({'error': 'Target user not found.'}, status=404)
+
+        raw_leave_type = data.get('leaveType', data.get('leave_type', '')).upper().replace('_LEAVE', '').replace(' ', '')
         
         type_mapping = {
             'ANNUAL': LeaveRequest.LeaveType.ANNUAL,
@@ -56,10 +64,10 @@ def submit_leave_request(request):
         # --- LEAVE BALANCE GUARD ---
         requested_days = (end_date - start_date).days + 1
         
-        employee_detail = getattr(user, 'employeedetail', None)
+        employee_detail = getattr(target_user, 'employeedetail', None)
         dept_id = str(employee_detail.department.id) if employee_detail and employee_detail.department else None
-        
-        balance_info = PolicyResolver.calculate_leave_balance(user, dept_id)
+
+        balance_info = PolicyResolver.calculate_leave_balance(target_user, dept_id)
         
         balance_key = leave_type_enum.lower()
         if balance_key in balance_info:
@@ -71,13 +79,22 @@ def submit_leave_request(request):
                 }, status=400)
 
         leave_request = LeaveRequest.objects.create(
-            user=user,
+            user=target_user,
             leave_type=leave_type_enum,
             start_date=start_date,
             end_date=end_date,
             reason=reason,
             attachment=attachment,
             status=LeaveRequest.LeaveStatus.PENDING
+        )
+
+        # Audit who created the request (requester may be different from target_user)
+        creator = requester
+        log_audit_event(
+            'LEAVE_REQUEST_CREATED',
+            f'Leave request {leave_request.leave_type} for {target_user.username} created by {creator.username}.',
+            user=creator,
+            request=request,
         )
 
         return JsonResponse({
@@ -111,6 +128,7 @@ def view_my_leave_requests(request):
                 'end_date': str(req.end_date),
                 'days': duration,
                 'reason': req.reason,
+                'rejection_reason': req.rejection_reason,
                 'status': req.status.lower(),
                 'attachment': request.build_absolute_uri(req.attachment.url) if req.attachment else None,
                 'approved_by': req.approved_by.username if req.approved_by else None,
@@ -176,6 +194,7 @@ def list_all_leave_requests(request):
                 'days': duration,
                 'balance': int(current_balance),
                 'reason': req.reason or 'No reason provided',
+                'rejection_reason': req.rejection_reason,
                 'status': req.status.lower(),
                 'attachment': request.build_absolute_uri(req.attachment.url) if req.attachment else None,
                 'requested_at': req.created_at.isoformat() if req.created_at else None,
@@ -226,6 +245,7 @@ def manage_leave_request(request, request_id):
             'start_date': str(leave_request.start_date),
             'end_date': str(leave_request.end_date),
             'reason': leave_request.reason,
+            'rejection_reason': leave_request.rejection_reason,
             'attachment': request.build_absolute_uri(leave_request.attachment.url) if leave_request.attachment else None,
             'status': leave_request.status.lower(),
         }
@@ -249,7 +269,7 @@ def manage_leave_request(request, request_id):
             
             log_audit_event(
                 'LEAVE_APPROVED',
-                f'Approved {leave_request.leave_type} for {leave_request.user.username}.',
+                f'Approved {leave_request.leave_type} for {leave_request.user.username} by {user.username}.',
                 user=user,
                 request=request
             )
@@ -257,11 +277,12 @@ def manage_leave_request(request, request_id):
         elif new_status == LeaveRequest.LeaveStatus.REJECTED:
             leave_request.status = LeaveRequest.LeaveStatus.REJECTED
             leave_request.approved_by = user
+            leave_request.rejection_reason = (data.get('rejection_reason') or '').strip() or None
             leave_request.save()
             
             log_audit_event(
                 'LEAVE_REJECTED',
-                f'Rejected {leave_request.leave_type} for {leave_request.user.username}.',
+                f'Rejected {leave_request.leave_type} for {leave_request.user.username} by {user.username}.',
                 user=user,
                 request=request
             )

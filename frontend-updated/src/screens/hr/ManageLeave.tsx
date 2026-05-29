@@ -1,5 +1,5 @@
-import { useLanguage } from '../../lib/translations';
-import { useEffect, useState, useMemo } from 'react';
+import { useLanguage } from "../../lib/translations";
+import { useEffect, useState, useMemo } from "react";
 import {
   CheckCircle2,
   XCircle,
@@ -25,11 +25,17 @@ import {
   Plane,
   Save,
   RotateCcw,
-} from 'lucide-react';
-import { cn } from '../../lib/utils';
-import { Link } from 'react-router-dom';
-import { apiRequest, API_BASE } from '../../lib/api';
-import { formatRelativeTime, fetchPolicies, createPolicy, updatePolicy, type LeavePolicyRecord } from '../../lib/admin';
+} from "lucide-react";
+import { cn } from "../../lib/utils";
+import { Link } from "react-router-dom";
+import { apiRequest, API_BASE } from "../../lib/api";
+import {
+  formatRelativeTime,
+  fetchPolicies,
+  createPolicy,
+  updatePolicy,
+  type LeavePolicyRecord,
+} from "../../lib/admin";
 
 interface LeaveRequest {
   id: string;
@@ -43,6 +49,7 @@ interface LeaveRequest {
   days: number;
   balance: number;
   reason: string;
+  rejection_reason?: string | null;
   status: string;
   attachment: string | null;
   requested_at: string | null;
@@ -50,14 +57,21 @@ interface LeaveRequest {
 
 export default function ManageLeave() {
   const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState('Pending');
+  const [activeTab, setActiveTab] = useState("Pending");
   const [showExportModal, setShowExportModal] = useState(false);
-  const [exportFormat, setExportFormat] = useState('');
+  const [exportFormat, setExportFormat] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [allRequests, setAllRequests] = useState<LeaveRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [expandedRequestId, setExpandedRequestId] = useState<string | null>(null);
-  const [previewFile, setPreviewFile] = useState<{ url: string; type: string } | null>(null);
+  const [expandedRequestId, setExpandedRequestId] = useState<string | null>(
+    null,
+  );
+  const [rejectReasonById, setRejectReasonById] = useState<Record<string, string>>({});
+  const [actionErrorById, setActionErrorById] = useState<Record<string, string>>({});
+  const [previewFile, setPreviewFile] = useState<{
+    url: string;
+    type: string;
+  } | null>(null);
 
   // ── Leave Entitlements policy state ──
   const [annualLeave, setAnnualLeave] = useState(20);
@@ -76,34 +90,67 @@ export default function ManageLeave() {
     try {
       const records = await fetchPolicies();
       setPolicyRecords(records);
-      const annual = records.find(p => p.name.toLowerCase() === 'annual leave');
-      const sick   = records.find(p => p.name.toLowerCase().includes('sick leave'));
+      const annual = records.find(
+        (p) => p.name.toLowerCase() === "annual leave",
+      );
+      const sick = records.find((p) =>
+        p.name.toLowerCase().includes("sick leave"),
+      );
       if (annual) setAnnualLeave(extractNumber(annual.value, 20));
-      if (sick)   setSickLeave(extractNumber(sick.value, 12));
-    } catch { /* silent */ }
+      if (sick) setSickLeave(extractNumber(sick.value, 12));
+    } catch {
+      /* silent */
+    }
   }
 
   async function handlePolicySave() {
     try {
       setPolicySaving(true);
       setPolicyError(null);
-      const upsert = async (name: string, value: string, description: string) => {
-        const existing = policyRecords.find(p => p.name.toLowerCase() === name.toLowerCase());
+      const upsert = async (
+        name: string,
+        value: string,
+        description: string,
+      ) => {
+        const existing = policyRecords.find(
+          (p) => p.name.toLowerCase() === name.toLowerCase(),
+        );
         if (existing) {
-          await updatePolicy(existing.id, { ...existing, category: 'LEAVE', value, description });
+          await updatePolicy(existing.id, {
+            ...existing,
+            category: "LEAVE",
+            value,
+            description,
+          });
         } else {
-          await createPolicy({ name, category: 'LEAVE', value, description, urgency: 'MEDIUM', isActive: true, rules: {} });
+          await createPolicy({
+            name,
+            category: "LEAVE",
+            value,
+            description,
+            urgency: "MEDIUM",
+            isActive: true,
+            rules: {},
+          });
         }
       };
       await Promise.all([
-        upsert('Annual Leave', `${annualLeave} Days`, 'Standard yearly leave entitlement.'),
-        upsert('Sick Leave',   `${sickLeave} Days`,   'Standard yearly medical leave quota.'),
+        upsert(
+          "Annual Leave",
+          `${annualLeave} Days`,
+          "Standard yearly leave entitlement.",
+        ),
+        upsert(
+          "Sick Leave",
+          `${sickLeave} Days`,
+          "Standard yearly medical leave quota.",
+        ),
       ]);
       await loadLeavePolicies();
       setPolicySuccess(true);
       setTimeout(() => setPolicySuccess(false), 3000);
     } catch {
-      setPolicyError('Failed to save leave entitlements.');
+      setPolicyError("Failed to save leave entitlements.");
     } finally {
       setPolicySaving(false);
     }
@@ -112,12 +159,15 @@ export default function ManageLeave() {
   const fetchRequests = async () => {
     setIsRefreshing(true);
     try {
-      const response = await apiRequest<{ success: boolean; leave_requests: LeaveRequest[] }>('/api/leave/api/all/');
+      const response = await apiRequest<{
+        success: boolean;
+        leave_requests: LeaveRequest[];
+      }>("/api/leave/api/all/");
       if (response.success) {
         setAllRequests(response.leave_requests);
       }
     } catch (error) {
-      console.error('Failed to fetch leave requests:', error);
+      console.error("Failed to fetch leave requests:", error);
     } finally {
       setIsRefreshing(false);
       setIsLoading(false);
@@ -133,13 +183,35 @@ export default function ManageLeave() {
     fetchRequests();
   };
 
-  const handleAction = async (requestId: string, action: 'APPROVED' | 'REJECTED') => {
+  const handleAction = async (
+    requestId: string,
+    action: "APPROVED" | "REJECTED",
+  ) => {
     try {
-      const response = await apiRequest<{ success: boolean }>(`/api/leave/api/manage/${requestId}/`, {
-        method: 'POST',
-        body: { status: action }
-      });
+      const requestReason = (rejectReasonById[requestId] || "").trim();
+      if (action === "REJECTED" && !requestReason) {
+        setActionErrorById((prev) => ({
+          ...prev,
+          [requestId]: "A rejection note is required.",
+        }));
+        return;
+      }
+
+      const body: Record<string, unknown> = { status: action };
+      if (action === "REJECTED") {
+        body.rejection_reason = requestReason;
+      }
+
+      const response = await apiRequest<{ success: boolean }>(
+        `/api/leave/api/manage/${requestId}/`,
+        {
+          method: "POST",
+          body,
+        },
+      );
       if (response.success) {
+        setRejectReasonById((prev) => ({ ...prev, [requestId]: "" }));
+        setActionErrorById((prev) => ({ ...prev, [requestId]: "" }));
         fetchRequests();
       }
     } catch (error) {
@@ -148,11 +220,15 @@ export default function ManageLeave() {
   };
 
   const filteredRequests = useMemo(() => {
-    return allRequests.filter(req => (req.status || '').toLowerCase() === activeTab.toLowerCase());
+    return allRequests.filter(
+      (req) => (req.status || "").toLowerCase() === activeTab.toLowerCase(),
+    );
   }, [allRequests, activeTab]);
 
   const pendingCount = useMemo(() => {
-    return allRequests.filter(req => (req.status || '').toLowerCase() === 'pending').length;
+    return allRequests.filter(
+      (req) => (req.status || "").toLowerCase() === "pending",
+    ).length;
   }, [allRequests]);
 
   const toggleExpand = (id: string) => {
@@ -161,14 +237,14 @@ export default function ManageLeave() {
 
   const getFullAttachmentUrl = (path: string | null) => {
     if (!path) return null;
-    if (path.startsWith('http')) return path;
-    const base = API_BASE.replace(/\/$/, '');
-    const relativePath = path.startsWith('/') ? path : `/${path}`;
+    if (path.startsWith("http")) return path;
+    const base = API_BASE.replace(/\/$/, "");
+    const relativePath = path.startsWith("/") ? path : `/${path}`;
     return `${base}${relativePath}`;
   };
 
   const handlePreview = (url: string) => {
-    const extension = url.split('.').pop()?.toLowerCase() || '';
+    const extension = url.split(".").pop()?.toLowerCase() || "";
     setPreviewFile({ url, type: extension });
   };
 
@@ -181,36 +257,69 @@ export default function ManageLeave() {
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center text-white">
-                  {['jpg', 'jpeg', 'png', 'gif'].includes(previewFile.type) ? <ImageIcon className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                  {["jpg", "jpeg", "png", "gif"].includes(previewFile.type) ? (
+                    <ImageIcon className="w-5 h-5" />
+                  ) : (
+                    <FileText className="w-5 h-5" />
+                  )}
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 uppercase">Document Preview</h3>
-                  <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Format: {previewFile.type}</p>
+                  <h3 className="text-sm font-bold text-slate-900 uppercase">
+                    Document Preview
+                  </h3>
+                  <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">
+                    Format: {previewFile.type}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <a href={previewFile.url} download className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all" title="Download Original">
+                <a
+                  href={previewFile.url}
+                  download
+                  className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all"
+                  title="Download Original"
+                >
                   <Download className="w-5 h-5" />
                 </a>
-                <button onClick={() => setPreviewFile(null)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-red-50 rounded-2xl transition-all">
+                <button
+                  onClick={() => setPreviewFile(null)}
+                  className="p-2 text-slate-400 hover:text-rose-600 hover:bg-red-50 rounded-2xl transition-all"
+                >
                   <X className="w-6 h-6" />
                 </button>
               </div>
             </div>
-            
+
             <div className="flex-1 bg-slate-100/50 overflow-auto p-4 flex items-center justify-center">
-              {['jpg', 'jpeg', 'png', 'gif'].includes(previewFile.type) ? (
-                <img src={previewFile.url} alt="Preview" className="max-w-full max-h-full object-contain shadow-lg" />
-              ) : previewFile.type === 'pdf' ? (
-                <iframe src={`${previewFile.url}#toolbar=0`} className="w-full h-full border-none rounded-2xl bg-white shadow-lg" title="PDF Preview" />
+              {["jpg", "jpeg", "png", "gif"].includes(previewFile.type) ? (
+                <img
+                  src={previewFile.url}
+                  alt="Preview"
+                  className="max-w-full max-h-full object-contain shadow-lg"
+                />
+              ) : previewFile.type === "pdf" ? (
+                <iframe
+                  src={`${previewFile.url}#toolbar=0`}
+                  className="w-full h-full border-none rounded-2xl bg-white shadow-lg"
+                  title="PDF Preview"
+                />
               ) : (
                 <div className="text-center space-y-4 p-12 bg-white rounded-2xl shadow-xl border border-slate-200">
                   <div className="w-20 h-20 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto">
                     <FileText className="w-10 h-10" />
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900">Preview not available</h3>
-                  <p className="text-sm text-slate-500 max-w-xs mx-auto">This file type ({previewFile.type}) cannot be previewed in the browser. Please download it to view.</p>
-                  <a href={previewFile.url} download className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20">
+                  <h3 className="text-lg font-bold text-slate-900">
+                    Preview not available
+                  </h3>
+                  <p className="text-sm text-slate-500 max-w-xs mx-auto">
+                    This file type ({previewFile.type}) cannot be previewed in
+                    the browser. Please download it to view.
+                  </p>
+                  <a
+                    href={previewFile.url}
+                    download
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20"
+                  >
                     <Download className="w-4 h-4" /> Download File
                   </a>
                 </div>
@@ -228,8 +337,12 @@ export default function ManageLeave() {
               <Plane className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-sm uppercase tracking-tight">Leave Entitlements</h3>
-              <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">Define standard yearly leave allocations</p>
+              <h3 className="font-bold text-slate-900 text-sm uppercase tracking-tight">
+                Leave Entitlements
+              </h3>
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">
+                Define standard yearly leave allocations
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -238,63 +351,93 @@ export default function ManageLeave() {
                 <CheckCircle2 className="w-4 h-4" /> Saved!
               </span>
             )}
-            {policyError && <span className="text-rose-500 text-xs font-bold">{policyError}</span>}
+            {policyError && (
+              <span className="text-rose-500 text-xs font-bold">
+                {policyError}
+              </span>
+            )}
             <button
               onClick={handlePolicySave}
               disabled={policySaving}
               className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-xs uppercase tracking-widest transition-all disabled:opacity-50 shadow-md"
             >
-              {policySaving ? <RotateCcw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-              {policySaving ? 'Saving...' : 'Save'}
+              {policySaving ? (
+                <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Save className="w-3.5 h-3.5" />
+              )}
+              {policySaving ? "Saving..." : "Save"}
             </button>
           </div>
         </div>
         <div className="p-5 grid grid-cols-2 gap-5">
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Annual Leave Days</label>
+            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+              Annual Leave Days
+            </label>
             <input
-              type="number" min={0} value={annualLeave}
-              onChange={e => setAnnualLeave(Math.max(0, parseInt(e.target.value || '0')))}
+              type="number"
+              min={0}
+              value={annualLeave}
+              onChange={(e) =>
+                setAnnualLeave(Math.max(0, parseInt(e.target.value || "0")))
+              }
               className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-slate-900 text-sm"
             />
-            <p className="text-[9px] text-slate-400 italic">Global default for all staff members.</p>
+            <p className="text-[9px] text-slate-400 italic">
+              Global default for all staff members.
+            </p>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Sick Leave Days</label>
+            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+              Sick Leave Days
+            </label>
             <input
-              type="number" min={0} value={sickLeave}
-              onChange={e => setSickLeave(Math.max(0, parseInt(e.target.value || '0')))}
+              type="number"
+              min={0}
+              value={sickLeave}
+              onChange={(e) =>
+                setSickLeave(Math.max(0, parseInt(e.target.value || "0")))
+              }
               className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-slate-900 text-sm"
             />
-            <p className="text-[9px] text-slate-400 italic">Medical leave allowance per year.</p>
+            <p className="text-[9px] text-slate-400 italic">
+              Medical leave allowance per year.
+            </p>
           </div>
         </div>
       </div>
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Link 
-            to="/hr" 
+          <Link
+            to="/hr"
             className="p-2 hover:bg-slate-100 rounded-2xl text-slate-400 hover:text-slate-600 transition-all"
             title="Back to Dashboard"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">{t('Leave Requests')}</h1>
-            <p className="text-slate-500">{t('Review and process employee leave applications')}</p>
+            <h1 className="text-2xl font-bold text-slate-900">
+              {t("Leave Requests")}
+            </h1>
+            <p className="text-slate-500">
+              {t("Review and process employee leave applications")}
+            </p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3">
-          <button 
+          <button
             onClick={handleRefresh}
             className="secondary-button p-2.5"
             title="Refresh Requests"
           >
-            <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
+            <RefreshCw
+              className={cn("w-4 h-4", isRefreshing && "animate-spin")}
+            />
           </button>
-          <button 
+          <button
             onClick={() => setShowExportModal(true)}
             className="secondary-button p-2.5"
             title="Export Report"
@@ -302,17 +445,23 @@ export default function ManageLeave() {
             <Download className="w-4 h-4" />
           </button>
           <div className="flex bg-white border border-slate-200 rounded-2xl p-1 shadow-sm overflow-x-auto">
-            {['Pending', 'Approved', 'Rejected'].map((tab) => (
-              <button 
+            {["Pending", "Approved", "Rejected"].map((tab) => (
+              <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={cn(
                   "px-4 md:px-6 py-2 rounded-2xl text-xs md:text-sm font-bold transition-all whitespace-nowrap",
-                  activeTab === tab ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20" : "text-slate-500 hover:text-slate-700"
+                  activeTab === tab
+                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
+                    : "text-slate-500 hover:text-slate-700",
                 )}
               >
                 {t(tab)}
-                {tab === 'Pending' && pendingCount > 0 && <span className="ml-2 bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{pendingCount}</span>}
+                {tab === "Pending" && pendingCount > 0 && (
+                  <span className="ml-2 bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                    {pendingCount}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -323,183 +472,298 @@ export default function ManageLeave() {
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 grayscale opacity-50">
             <RefreshCw className="w-8 h-8 animate-spin mb-4" />
-            <p className="text-sm font-bold">{t('Synchronizing Leave Records...')}</p>
+            <p className="text-sm font-bold">
+              {t("Synchronizing Leave Records...")}
+            </p>
           </div>
         ) : filteredRequests.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-slate-200">
             <Clock className="w-12 h-12 text-slate-300 mb-4" />
-            <h3 className="text-lg font-bold text-slate-900">No {activeTab} Requests</h3>
-            <p className="text-sm text-slate-500">{t('There are no leave applications in this category.')}</p>
+            <h3 className="text-lg font-bold text-slate-900">
+              No {activeTab} Requests
+            </h3>
+            <p className="text-sm text-slate-500">
+              {t("There are no leave applications in this category.")}
+            </p>
           </div>
         ) : (
           filteredRequests.map((request) => {
             const isExpanded = expandedRequestId === request.id;
             const attachmentUrl = getFullAttachmentUrl(request.attachment);
-            
+
             return (
-              <div key={request.id} className={cn(
-                "professional-card transition-all duration-300 overflow-hidden",
-                isExpanded ? "ring-2 ring-indigo-500 shadow-xl" : "hover:border-slate-300"
-              )}>
+              <div
+                key={request.id}
+                className={cn(
+                  "professional-card transition-all duration-300 overflow-hidden",
+                  isExpanded
+                    ? "ring-2 ring-indigo-500 shadow-xl"
+                    : "hover:border-slate-300",
+                )}
+              >
                 <div className="p-6">
                   <div className="flex flex-col lg:flex-row gap-6 lg:items-center">
                     {/* Employee Mini Info */}
                     <div className="flex items-center gap-4 min-w-[280px]">
                       <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 font-bold text-lg">
-                        {(request.employee_name || 'U').charAt(0)}
+                        {(request.employee_name || "U").charAt(0)}
                       </div>
                       <div className="overflow-hidden">
-                        <h3 className="font-bold text-slate-900 truncate">{request.employee_name || 'Unknown'}</h3>
+                        <h3 className="font-bold text-slate-900 truncate">
+                          {request.employee_name || "Unknown"}
+                        </h3>
                         <div className="flex items-center gap-2 text-[10px] text-slate-500 uppercase font-bold tracking-tighter">
-                           <Briefcase className="w-3 h-3 text-slate-400" />
-                           <span className="truncate">{request.department || 'No Department'}</span>
+                          <Briefcase className="w-3 h-3 text-slate-400" />
+                          <span className="truncate">
+                            {request.department || "No Department"}
+                          </span>
                         </div>
-                        <p className="text-[10px] text-slate-400 font-mono uppercase truncate mt-0.5">{request.username || 'N/A'}</p>
+                        <p className="text-[10px] text-slate-400 font-mono uppercase truncate mt-0.5">
+                          {request.username || "N/A"}
+                        </p>
                       </div>
                     </div>
 
                     {/* Quick Stats */}
                     <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
-                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Leave Type</p>
-                        <p className="text-sm font-bold text-slate-700 truncate">{request.leave_type}</p>
+                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">
+                          Leave Type
+                        </p>
+                        <p className="text-sm font-bold text-slate-700 truncate">
+                          {request.leave_type}
+                        </p>
                       </div>
                       <div>
-                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Duration</p>
-                        <p className="text-sm font-bold text-slate-900">{request.days} Days</p>
+                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">
+                          Duration
+                        </p>
+                        <p className="text-sm font-bold text-slate-900">
+                          {request.days} Days
+                        </p>
                       </div>
                       <div className="hidden md:block">
-                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Start Date</p>
-                        <p className="text-sm font-bold text-slate-900">{request.start_date}</p>
+                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">
+                          Start Date
+                        </p>
+                        <p className="text-sm font-bold text-slate-900">
+                          {request.start_date}
+                        </p>
                       </div>
                       <div className="hidden md:block">
-                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Requested</p>
-                        <p className="text-sm text-slate-500">{formatRelativeTime(request.requested_at)}</p>
+                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">
+                          Requested
+                        </p>
+                        <p className="text-sm text-slate-500">
+                          {formatRelativeTime(request.requested_at)}
+                        </p>
                       </div>
                     </div>
 
                     {/* Expand Toggle */}
                     <div className="flex items-center gap-3 shrink-0">
-                      <button 
+                      <button
                         onClick={() => toggleExpand(request.id)}
                         className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-2xl text-xs font-bold transition-all border border-slate-200"
                       >
                         {isExpanded ? (
-                          <>Close Details <ChevronUp className="w-4 h-4" /></>
+                          <>
+                            Close Details <ChevronUp className="w-4 h-4" />
+                          </>
                         ) : (
-                          <>See Details <ChevronDown className="w-4 h-4" /></>
+                          <>
+                            See Details <ChevronDown className="w-4 h-4" />
+                          </>
                         )}
                       </button>
                     </div>
                   </div>
 
                   {/* Expanded Content */}
-                  <div className={cn(
-                    "grid transition-all duration-300 ease-in-out",
-                    isExpanded ? "grid-rows-[1fr] opacity-100 mt-8" : "grid-rows-[0fr] opacity-0"
-                  )}>
+                  <div
+                    className={cn(
+                      "grid transition-all duration-300 ease-in-out",
+                      isExpanded
+                        ? "grid-rows-[1fr] opacity-100 mt-8"
+                        : "grid-rows-[0fr] opacity-0",
+                    )}
+                  >
                     <div className="overflow-hidden">
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-8 border-t border-slate-100">
                         {/* Detailed Employee Info */}
                         <div className="space-y-6">
-                           <div className="space-y-4">
-                              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Full Identity</h4>
-                              <div className="space-y-3">
-                                <div className="flex items-center gap-3 text-sm text-slate-600">
-                                  <User className="w-4 h-4 text-indigo-500" />
-                                  <span className="font-bold">{request.employee_name}</span>
-                                </div>
-                                <div className="flex items-center gap-3 text-sm text-slate-600">
-                                  <Briefcase className="w-4 h-4 text-indigo-500" />
-                                  <span>{request.department}</span>
-                                </div>
-                                <div className="flex items-center gap-3 text-sm text-slate-600">
-                                  <Mail className="w-4 h-4 text-indigo-500" />
-                                  <span className="truncate">{request.email}</span>
-                                </div>
+                          <div className="space-y-4">
+                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                              Full Identity
+                            </h4>
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-3 text-sm text-slate-600">
+                                <User className="w-4 h-4 text-indigo-500" />
+                                <span className="font-bold">
+                                  {request.employee_name}
+                                </span>
                               </div>
-                           </div>
-                           <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 shadow-sm">
-                              <p className="text-[10px] text-indigo-400 uppercase font-bold tracking-wider mb-2">Leave Quota Status</p>
-                              <div className="flex items-baseline gap-2">
-                                <span className="text-2xl font-bold text-indigo-700">{request.balance}</span>
-                                <span className="text-xs font-bold text-indigo-500 uppercase">Days Remaining</span>
+                              <div className="flex items-center gap-3 text-sm text-slate-600">
+                                <Briefcase className="w-4 h-4 text-indigo-500" />
+                                <span>{request.department}</span>
                               </div>
-                           </div>
+                              <div className="flex items-center gap-3 text-sm text-slate-600">
+                                <Mail className="w-4 h-4 text-indigo-500" />
+                                <span className="truncate">
+                                  {request.email}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 shadow-sm">
+                            <p className="text-[10px] text-indigo-400 uppercase font-bold tracking-wider mb-2">
+                              Leave Quota Status
+                            </p>
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-2xl font-bold text-indigo-700">
+                                {request.balance}
+                              </span>
+                              <span className="text-xs font-bold text-indigo-500 uppercase">
+                                Days Remaining
+                              </span>
+                            </div>
+                          </div>
                         </div>
 
                         {/* Leave Reason & Attachment */}
                         <div className="lg:col-span-2 space-y-6">
-                           <div className="space-y-3">
-                              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                <MessageSquare className="w-3 h-3" /> 
-                                Justification/Reason
+                          <div className="space-y-3">
+                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                              <MessageSquare className="w-3 h-3" />
+                              Justification/Reason
+                            </h4>
+                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 shadow-inner italic text-slate-600 text-sm whitespace-pre-wrap break-words leading-relaxed max-h-[400px] overflow-y-auto">
+                              "
+                              {request.reason ||
+                                "No reason provided by the employee."}
+                              "
+                            </div>
+                          </div>
+
+                          {request.status === 'rejected' && (
+                            <div className="space-y-3">
+                              <h4 className="text-[10px] font-bold text-rose-400 uppercase tracking-widest flex items-center gap-2">
+                                <XCircle className="w-3 h-3" />
+                                Rejection Note
                               </h4>
-                              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 shadow-inner italic text-slate-600 text-sm whitespace-pre-wrap break-words leading-relaxed max-h-[400px] overflow-y-auto">
-                                "{request.reason || 'No reason provided by the employee.'}"
+                              <div className="bg-rose-50 p-6 rounded-2xl border border-rose-100 text-rose-700 text-sm whitespace-pre-wrap break-words leading-relaxed max-h-[400px] overflow-y-auto">
+                                {request.rejection_reason ||
+                                  'No rejection note provided.'}
                               </div>
-                           </div>
+                            </div>
+                          )}
 
-                           {attachmentUrl && (
-                             <div className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
-                               <div className="flex items-center gap-3 overflow-hidden">
-                                 <div className="w-10 h-10 bg-red-50 text-rose-600 rounded-2xl flex items-center justify-center shrink-0">
-                                   <FileText className="w-5 h-5" />
-                                 </div>
-                                 <div className="overflow-hidden">
-                                   <p className="text-xs font-bold text-slate-900 uppercase">Supporting Document</p>
-                                   <p className="text-[10px] text-slate-400 truncate">Evidence for review</p>
-                                 </div>
-                               </div>
-                               <div className="flex items-center gap-2 shrink-0">
-                                 <button 
-                                   onClick={() => handlePreview(attachmentUrl)}
-                                   className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-2xl text-xs font-bold transition-all"
-                                 >
-                                   <Eye className="w-3.5 h-3.5" /> Quick Preview
-                                 </button>
-                                 <a 
-                                   href={attachmentUrl} 
-                                   target="_blank" 
-                                   rel="noopener noreferrer"
-                                   className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-2xl transition-all"
-                                   title="Open in new tab"
-                                 >
-                                   <ExternalLink className="w-4 h-4" />
-                                 </a>
-                               </div>
-                             </div>
-                           )}
+                          {attachmentUrl && (
+                            <div className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                              <div className="flex items-center gap-3 overflow-hidden">
+                                <div className="w-10 h-10 bg-red-50 text-rose-600 rounded-2xl flex items-center justify-center shrink-0">
+                                  <FileText className="w-5 h-5" />
+                                </div>
+                                <div className="overflow-hidden">
+                                  <p className="text-xs font-bold text-slate-900 uppercase">
+                                    Supporting Document
+                                  </p>
+                                  <p className="text-[10px] text-slate-400 truncate">
+                                    Evidence for review
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                  onClick={() => handlePreview(attachmentUrl)}
+                                  className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-2xl text-xs font-bold transition-all"
+                                >
+                                  <Eye className="w-3.5 h-3.5" /> Quick Preview
+                                </button>
+                                <a
+                                  href={attachmentUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-2xl transition-all"
+                                  title="Open in new tab"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </a>
+                              </div>
+                            </div>
+                          )}
 
-                           {/* Action Footer inside expanded area */}
-                           {(request.status || '').toLowerCase() === 'pending' && (
-                             <div className="flex items-center justify-end gap-3 pt-4">
-                               <button 
-                                 onClick={() => handleAction(request.id, 'REJECTED')}
-                                 className="px-6 py-2.5 bg-white border-2 border-rose-100 text-rose-600 hover:bg-red-50 rounded-2xl font-bold text-sm transition-all flex items-center gap-2"
-                               >
-                                 <XCircle className="w-4 h-4" /> Reject
-                               </button>
-                               <button 
-                                 onClick={() => handleAction(request.id, 'APPROVED')}
-                                 className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-sm shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-2"
-                               >
-                                 <CheckCircle2 className="w-4 h-4" /> Approve Leave
-                               </button>
-                             </div>
-                           )}
+                          {/* Action Footer inside expanded area */}
+                          {(request.status || "").toLowerCase() ===
+                            "pending" && (
+                            <div className="space-y-4 pt-4">
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                                  Rejection Note
+                                </label>
+                                <textarea
+                                  value={rejectReasonById[request.id] || ""}
+                                  onChange={(e) =>
+                                    setRejectReasonById((prev) => ({
+                                      ...prev,
+                                      [request.id]: e.target.value,
+                                    }))
+                                  }
+                                  placeholder="Enter why this leave request should be rejected."
+                                  className="w-full min-h-[120px] resize-none rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-100"
+                                />
+                                {actionErrorById[request.id] && (
+                                  <p className="text-xs text-rose-600">
+                                    {actionErrorById[request.id]}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex items-center justify-end gap-3">
+                                <button
+                                  onClick={() =>
+                                    handleAction(request.id, "REJECTED")
+                                  }
+                                  className="px-6 py-2.5 bg-white border-2 border-rose-100 text-rose-600 hover:bg-red-50 rounded-2xl font-bold text-sm transition-all flex items-center gap-2"
+                                >
+                                  <XCircle className="w-4 h-4" /> Reject
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleAction(request.id, "APPROVED")
+                                  }
+                                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-sm shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-2"
+                                >
+                                  <CheckCircle2 className="w-4 h-4" /> Approve
+                                  Leave
+                                </button>
+                              </div>
+                            </div>
+                          )}
 
-                           {((request.status || '').toLowerCase() === 'approved' || (request.status || '').toLowerCase() === 'rejected') && (
-                             <div className="flex items-center justify-end gap-3 pt-4">
-                               <div className={cn(
-                                 "flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-bold uppercase tracking-widest",
-                                 (request.status || '').toLowerCase() === 'approved' ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
-                               )}>
-                                 {(request.status || '').toLowerCase() === 'approved' ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                                 Already {request.status}
-                               </div>
-                             </div>
-                           )}
+                          {((request.status || "").toLowerCase() ===
+                            "approved" ||
+                            (request.status || "").toLowerCase() ===
+                              "rejected") && (
+                            <div className="flex items-center justify-end gap-3 pt-4">
+                              <div
+                                className={cn(
+                                  "flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-bold uppercase tracking-widest",
+                                  (request.status || "").toLowerCase() ===
+                                    "approved"
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : "bg-rose-100 text-rose-700",
+                                )}
+                              >
+                                {(request.status || "").toLowerCase() ===
+                                "approved" ? (
+                                  <CheckCircle2 className="w-4 h-4" />
+                                ) : (
+                                  <XCircle className="w-4 h-4" />
+                                )}
+                                Already {request.status}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -512,11 +776,17 @@ export default function ManageLeave() {
       </div>
 
       <div className="flex items-center justify-center gap-4 pt-4">
-        <button className="p-2 border border-slate-200 rounded-2xl hover:bg-white disabled:opacity-50" disabled>
+        <button
+          className="p-2 border border-slate-200 rounded-2xl hover:bg-white disabled:opacity-50"
+          disabled
+        >
           <ChevronLeft className="w-4 h-4" />
         </button>
         <span className="text-sm font-medium text-slate-500">Page 1 of 1</span>
-        <button className="p-2 border border-slate-200 rounded-2xl hover:bg-white disabled:opacity-50" disabled>
+        <button
+          className="p-2 border border-slate-200 rounded-2xl hover:bg-white disabled:opacity-50"
+          disabled
+        >
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
@@ -527,10 +797,14 @@ export default function ManageLeave() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-slate-900">{t('Export Leave Report')}</h2>
-                <p className="text-sm text-slate-500">{t('Select format and date range')}</p>
+                <h2 className="text-xl font-bold text-slate-900">
+                  {t("Export Leave Report")}
+                </h2>
+                <p className="text-sm text-slate-500">
+                  {t("Select format and date range")}
+                </p>
               </div>
-              <button 
+              <button
                 onClick={() => setShowExportModal(false)}
                 className="p-2 hover:bg-slate-100 rounded-2xl transition-colors"
               >
@@ -540,19 +814,25 @@ export default function ManageLeave() {
 
             <div className="p-6 space-y-6">
               <div className="space-y-4">
-                <p className="text-sm font-bold text-slate-700 uppercase tracking-wider text-center">Select Date Range</p>
+                <p className="text-sm font-bold text-slate-700 uppercase tracking-wider text-center">
+                  Select Date Range
+                </p>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">From</label>
-                    <input 
-                      type="date" 
+                    <label className="text-xs font-bold text-slate-500 uppercase">
+                      From
+                    </label>
+                    <input
+                      type="date"
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">To</label>
-                    <input 
-                      type="date" 
+                    <label className="text-xs font-bold text-slate-500 uppercase">
+                      To
+                    </label>
+                    <input
+                      type="date"
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
@@ -560,27 +840,55 @@ export default function ManageLeave() {
               </div>
 
               <div className="space-y-4">
-                <p className="text-sm font-bold text-slate-700 uppercase tracking-wider text-center">Output Format</p>
+                <p className="text-sm font-bold text-slate-700 uppercase tracking-wider text-center">
+                  Output Format
+                </p>
                 <div className="grid grid-cols-3 gap-3">
                   {[
-                    { id: 'pdf', label: 'PDF', icon: FileText, color: 'text-rose-600', bg: 'bg-red-50' },
-                    { id: 'excel', label: 'Excel', icon: FileSpreadsheet, color: 'text-emerald-600', bg: 'bg-green-50' },
-                    { id: 'csv', label: 'CSV', icon: TableIcon, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+                    {
+                      id: "pdf",
+                      label: "PDF",
+                      icon: FileText,
+                      color: "text-rose-600",
+                      bg: "bg-red-50",
+                    },
+                    {
+                      id: "excel",
+                      label: "Excel",
+                      icon: FileSpreadsheet,
+                      color: "text-emerald-600",
+                      bg: "bg-green-50",
+                    },
+                    {
+                      id: "csv",
+                      label: "CSV",
+                      icon: TableIcon,
+                      color: "text-indigo-600",
+                      bg: "bg-indigo-50",
+                    },
                   ].map((format) => (
                     <button
                       key={format.id}
                       onClick={() => setExportFormat(format.id)}
                       className={cn(
                         "flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all",
-                        exportFormat === format.id 
-                          ? "border-indigo-600 bg-indigo-50 shadow-sm" 
-                          : "border-slate-100 bg-white hover:border-slate-200"
+                        exportFormat === format.id
+                          ? "border-indigo-600 bg-indigo-50 shadow-sm"
+                          : "border-slate-100 bg-white hover:border-slate-200",
                       )}
                     >
-                      <div className={cn("p-2 rounded-2xl", format.bg, format.color)}>
+                      <div
+                        className={cn(
+                          "p-2 rounded-2xl",
+                          format.bg,
+                          format.color,
+                        )}
+                      >
                         <format.icon className="w-5 h-5" />
                       </div>
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">{format.label}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                        {format.label}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -588,23 +896,25 @@ export default function ManageLeave() {
             </div>
 
             <div className="p-6 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row gap-3">
-              <button 
+              <button
                 onClick={() => setShowExportModal(false)}
                 className="flex-1 py-3 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-2xl transition-all order-2 sm:order-1"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={() => {
-                  alert(`Exporting leave report as ${exportFormat.toUpperCase()}`);
+                  alert(
+                    `Exporting leave report as ${exportFormat.toUpperCase()}`,
+                  );
                   setShowExportModal(false);
                 }}
                 disabled={!exportFormat}
                 className={cn(
                   "flex-1 py-3 text-sm font-bold text-white rounded-2xl shadow-lg transition-all active:scale-95 order-1 sm:order-2",
-                  exportFormat 
-                    ? "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20" 
-                    : "bg-slate-300 cursor-not-allowed shadow-none"
+                  exportFormat
+                    ? "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20"
+                    : "bg-slate-300 cursor-not-allowed shadow-none",
                 )}
               >
                 Generate Report

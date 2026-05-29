@@ -21,6 +21,8 @@ import {
 import { cn } from '../../lib/utils';
 import { Link } from 'react-router-dom';
 import { apiRequest } from '../../lib/api';
+import { updateUser } from '../../lib/users';
+import type { AppUserRole } from '../../types';
 import SkeletonLoader from '../../components/SkeletonLoader';
 
 interface Employee {
@@ -65,7 +67,6 @@ function exportCSV(employees: Employee[]) {
     .join('\n');
   downloadBlob(csv, 'employees.csv', 'text/csv;charset=utf-8;');
 }
-
 function exportExcel(employees: Employee[]) {
   const headers = ['Full Name', 'Username', 'Email', 'Role', 'Department', 'Position', 'Employment Type', 'Hire Date', 'Status', 'Biometric'];
   const toRow = (cells: string[]) =>
@@ -85,7 +86,6 @@ function exportExcel(employees: Employee[]) {
 <body><table border="1">${headerRow}${dataRows}</table></body></html>`;
   downloadBlob(xml, 'employees.xls', 'application/vnd.ms-excel');
 }
-
 function exportPDF(employees: Employee[]) {
   const rows = employees
     .map(
@@ -136,6 +136,32 @@ export default function ManageEmployees() {
   const [filterType, setFilterType] = useState('');
   const [page, setPage] = useState(1);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    departmentId: '',
+    position: '',
+    employmentType: '',
+    hireDate: '',
+    status: 'ACTIVE',
+    role: 'employee',
+  });
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [positions, setPositions] = useState<{ id: string; name: string }[]>([]);
+  const [positionsLoading, setPositionsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isEditing || !editForm.departmentId) {
+      setPositions([]);
+      return;
+    }
+    setPositionsLoading(true);
+    apiRequest<{ success: boolean; positions: { id: string; name: string }[] }>(
+      `/accounts/api/positions/?departmentId=${editForm.departmentId}`
+    )
+      .then((res) => setPositions(res.positions ?? []))
+      .catch(() => {})
+      .finally(() => setPositionsLoading(false));
+  }, [editForm.departmentId, isEditing]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -160,6 +186,56 @@ export default function ManageEmployees() {
   const handleRefresh = () => {
     setIsRefreshing(true);
     fetchData();
+  };
+
+  const startEditing = (emp: Employee) => {
+    const dept = departments.find(d => d.name === emp.department);
+    setEditForm({
+      departmentId: dept?.id || '',
+      position: emp.position || '',
+      employmentType: emp.employment_type || '',
+      hireDate: emp.hire_date || '',
+      status: emp.status || 'ACTIVE',
+      role: emp.role || 'employee',
+    });
+    setIsEditing(true);
+  };
+
+  const handleSave = async () => {
+    if (!selectedEmployee) return;
+    setSaveLoading(true);
+    try {
+      await updateUser(selectedEmployee.id, {
+        username: selectedEmployee.username,
+        email: selectedEmployee.email,
+        firstName: selectedEmployee.first_name,
+        lastName: selectedEmployee.last_name,
+        role: editForm.role as AppUserRole,
+        isActive: editForm.status === 'ACTIVE',
+        departmentId: editForm.departmentId,
+        position: editForm.position,
+        employmentType: editForm.employmentType,
+        hireDate: editForm.hireDate,
+      });
+      // Refresh local list
+      await fetchData();
+      setIsEditing(false);
+      // Update selected employee for view mode
+      setSelectedEmployee({
+        ...selectedEmployee,
+        department: departments.find(d => d.id === editForm.departmentId)?.name || 'Unknown',
+        position: editForm.position,
+        employment_type: editForm.employmentType,
+        hire_date: editForm.hireDate,
+        status: editForm.status,
+        role: editForm.role,
+      });
+    } catch (err) {
+      console.error('Failed to save user', err);
+      alert('Failed to save user details. Please try again.');
+    } finally {
+      setSaveLoading(false);
+    }
   };
 
   // Filtering
@@ -343,7 +419,7 @@ export default function ManageEmployees() {
 
                 <div className="mt-6 pt-6 border-t border-slate-100">
                   <button
-                    onClick={() => setSelectedEmployee(emp)}
+                    onClick={() => { setSelectedEmployee(emp); setIsEditing(false); }}
                     className="w-full py-2 text-sm font-bold text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-colors flex items-center justify-center gap-2"
                   >
                     <Eye className="w-4 h-4" />
@@ -387,43 +463,133 @@ export default function ManageEmployees() {
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-slate-900">Employee Profile</h2>
+              <h2 className="text-xl font-bold text-slate-900">{isEditing ? 'Edit Employee Details' : 'Employee Profile'}</h2>
               <button onClick={() => setSelectedEmployee(null)} className="p-2 hover:bg-slate-100 rounded-2xl">
                 <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
             <div className="p-6 space-y-6">
-              <div className="flex items-center gap-4">
-                <div className="w-20 h-20 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 text-2xl font-bold overflow-hidden shrink-0">
-                  {selectedEmployee.profile_photo ? (
-                    <img src={selectedEmployee.profile_photo} alt={selectedEmployee.full_name} className="w-full h-full object-cover rounded-2xl" />
-                  ) : (
-                    (selectedEmployee.first_name || selectedEmployee.username).charAt(0).toUpperCase()
-                  )}
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900">{selectedEmployee.full_name}</h3>
-                  <p className="text-slate-500 text-sm">{selectedEmployee.position || selectedEmployee.role}</p>
-                  <span className={cn('mt-2 inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider', statusBadge(selectedEmployee.status))}>
-                    {selectedEmployee.status}
-                  </span>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { label: 'Department', value: selectedEmployee.department },
-                  { label: 'Employment Type', value: selectedEmployee.employment_type?.replace('_', '-') || 'N/A' },
-                  { label: 'Email', value: selectedEmployee.email },
-                  { label: 'Username', value: selectedEmployee.username },
-                  { label: 'Hire Date', value: selectedEmployee.hire_date || 'N/A' },
-                  { label: 'Biometric', value: selectedEmployee.enrolled ? 'Enrolled' : 'Not Enrolled' },
-                ].map((item) => (
-                  <div key={item.label}>
-                    <p className="text-xs font-semibold text-slate-500 uppercase">{item.label}</p>
-                    <p className="text-sm font-medium text-slate-800 truncate">{item.value}</p>
+              {!isEditing ? (
+                <>
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 h-20 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 text-2xl font-bold overflow-hidden shrink-0">
+                      {selectedEmployee.profile_photo ? (
+                        <img src={selectedEmployee.profile_photo} alt={selectedEmployee.full_name} className="w-full h-full object-cover rounded-2xl" />
+                      ) : (
+                        (selectedEmployee.first_name || selectedEmployee.username).charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-900">{selectedEmployee.full_name}</h3>
+                      <p className="text-slate-500 text-sm">{selectedEmployee.position || selectedEmployee.role}</p>
+                      <span className={cn('mt-2 inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider', statusBadge(selectedEmployee.status))}>
+                        {selectedEmployee.status}
+                      </span>
+                    </div>
                   </div>
-                ))}
-              </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    {[
+                      { label: 'Department', value: selectedEmployee.department },
+                      { label: 'Employment Type', value: selectedEmployee.employment_type?.replace('_', '-') || 'N/A' },
+                      { label: 'Email', value: selectedEmployee.email },
+                      { label: 'Username', value: selectedEmployee.username },
+                      { label: 'Hire Date', value: selectedEmployee.hire_date || 'N/A' },
+                      { label: 'Biometric', value: selectedEmployee.enrolled ? 'Enrolled' : 'Not Enrolled' },
+                    ].map((item) => (
+                      <div key={item.label}>
+                        <p className="text-xs font-semibold text-slate-500 uppercase">{item.label}</p>
+                        <p className="text-sm font-medium text-slate-800 truncate">{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => startEditing(selectedEmployee)}
+                    className="w-full py-3 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-2xl transition-all"
+                  >
+                    Edit Details
+                  </button>
+                </>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500">Department</label>
+                    <select
+                      value={editForm.departmentId}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, departmentId: e.target.value }))}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+                    >
+                      <option value="">Select Department</option>
+                      {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500">Position</label>
+                    {positions.length > 0 ? (
+                      <select
+                        value={editForm.position}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, position: e.target.value }))}
+                        disabled={positionsLoading}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+                      >
+                        <option value="">Select Position</option>
+                        {positions.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        value={editForm.position}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, position: e.target.value }))}
+                        disabled={positionsLoading}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+                        placeholder={positionsLoading ? "Loading positions..." : editForm.departmentId ? "No positions defined" : "Select a department first"}
+                      />
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500">Employment Type</label>
+                    <select
+                      value={editForm.employmentType}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, employmentType: e.target.value }))}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+                    >
+                      <option value="">Select Type</option>
+                      <option value="FULL_TIME">Full Time</option>
+                      <option value="PART_TIME">Part Time</option>
+                      <option value="CONTRACT">Contract</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500">Hire Date</label>
+                      <input
+                        type="date"
+                        value={editForm.hireDate}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, hireDate: e.target.value }))}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500">Status</label>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      onClick={() => setIsEditing(false)}
+                      disabled={saveLoading}
+                      className="flex-1 py-2 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      disabled={saveLoading}
+                      className="flex-1 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all flex items-center justify-center gap-2"
+                    >
+                      {saveLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Save Changes'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

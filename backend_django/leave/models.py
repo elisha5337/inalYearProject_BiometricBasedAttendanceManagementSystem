@@ -57,9 +57,26 @@ class LeaveRequest(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
     reason = models.TextField(blank=True, null=True)
+    rejection_reason = models.TextField(blank=True, null=True)
     attachment = models.FileField(upload_to='leave_attachments/', blank=True, null=True)
     status = models.CharField(max_length=50, choices=LeaveStatus.choices, default=LeaveStatus.PENDING)
     created_at = models.DateTimeField(auto_now_add=True, db_column='createdAt')
+
+    def clean(self):
+        from django.utils import timezone
+        from django.core.exceptions import ValidationError
+        super().clean()
+        
+        today = timezone.localdate()
+        if self.start_date and self.start_date < today:
+            raise ValidationError({'start_date': "Leave start date cannot be in the past."})
+        
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValidationError({'end_date': "End date cannot be before start date."})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.leave_type} for {self.user.username} ({self.status})"

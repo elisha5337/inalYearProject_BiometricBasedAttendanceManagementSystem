@@ -7,18 +7,13 @@ import {
   AlertCircle,
   CheckCircle,
   Loader2,
-  Briefcase,
-  Building2,
 } from "lucide-react";
 import logo from "../../assets/logo.jpg";
 import { ApiError } from "../../lib/api";
 import { registerUser } from "../../lib/auth";
 import { apiRequest } from "../../lib/api";
 
-interface Department {
-  id: string;
-  name: string;
-}
+
 
 export default function Register() {
   const navigate = useNavigate();
@@ -30,37 +25,12 @@ export default function Register() {
     email: "",
     password: "",
     confirm_password: "",
-    department_id: "",
-    position: "",
   });
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [positions, setPositions] = useState<{ id: string; name: string }[]>([]);
-  const [positionsLoading, setPositionsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    apiRequest<{ success: boolean; departments: Department[] }>(
-      "/accounts/api/departments/"
-    )
-      .then((res) => setDepartments(res.departments ?? []))
-      .catch(() => {});
-  }, []);
 
-  // Fetch positions whenever department changes
-  useEffect(() => {
-    setPositions([]);
-    setForm((prev) => ({ ...prev, position: "" }));
-    if (!form.department_id) return;
-    setPositionsLoading(true);
-    apiRequest<{ success: boolean; positions: { id: string; name: string }[] }>(
-      `/accounts/api/positions/?departmentId=${form.department_id}`
-    )
-      .then((res) => setPositions(res.positions ?? []))
-      .catch(() => {})
-      .finally(() => setPositionsLoading(false));
-  }, [form.department_id]);
 
   const set = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -79,6 +49,16 @@ export default function Register() {
       return;
     }
 
+    const hasUpperCase = /[A-Z]/.test(form.password);
+    const hasLowerCase = /[a-z]/.test(form.password);
+    const hasNumber = /[0-9]/.test(form.password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(form.password);
+
+    if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
+      setError("Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.");
+      return;
+    }
+
     setIsLoading(true);
     try {
       const res = await registerUser({
@@ -87,13 +67,11 @@ export default function Register() {
         first_name: form.first_name.trim(),
         last_name: form.last_name.trim(),
         password: form.password,
-        department_id: form.department_id || undefined,
-        position: form.position.trim() || undefined,
       });
       setSuccess(res.message || "Account created. You can now log in.");
       setForm({
         first_name: "", last_name: "", username: "", email: "",
-        password: "", confirm_password: "", department_id: "", position: "",
+        password: "", confirm_password: "",
       });
       setTimeout(() => {
         navigate("/login", { state: { registrationSuccess: res.message || "Account created successfully. You can now log in." } });
@@ -245,57 +223,7 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Department */}
-            <div>
-              <label className="block text-sm font-bold text-gray-800 mb-1">Department</label>
-              <div className={inputWrap} style={borderStyle}>
-                <span className={iconWrap} style={{ borderColor: "#D1D5DB" }}>
-                  <Building2 className={iconColor} />
-                </span>
-                <select
-                  disabled={isLoading}
-                  value={form.department_id} onChange={set("department_id")}
-                  className="flex-1 px-3 py-2 text-sm outline-none disabled:opacity-60"
-                  style={{ ...inputStyle, borderRadius: 0 }}
-                >
-                  <option value="">Select department (optional)</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
 
-            {/* Position */}
-            <div>
-              <label className="block text-sm font-bold text-gray-800 mb-1">Position</label>
-              <div className={inputWrap} style={borderStyle}>
-                <span className={iconWrap} style={{ borderColor: "#D1D5DB" }}>
-                  <Briefcase className={iconColor} />
-                </span>
-                {positions.length > 0 ? (
-                  <select
-                    disabled={isLoading || positionsLoading}
-                    value={form.position} onChange={set("position")}
-                    className="flex-1 px-3 py-2 text-sm outline-none disabled:opacity-60"
-                    style={{ ...inputStyle, borderRadius: 0 }}
-                  >
-                    <option value="">Select position (optional)</option>
-                    {positions.map((p) => (
-                      <option key={p.id} value={p.name}>{p.name}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type="text" disabled={isLoading || positionsLoading}
-                    value={form.position} onChange={set("position")}
-                    className="flex-1 px-3 py-2 text-sm outline-none disabled:opacity-60"
-                    style={inputStyle}
-                    placeholder={positionsLoading ? "Loading positions..." : form.department_id ? "No positions defined for this department" : "Select a department first"}
-                  />
-                )}
-              </div>
-            </div>
 
             {/* Password */}
             <div>

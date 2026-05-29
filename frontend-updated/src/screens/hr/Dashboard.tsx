@@ -26,6 +26,7 @@ export default function HRDashboard({ user }: { user: User }) {
   const [alerts, setAlerts] = useState<{ title: string; message: string; type: string; time: string | null }[]>([]);
   const [devices, setDevices] = useState<DeviceRecord[]>([]);
   const [lateDeltaText, setLateDeltaText] = useState('+0');
+
   const todayKey = useMemo(() => toISODate(new Date()), []);
 
   useEffect(() => {
@@ -210,6 +211,7 @@ export default function HRDashboard({ user }: { user: User }) {
           </div>
         </Link>
       </div>
+
 
       {/* Chart + Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

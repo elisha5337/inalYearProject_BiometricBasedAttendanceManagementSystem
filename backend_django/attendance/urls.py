@@ -17,6 +17,10 @@ urlpatterns = [
     path('verify-manual/<uuid:record_id>/', views.api_update_attendance_verification, name='verify_manual_entry'),
     path('delete/<uuid:record_id>/', views.api_delete_attendance_record, name='delete_attendance_record'),
 
+    # Absent Employees — Real-time absence tracking for current working day
+    path('absent-today/', views.get_todays_absent_employees, name='absent_today'),
+    path('materialize-absent/', views.materialize_absent_attendance, name='materialize_absent'),
+
     # Device Management
     path('devices/', views.api_device_list_create, name='device_list_create'),
     path('devices/<uuid:device_id>/', views.api_device_detail, name='device_detail'),

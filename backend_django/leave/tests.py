@@ -47,3 +47,26 @@ class PolicyTest(TestCase):
         p = Policy.objects.create(name="General Policy", value="10")
         self.assertTrue(p.is_active)
         self.assertEqual(p.category, "ATTENDANCE")
+
+
+class LeaveApiTest(TestCase):
+    def setUp(self):
+        self.client = self.client
+        self.admin = User.objects.create_user(username='admin_user', password='AdminPass123', is_superuser=True)
+        self.target = User.objects.create_user(username='target_user', password='TargetPass123')
+
+    def test_admin_can_create_leave_for_other_user(self):
+        login = self.client.login(username='admin_user', password='AdminPass123')
+        self.assertTrue(login)
+
+        payload = {
+            'userId': str(self.target.id),
+            'leaveType': 'ANNUAL',
+            'startDate': date.today().isoformat(),
+            'endDate': (date.today() + timedelta(days=2)).isoformat(),
+            'reason': 'Admin submitted on behalf'
+        }
+
+        response = self.client.post('/api/leave/api/request/', data=payload, content_type='application/json')
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(LeaveRequest.objects.filter(user=self.target, reason__icontains='Admin submitted').exists())

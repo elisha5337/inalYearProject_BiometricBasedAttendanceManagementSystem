@@ -28,6 +28,7 @@ export default function LeaveManagement() {
   const [statusFilter, setStatusFilter] = useState<'All' | 'Approved' | 'Rejected' | 'Pending' | 'Cancelled'>('All');
   const [selectedRequest, setSelectedRequest] = useState<AdminLeaveRequestRecord | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const loadRequests = async () => {
     try {
@@ -45,6 +46,7 @@ export default function LeaveManagement() {
   useEffect(() => {
     loadRequests();
   }, []);
+
 
   const handleProcessRequest = async (id: string, status: 'APPROVED' | 'REJECTED') => {
     try {
@@ -116,6 +118,7 @@ export default function LeaveManagement() {
           <Download className="w-4 h-4" />
           Export Report
         </button>
+        
       </div>
 
       {error ? (
@@ -355,6 +358,8 @@ export default function LeaveManagement() {
           </div>
         </div>
       )}
+
+      
     </div>
   );
 }

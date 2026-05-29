@@ -36,7 +36,6 @@ def reset_database():
     Workflow.objects.all().delete()
     ExternalIntegration.objects.all().delete()
     Device.objects.all().delete()
-    
     # 1. Clean Users
     print("Deleting all existing users...")
     User.objects.all().delete()

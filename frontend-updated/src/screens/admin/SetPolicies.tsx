@@ -408,12 +408,7 @@ export default function SetPolicies() {
                   <p className="text-[10px] text-slate-400 italic px-2">Total session duration in minutes.</p>
                 </div>
               )}
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 uppercase">Password Expiry</label>
-                <select value={policies.passwordExpiry} onChange={(e) => setPolicies(c => ({...c, passwordExpiry: e.target.value}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold">
-                  <option>30 Days</option><option>60 Days</option><option>90 Days</option><option>Never</option>
-                </select>
-              </div>
+
             </div>
           </div>
         </div>

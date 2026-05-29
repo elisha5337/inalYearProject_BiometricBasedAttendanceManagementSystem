@@ -101,7 +101,11 @@ class BiometricRegistry:
                     return False
 
                 self.user_data = [
-                    {'id': str(t.user.id), 'username': t.user.username}
+                    {
+                        'id': str(t.user.id),
+                        'username': t.user.username,
+                        'full_name': t.user.get_full_name() or t.user.username,
+                    }
                     for t in templates
                 ]
 

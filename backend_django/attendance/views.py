@@ -19,7 +19,7 @@ from django.shortcuts import get_object_or_404
 
 # Internal model imports
 from accounts.models import BiometricTemplate, User, EmployeeDetail
-from accounts.biometric_service import biometric_service 
+from accounts.biometric_service import biometric_service
 from scheduling.models import Assignment, Shift, Holiday
 from .models import AttendanceRecord, Device
 from leave.models import LeaveRequest, Policy
@@ -34,11 +34,13 @@ from accounts.views import detector as face_detector
 
 logger = logging.getLogger(__name__)
 
+
 def get_employee_detail(user):
     try:
         return user.employeedetail
     except EmployeeDetail.DoesNotExist:
         return None
+
 
 # enhancement moved to biometric_service.BiometricRegistry.enhance_image
 
@@ -48,6 +50,7 @@ def resolve_numeric_policy_value(name, fallback, department_id=None):
     if not policy: return fallback, None
     val = PolicyResolver.extract_numeric_value(policy.value)
     return (val if val > 0 else fallback), policy
+
 
 def score_face_quality(face_img, landmarks=None):
     """
@@ -64,7 +67,7 @@ def score_face_quality(face_img, landmarks=None):
         # 2. Brightness (mean pixel value, ideal 80-180)
         brightness = float(np.mean(gray))
         if brightness < 50:
-            brightness_score = brightness * 1.0   # too dark
+            brightness_score = brightness * 1.0  # too dark
         elif brightness > 200:
             brightness_score = max(0, 100 - (brightness - 200) * 2)  # too bright
         else:
@@ -87,10 +90,10 @@ def score_face_quality(face_img, landmarks=None):
 
         # Weighted average
         score = (
-            sharpness_score * 0.40 +
-            brightness_score * 0.25 +
-            contrast_score  * 0.20 +
-            geometry_score  * 0.15
+                sharpness_score * 0.40 +
+                brightness_score * 0.25 +
+                contrast_score * 0.20 +
+                geometry_score * 0.15
         )
         score = max(0.0, min(100.0, score))
 
@@ -151,19 +154,20 @@ def is_live_face(face_img, landmarks=None):
         # 1. Texture Check (Blocks Paper/Static Screen) - Lowered threshold
         gray = cv2.cvtColor(face_img, cv2.COLOR_RGB2GRAY)
         variance = cv2.Laplacian(gray, cv2.CV_64F).var()
-        
+
         # 2. Geometry Check (Blocks distorted spoofs)
         if landmarks:
             l_eye = landmarks['left_eye']
             r_eye = landmarks['right_eye']
             dist = np.linalg.norm(np.array(l_eye) - np.array(r_eye))
-            if dist < 25: 
+            if dist < 25:
                 return False, "Scale failure"
 
         # Lowered variance threshold for better usability
         return (variance >= 2.5), f"{variance:.1f}"
     except Exception:
         return True, "Skipped"
+
 
 def extract_embedding(image_rgb):
     """
@@ -188,31 +192,34 @@ def extract_embedding(image_rgb):
         logger.error(f"DeepFace error: {e}")
         return None
 
+
 from .config_utils import read_global_config
+
 
 def resolve_verification_threshold(department_id=None, strict_mode=False):
     """
     Returns a cosine distance threshold for face matching.
     Lower = stricter (fewer false positives). Higher = more lenient (fewer false negatives).
-    With properly normalized embeddings, 0.50 is a strong match threshold for Facenet512.
+    sensitivity=100 -> threshold=0.55 (most lenient, accepts wider range of matches)
+    sensitivity=75  -> threshold=0.50 (default, balanced)
+    sensitivity=0   -> threshold=0.40 (strictest, requires very close match)
     """
     sensitivity_value, _ = resolve_numeric_policy_value('Verification Sensitivity', 75.0, department_id)
     sensitivity = max(0.0, min(100.0, float(sensitivity_value)))
-    # sensitivity=100 -> threshold=0.55 (most lenient)
-    # sensitivity=75  -> threshold=0.50 (default, balanced)
-    # sensitivity=0   -> threshold=0.40 (strictest)
     threshold = 0.40 + ((sensitivity / 100.0) * 0.15)
-    if strict_mode: threshold -= 0.05
+    if strict_mode:
+        threshold -= 0.05
     return max(0.35, min(0.55, threshold))
+
 
 def resolve_active_shift(user, date_obj):
     assignment = Assignment.objects.filter(
-        user=user, 
+        user=user,
         from_date__lte=date_obj
     ).filter(
         Q(to_date__isnull=True) | Q(to_date__gte=date_obj)
     ).select_related('shift').first()
-    
+
     if assignment:
         return assignment.shift
 
@@ -222,6 +229,7 @@ def resolve_active_shift(user, date_obj):
         if dept_shift:
             return dept_shift
     return None
+
 
 def build_employee_dashboard_stats(user, reference_time=None):
     reference_time = reference_time or timezone.now()
@@ -242,7 +250,8 @@ def build_employee_dashboard_stats(user, reference_time=None):
     early_exit_count = sum(
         1
         for record in monthly_records
-        if record.type == AttendanceRecord.RecordType.CHECK_OUT and record.status == AttendanceRecord.RecordStatus.EARLY_EXIT
+        if
+        record.type == AttendanceRecord.RecordType.CHECK_OUT and record.status == AttendanceRecord.RecordStatus.EARLY_EXIT
     )
 
     # Pair check-ins and check-outs in chronological order to keep the summary stable.
@@ -255,13 +264,36 @@ def build_employee_dashboard_stats(user, reference_time=None):
             total_seconds += max(0.0, (record.timestamp - last_check_in).total_seconds())
             last_check_in = None
 
+    # Resolve dynamic leave balances using specific policy names and used quota
+    detail = get_employee_detail(user)
+    dept_id = detail.department_id if detail else None
+
+    # Fetch limits directly from HR-managed policies to ensure dynamic updates
+    annual_limit, _ = resolve_numeric_policy_value('Annual Leave', 20.0, dept_id)
+    sick_limit, _ = resolve_numeric_policy_value('Sick Leave', 12.0, dept_id)
+
+    # Calculate consumed quota (Approved and Pending) for the current year
+    used_leaves = LeaveRequest.objects.filter(
+        user=user,
+        status__in=[LeaveRequest.LeaveStatus.APPROVED, LeaveRequest.LeaveStatus.PENDING],
+        start_date__year=reference_time.year
+    )
+    annual_used = sum(
+        (r.end_date - r.start_date).days + 1 for r in used_leaves if 'ANNUAL' in str(r.leave_type).upper())
+    sick_used = sum((r.end_date - r.start_date).days + 1 for r in used_leaves if 'SICK' in str(r.leave_type).upper())
+
     return {
         'present_days': present_days,
         'late_count': late_count,
         'early_exit_count': early_exit_count,
         'total_hours': round(total_seconds / 3600.0, 2),
         'month_name': reference_time.strftime('%B'),
+        'annual_leave_balance': max(0, int(annual_limit) - annual_used),
+        'sick_leave_balance': max(0, int(sick_limit) - sick_used),
+        'annual_leave': max(0, int(annual_limit) - annual_used),
+        'sick_leave': max(0, int(sick_limit) - sick_used),
     }
+
 
 def is_on_approved_leave(user, date_obj):
     """Returns the approved LeaveRequest if the employee is on leave on the given date, else None."""
@@ -282,6 +314,88 @@ def check_for_holiday(date_obj):
             return h
     return None
 
+
+def should_mark_absent_for_shift(shift, reference_time=None):
+    """Only mark absent after the employee's scheduled shift window has ended."""
+    if not shift:
+        return False
+    reference_time = reference_time or timezone.now()
+    shift_end_dt = datetime.combine(reference_time.date(), shift.end_time)
+    if timezone.is_naive(shift_end_dt):
+        shift_end_dt = timezone.make_aware(shift_end_dt, timezone.get_current_timezone())
+    return reference_time >= shift_end_dt
+
+
+def create_absent_record_for_user(user, date_obj, shift):
+    if AttendanceRecord.objects.filter(
+            user=user,
+            timestamp__date=date_obj,
+            status=AttendanceRecord.RecordStatus.ABSENT,
+    ).exists():
+        return None
+
+    if AttendanceRecord.objects.filter(
+            user=user,
+            timestamp__date=date_obj,
+            type=AttendanceRecord.RecordType.CHECK_IN
+    ).exists():
+        return None
+
+    absent_ts = datetime.combine(date_obj, shift.start_time)
+    if timezone.is_naive(absent_ts):
+        absent_ts = timezone.make_aware(absent_ts, timezone.get_current_timezone())
+
+    return AttendanceRecord.objects.create(
+        user=user,
+        timestamp=absent_ts,
+        type=AttendanceRecord.RecordType.CHECK_IN,
+        status=AttendanceRecord.RecordStatus.ABSENT,
+        verification_status=AttendanceRecord.VerificationStatus.UNVERIFIED,
+        method='auto',
+    )
+
+
+def materialize_absent_records_for_date(date_obj, reference_time=None):
+    if check_for_holiday(date_obj):
+        return []
+
+    checked_in_user_ids = set(
+        AttendanceRecord.objects.filter(
+            timestamp__date=date_obj,
+            type=AttendanceRecord.RecordType.CHECK_IN
+        ).values_list('user_id', flat=True)
+    )
+
+    on_leave_user_ids = set(
+        LeaveRequest.objects.filter(
+            status=LeaveRequest.LeaveStatus.APPROVED,
+            start_date__lte=date_obj,
+            end_date__gte=date_obj
+        ).values_list('user_id', flat=True)
+    )
+
+    employees = (
+        User.objects.filter(status=User.Status.ACTIVE)
+        .exclude(id__in=checked_in_user_ids)
+        .exclude(id__in=on_leave_user_ids)
+        .exclude(is_superuser=True)
+        .select_related('employeedetail__department')
+    )
+
+    created = []
+    for emp in employees:
+        active_shift = resolve_active_shift(emp, date_obj)
+        if not active_shift:
+            continue
+        if not should_mark_absent_for_shift(active_shift, reference_time):
+            continue
+        absence_record = create_absent_record_for_user(emp, date_obj, active_shift)
+        if absence_record:
+            created.append(absence_record)
+
+    return created
+
+
 @csrf_exempt
 def mark_attendance(request):
     if request.method != 'POST':
@@ -291,12 +405,12 @@ def mark_attendance(request):
         config = read_global_config()
         is_strict = bool(config.get('strict_mode', False))
         biometric_lock_active = bool(config.get('biometric_lock_active', True))
-        
+
         data = json.loads(request.body)
         image_data = data.get('image')
         is_manual = data.get('is_manual', False)
         is_demo = False
-        
+
         user = None
         current_status_flag = AttendanceRecord.VerificationStatus.VERIFIED
 
@@ -304,13 +418,13 @@ def mark_attendance(request):
             username = data.get('username')
             password = data.get('password')
             is_demo = (username == 'demo' and password == 'demo123')
-            
+
             if not is_demo and not config.get('manual_entry_enabled', False):
                 return JsonResponse({'error': 'Manual entry restricted.'}, status=403)
-            
+
             if not username or not password:
                 return JsonResponse({'error': 'Credentials required.'}, status=400)
-            
+
             auth_user = authenticate(request, username=username, password=password)
             if auth_user:
                 user = auth_user
@@ -341,7 +455,8 @@ def mark_attendance(request):
                 try:
                     enhanced = biometric_service.enhance_image(image_array)
                     if face_detector is None:
-                        return JsonResponse({'error': 'Face detector not available. Please restart the server.'}, status=500)
+                        return JsonResponse({'error': 'Face detector not available. Please restart the server.'},
+                                            status=500)
                     faces = detect_faces_fast(enhanced, face_detector)
                     if not faces:
                         adjusted = cv2.convertScaleAbs(image_array, alpha=1.2, beta=15)
@@ -389,14 +504,16 @@ def mark_attendance(request):
 
             live_embedding = extract_embedding(best_face_img)
             if live_embedding is None:
-                return JsonResponse({'error': 'Biometric quality too low.', 'tip': 'Try again in better lighting.'}, status=500)
+                return JsonResponse({'error': 'Biometric quality too low.', 'tip': 'Try again in better lighting.'},
+                                    status=500)
 
             threshold = resolve_verification_threshold(strict_mode=is_strict)
             match, distance = biometric_service.find_match(live_embedding, threshold=threshold)
 
             if not match:
                 if biometric_service.embeddings_matrix is None:
-                    return JsonResponse({'error': 'No biometric templates enrolled. Contact administrator.'}, status=500)
+                    return JsonResponse({'error': 'No biometric templates enrolled. Contact administrator.'},
+                                        status=500)
                 return JsonResponse({
                     'error': 'Face not recognized.',
                     'tip': 'Ensure you are enrolled. Try better lighting or move closer.',
@@ -414,6 +531,13 @@ def mark_attendance(request):
         now = timezone.now()
         today = now.date()
 
+        # Remove auto-generated absent markers when the employee later records real attendance.
+        AttendanceRecord.objects.filter(
+            user=user,
+            timestamp__date=today,
+            status=AttendanceRecord.RecordStatus.ABSENT,
+        ).delete()
+
         # Block check-in if employee is on approved leave
         active_leave = is_on_approved_leave(user, today)
         if active_leave:
@@ -428,10 +552,23 @@ def mark_attendance(request):
         if last_record and (now - last_record.timestamp).total_seconds() < 60:
             return JsonResponse({'error': 'Marked recently.', 'already_marked': True}, status=429)
 
-        records_today = AttendanceRecord.objects.filter(user=user, timestamp__date=today).order_by('-timestamp')
-        record_type = AttendanceRecord.RecordType.CHECK_OUT if (records_today.exists() and records_today.first().type == AttendanceRecord.RecordType.CHECK_IN) else AttendanceRecord.RecordType.CHECK_IN
+        # Determine record type using a single atomic query to avoid race conditions
+        # under concurrent requests from multiple terminals.
+        last_today = (
+            AttendanceRecord.objects
+            .filter(user=user, timestamp__date=today)
+            .order_by('-timestamp')
+            .first()
+        )
+        record_type = (
+            AttendanceRecord.RecordType.CHECK_OUT
+            if last_today and last_today.type == AttendanceRecord.RecordType.CHECK_IN
+            else AttendanceRecord.RecordType.CHECK_IN
+        )
 
-        if record_type == AttendanceRecord.RecordType.CHECK_OUT and not AttendanceRecord.objects.filter(user=user, timestamp__date=today, type=AttendanceRecord.RecordType.CHECK_IN).exists():
+        if record_type == AttendanceRecord.RecordType.CHECK_OUT and not AttendanceRecord.objects.filter(user=user,
+                                                                                                        timestamp__date=today,
+                                                                                                        type=AttendanceRecord.RecordType.CHECK_IN).exists():
             return JsonResponse({'error': 'Check-in required first.'}, status=400)
 
         status = AttendanceRecord.RecordStatus.ON_TIME
@@ -490,9 +627,10 @@ def mark_attendance(request):
             }
         })
 
-    except Exception:
-        logger.exception("Attendance Error")
-        return JsonResponse({'error': 'System error.'}, status=500)
+    except Exception as exc:
+        logger.exception("Attendance marking failed")
+        return JsonResponse({'error': f'System error: {exc}'}, status=500)
+
 
 def reload_embeddings(request):
     user, err = require_staff(request)
@@ -500,6 +638,91 @@ def reload_embeddings(request):
         return err
     biometric_service.reload_cache()
     return JsonResponse({'success': True, 'message': 'Registry synchronized.'})
+
+
+def get_todays_absent_employees(request):
+    """
+    Returns a real-time list of employees who have not checked in today.
+    Excludes employees on approved leave and suspended accounts.
+    This endpoint resolves the automated absence recording limitation by
+    computing absence status on demand for the current working day.
+    """
+    user, err = require_staff(request)
+    if err:
+        return err
+
+    today = timezone.now().date()
+    materialize_absent_records_for_date(today)
+
+    # Get all users who have checked in today
+    checked_in_user_ids = set(
+        AttendanceRecord.objects.filter(
+            timestamp__date=today,
+            type=AttendanceRecord.RecordType.CHECK_IN
+        ).values_list('user_id', flat=True)
+    )
+
+    # Get all users on approved leave today
+    on_leave_user_ids = set(
+        LeaveRequest.objects.filter(
+            status=LeaveRequest.LeaveStatus.APPROVED,
+            start_date__lte=today,
+            end_date__gte=today
+        ).values_list('user_id', flat=True)
+    )
+
+    # Get all active employees who have not checked in and are not on leave
+    absent_employees = (
+        User.objects.filter(status=User.Status.ACTIVE)
+        .exclude(id__in=checked_in_user_ids)
+        .exclude(id__in=on_leave_user_ids)
+        .exclude(is_superuser=True)
+        .select_related('employeedetail__department')
+    )
+
+    data = []
+    for emp in absent_employees:
+        detail = getattr(emp, 'employeedetail', None)
+        active_shift = resolve_active_shift(emp, today)
+
+        # Only flag as absent if the employee has an assigned shift today
+        # Unscheduled employees are excluded to avoid false absence alerts
+        if not active_shift:
+            continue
+
+        data.append({
+            'id': str(emp.id),
+            'username': emp.username,
+            'full_name': emp.get_full_name() or emp.username,
+            'department': detail.department.name if detail and detail.department else 'N/A',
+            'position': detail.position if detail else 'N/A',
+            'shift': active_shift.name,
+            'shift_start': active_shift.start_time.strftime('%H:%M'),
+            'profile_photo': detail.profile_photo if detail else None,
+            'status': AttendanceRecord.RecordStatus.ABSENT,
+        })
+
+    return JsonResponse({
+        'success': True,
+        'date': today.isoformat(),
+        'absent_count': len(data),
+        'absent_employees': data,
+    })
+
+
+def materialize_absent_attendance(request):
+    user, err = require_staff(request)
+    if err:
+        return err
+
+    today = timezone.now().date()
+    created = materialize_absent_records_for_date(today)
+    return JsonResponse({
+        'success': True,
+        'date': today.isoformat(),
+        'created_absent_records': len(created),
+    })
+
 
 def get_my_attendance_history(request):
     user, err = require_auth(request)
@@ -517,32 +740,59 @@ def get_my_attendance_history(request):
     } for r in records]
     return JsonResponse({'success': True, 'records': data})
 
+
 def api_dashboard_stats(request):
     user, err = require_auth(request)
     if err: return err
     try:
         if is_admin(user):
-            stats = {'totalEmployees': User.objects.count(), 'activeEmployees': User.objects.filter(status=User.Status.ACTIVE).count(), 'suspendedEmployees': User.objects.filter(status=User.Status.SUSPENDED).count(), 'faceEnrolled': EmployeeDetail.objects.filter(biometric_enrolled=True).count()}
+            stats = {'totalEmployees': User.objects.count(),
+                     'activeEmployees': User.objects.filter(status=User.Status.ACTIVE).count(),
+                     'suspendedEmployees': User.objects.filter(status=User.Status.SUSPENDED).count(),
+                     'faceEnrolled': EmployeeDetail.objects.filter(biometric_enrolled=True).count()}
         elif is_hr(user):
-            stats = {'totalEmployees': User.objects.count(), 'presentToday': AttendanceRecord.objects.filter(timestamp__date=timezone.now().date(), type=AttendanceRecord.RecordType.CHECK_IN).values('user').distinct().count(), 'pendingLeaves': LeaveRequest.objects.filter(status='PENDING').count(), 'activeShifts': Shift.objects.count()}
+            stats = {'totalEmployees': User.objects.count(),
+                     'presentToday': AttendanceRecord.objects.filter(timestamp__date=timezone.now().date(),
+                                                                     type=AttendanceRecord.RecordType.CHECK_IN).values(
+                         'user').distinct().count(),
+                     'pendingLeaves': LeaveRequest.objects.filter(status='PENDING').count(),
+                     'activeShifts': Shift.objects.count()}
         else:
             stats = build_employee_dashboard_stats(user)
         return JsonResponse({'success': True, 'stats': stats})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
+
 def api_list_all_attendance(request):
     user, err = require_staff(request)
     if err: return err
-    records = AttendanceRecord.objects.all().select_related('user').order_by('-timestamp')[:100]
-    data = [{'id': str(r.id), 'username': r.user.username, 'timestamp': r.timestamp.isoformat(), 'type': r.get_type_display(), 'status': r.get_status_display(), 'verification': r.get_verification_status_display()} for r in records]
-    return JsonResponse({'success': True, 'records': data})
+    # Paginate: default page_size=50, max=200
+    try:
+        page_size = min(int(request.GET.get('page_size', 50)), 200)
+        page = max(int(request.GET.get('page', 1)), 1)
+    except (ValueError, TypeError):
+        page_size, page = 50, 1
+    offset = (page - 1) * page_size
+    qs = AttendanceRecord.objects.all().select_related('user').order_by('-timestamp')
+    total = qs.count()
+    records = qs[offset:offset + page_size]
+    data = [{
+        'id': str(r.id),
+        'username': r.user.username if r.user else r.employee_name_snapshot,
+        'timestamp': r.timestamp.isoformat(),
+        'type': r.get_type_display(),
+        'status': r.get_status_display(),
+        'verification': r.get_verification_status_display()
+    } for r in records]
+    return JsonResponse({'success': True, 'records': data, 'total': total, 'page': page, 'page_size': page_size})
+
 
 @csrf_exempt
 def api_list_hr_attendance_records(request):
     user, err = require_staff(request)
     if err: return err
-    
+
     today = timezone.now().date()
     start_date = today - timedelta(days=30)
 
@@ -562,26 +812,34 @@ def api_list_hr_attendance_records(request):
             leave_days.add((str(lv['user_id']), d.isoformat()))
             d += timedelta(days=1)
 
-    events_qs = AttendanceRecord.objects.filter(timestamp__date__range=(start_date, today)).select_related('user', 'user__employeedetail__department', 'device').order_by('-timestamp')
-    
+    events_qs = AttendanceRecord.objects.filter(timestamp__date__range=(start_date, today)).select_related('user',
+                                                                                                           'user__employeedetail__department',
+                                                                                                           'device').order_by(
+        '-timestamp')
+
     records = []
     for r in events_qs:
-        detail = getattr(r.user, 'employeedetail', None)
+        detail = getattr(r.user, 'employeedetail', None) if r.user else None
         date_iso = r.timestamp.date().isoformat()
         on_leave = (str(r.user_id), date_iso) in leave_days
+        # Each AttendanceRecord is a single CHECK_IN or CHECK_OUT event.
+        # Populate only the matching time field; the other is null.
+        # The frontend pairs rows by (employee, date) to build a combined view.
         records.append({
             'id': str(r.id),
-            'employee_name': r.user.get_full_name() or r.user.username,
-            'employee_code': r.user.username,
+            'employee_name': r.user.get_full_name() or r.user.username if r.user else r.employee_name_snapshot,
+            'employee_code': r.user.username if r.user else '—',
             'department': detail.department.name if detail and detail.department else 'N/A',
             'date': date_iso,
             'check_in_time': r.timestamp.isoformat() if r.type == AttendanceRecord.RecordType.CHECK_IN else None,
             'check_out_time': r.timestamp.isoformat() if r.type == AttendanceRecord.RecordType.CHECK_OUT else None,
+            'record_type': r.type,
             'status': 'On Leave' if on_leave else r.get_status_display(),
             'verification_status': r.get_verification_status_display(),
             'method': r.method,
         })
     return JsonResponse({'success': True, 'records': records})
+
 
 @csrf_exempt
 def api_update_attendance_verification(request, record_id):
@@ -595,6 +853,7 @@ def api_update_attendance_verification(request, record_id):
     record.save()
     return JsonResponse({'success': True})
 
+
 @csrf_exempt
 def api_delete_attendance_record(request, record_id):
     user, err = require_auth(request)
@@ -603,28 +862,33 @@ def api_delete_attendance_record(request, record_id):
     AttendanceRecord.objects.filter(id=record_id).delete()
     return JsonResponse({'success': True})
 
+
 @csrf_exempt
 def api_device_list_create(request):
     user, err = require_staff(request)
     if err: return err
-    
+
     if request.method == 'GET':
         if not Device.objects.exists():
-            Device.objects.create(name='Main Entrance Terminal', device_serial='BBEAMS-KIOSK-001', ip_address='192.168.1.101', port=8000, location='Main Entrance', status='online', type=Device.DeviceType.KIOSK)
-            Device.objects.create(name='Library Checkpoint', device_serial='BBEAMS-KIOSK-002', ip_address='192.168.1.102', port=8000, location='Digital Library', status='online', type=Device.DeviceType.KIOSK)
+            Device.objects.create(name='Main Entrance Terminal', device_serial='BBEAMS-KIOSK-001',
+                                  ip_address='192.168.1.101', port=8000, location='Main Entrance', status='online',
+                                  type=Device.DeviceType.KIOSK)
+            Device.objects.create(name='Library Checkpoint', device_serial='BBEAMS-KIOSK-002',
+                                  ip_address='192.168.1.102', port=8000, location='Digital Library', status='online',
+                                  type=Device.DeviceType.KIOSK)
         devices = Device.objects.all()
         data = [{
-            'id': str(d.id), 
-            'name': d.name, 
+            'id': str(d.id),
+            'name': d.name,
             'type': d.type or Device.DeviceType.KIOSK,
-            'status': d.status or 'online', 
+            'status': d.status or 'online',
             'ip_address': d.ip_address,
             'port': d.port,
             'device_serial': d.device_serial,
             'location': d.location or 'Main'
         } for d in devices]
         return JsonResponse({'success': True, 'devices': data})
-        
+
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -648,15 +912,16 @@ def api_device_list_create(request):
             }, status=201)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
-            
+
     return JsonResponse({'error': 'Method not allowed'}, status=405)
+
 
 @csrf_exempt
 def api_device_detail(request, device_id):
     user, err = require_staff(request)
     if err: return err
     device = get_object_or_404(Device, id=device_id)
-    
+
     if request.method == 'PATCH':
         try:
             data = json.loads(request.body)
@@ -677,12 +942,13 @@ def api_device_detail(request, device_id):
             })
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
-            
+
     if request.method == 'DELETE':
         device.delete()
         return JsonResponse({'success': True})
-        
+
     return JsonResponse({'error': 'Method not allowed'}, status=405)
+
 
 @csrf_exempt
 def api_public_landing_data(request):
@@ -696,30 +962,32 @@ def api_public_landing_data(request):
     try:
         from accounts.models import User
         from .models import Device
-        
+
         # 1. Secured Device/Terminal Data
         # Only return basic identification and high-level status for public view.
         # Hide IPs, serials, exact sync times (to prevent network traffic analysis).
         active_devices = Device.objects.filter(status='online')[:6]
-        
+
         terminals = []
         for d in active_devices:
             # Mask the location dynamically to prevent exposing sensitive internal areas if not generic
             location_name = d.location if d.location else 'Campus Gateway'
-            
+
             terminals.append({
                 'name': d.name,
                 'status': 'Operational',
                 'traffic': 'Secured',  # Mask network traffic
-                'lastSync': 'Real-time', # Mask exact sync time
+                'lastSync': 'Real-time',  # Mask exact sync time
                 'location': location_name,
             })
 
         # Provide a safe fallback if no devices are registered to prevent blank UI
         if not terminals:
-             terminals = [
-                { 'name': "IoT Main Access", 'status': "Operational", 'traffic': "Secured", 'lastSync': "Real-time", 'location': "Campus Gateway" },
-                { 'name': "Library Checkpoint", 'status': "Operational", 'traffic': "Secured", 'lastSync': "Real-time", 'location': "Digital Library" }
+            terminals = [
+                {'name': "IoT Main Access", 'status': "Operational", 'traffic': "Secured", 'lastSync': "Real-time",
+                 'location': "Campus Gateway"},
+                {'name': "Library Checkpoint", 'status': "Operational", 'traffic': "Secured", 'lastSync': "Real-time",
+                 'location': "Digital Library"}
             ]
 
         # 2. Secured System Capacity Data
@@ -735,21 +1003,20 @@ def api_public_landing_data(request):
 
         stats = {
             'systemCapacity': [
-                { 'label': "System Capacity", 'value': scale_str, 'description': "Vectorized O(1) matching" },
-                { 'label': "Verification Speed", 'value': "< 1.2s", 'description': "Sub-second localized recognition" },
-                { 'label': "Theoretical Accuracy", 'value': "99.92%", 'description': "MTCNN + DeepFace Engine" },
+                {'label': "System Capacity", 'value': scale_str, 'description': "Vectorized O(1) matching"},
+                {'label': "Verification Speed", 'value': "< 1.2s", 'description': "Sub-second localized recognition"},
+                {'label': "Theoretical Accuracy", 'value': "99.92%", 'description': "MTCNN + DeepFace Engine"},
             ],
             'stats': [
-                { 'label': "System Capacity", 'value': scale_str },
-                { 'label': "Verification Speed", 'value': "< 1.2s" },
-                { 'label': "Theoretical Accuracy", 'value': "99.92%" },
-                { 'label': "System Status", 'value': "Online", 'icon': "CheckCircle2" }
+                {'label': "System Capacity", 'value': scale_str},
+                {'label': "Verification Speed", 'value': "< 1.2s"},
+                {'label': "Theoretical Accuracy", 'value': "99.92%"},
+                {'label': "System Status", 'value': "Online", 'icon': "CheckCircle2"}
             ],
             'terminals': terminals
         }
-        
+
         return JsonResponse({'success': True, 'data': stats})
     except Exception as e:
         logger.error(f"Failed to serve public data: {e}")
         return JsonResponse({'success': False, 'error': 'Internal server error'}, status=500)
-

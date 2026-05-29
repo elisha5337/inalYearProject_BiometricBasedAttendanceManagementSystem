@@ -7,9 +7,35 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-your-secret-key'
-DEBUG = True
-ALLOWED_HOSTS = ['*'] # Permissive for development
+# --- SECURITY: Load environment variables from .env file ---
+# Reads the .env file in backend_django/ and injects values into os.environ.
+# This avoids hardcoding secrets in settings.py.
+# The .env file is excluded from version control via .gitignore.
+def _load_env_file():
+    env_path = BASE_DIR / '.env'
+    if not env_path.exists():
+        return
+    with open(env_path, encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#') or '=' not in line:
+                continue
+            key, _, value = line.partition('=')
+            key = key.strip()
+            value = value.strip()
+            if key and key not in os.environ:
+                os.environ[key] = value
+
+_load_env_file()
+
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-change-this-before-production')
+# SECURITY: SECRET_KEY is also used as the JWT signing key (SIMPLE_JWT SIGNING_KEY below).
+# For defense/production, set DJANGO_SECRET_KEY in the .env file to a long random string.
+# Generate one with: python -c "import secrets; print(secrets.token_hex(50))"
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
+# SECURITY: Set DJANGO_DEBUG=False in .env before any live demo or deployment.
+# DEBUG=True exposes full stack traces (including DB password) in the browser on errors.
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 INSTALLED_APPS = [
     'jazzmin',
@@ -41,7 +67,14 @@ MIDDLEWARE = [
 ]
 
 # CORS Configuration
-CORS_ALLOW_ALL_ORIGINS = True # Permissive for development
+# Restrict to known frontend origins only — never allow all origins with credentials
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
 CORS_ALLOW_CREDENTIALS = True
 
 # CSRF Configuration
@@ -51,7 +84,6 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
-
 # Cookie Settings for SPA (Development)
 SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SAMESITE = 'Lax'
@@ -59,7 +91,6 @@ SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_SECURE = False   
 CSRF_COOKIE_SECURE = False
-
 SESSION_SAVE_EVERY_REQUEST = False
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
@@ -86,11 +117,11 @@ WSGI_APPLICATION = 'hu_attendance_system.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'BBEAMS',
-        'USER': 'postgres',
-        'PASSWORD': '53372545',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.environ.get('DB_NAME', 'BBEAMS'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
         'CONN_MAX_AGE': 60,
     }
 }
@@ -131,8 +162,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'elsayearba@gmail.com' # REPLACE WITH YOUR GMAIL
-EMAIL_HOST_PASSWORD = 'dvkh vcez abfz ztvj' # REPLACE WITH YOUR GMAIL APP PASSWORD
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = f'HU-IOT BBEAMS <{EMAIL_HOST_USER}>'
 
 LOGGING = {

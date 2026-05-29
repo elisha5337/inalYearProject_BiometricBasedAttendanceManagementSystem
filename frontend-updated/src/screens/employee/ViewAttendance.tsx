@@ -110,10 +110,7 @@ export default function ViewAttendance({ user }: { user: User }) {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex bg-white border border-slate-200 rounded-2xl p-1">
-            <button className="px-4 py-1.5 text-sm font-medium bg-indigo-50 text-indigo-600 rounded-md">Table</button>
-            <button className="px-4 py-1.5 text-sm font-medium text-slate-500 rounded-md cursor-default">Chart</button>
-          </div>
+
           <button onClick={handleExport} className="secondary-button gap-2">
             <Download className="w-4 h-4" />
             Export

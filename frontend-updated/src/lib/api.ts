@@ -1,4 +1,6 @@
-const API_BASE = ((import.meta as any).env?.VITE_API_BASE || 'http://localhost:8000').replace(/\/$/, '');
+const API_BASE = (
+  (import.meta as any).env?.VITE_API_BASE || "http://localhost:8000"
+).replace(/\/$/, "");
 
 export class ApiError extends Error {
   status: number;
@@ -6,14 +8,14 @@ export class ApiError extends Error {
 
   constructor(message: string, status: number, data: unknown) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
     this.status = status;
     this.data = data;
   }
 }
 
 type ApiRequestOptions = {
-  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   headers?: Record<string, string>;
 };
@@ -33,10 +35,10 @@ type ApiRequestOptions = {
 //     overwrite each other, and tokens survive a page refresh.
 // ─────────────────────────────────────────────────────────────────────────────
 function getTabId(): string {
-  let id = sessionStorage.getItem('tab_id');
+  let id = sessionStorage.getItem("tab_id");
   if (!id) {
     id = `tab_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    sessionStorage.setItem('tab_id', id);
+    sessionStorage.setItem("tab_id", id);
   }
   return id;
 }
@@ -44,45 +46,53 @@ function getTabId(): string {
 export const TokenStore = {
   _key: (suffix: string) => `${getTabId()}_${suffix}`,
 
-  getAccess: () => localStorage.getItem(TokenStore._key('access')),
-  getRefresh: () => localStorage.getItem(TokenStore._key('refresh')),
+  getAccess: () => localStorage.getItem(TokenStore._key("access")),
+  getRefresh: () => localStorage.getItem(TokenStore._key("refresh")),
 
   set: (access: string, refresh: string) => {
-    localStorage.setItem(TokenStore._key('access'), access);
-    localStorage.setItem(TokenStore._key('refresh'), refresh);
+    localStorage.setItem(TokenStore._key("access"), access);
+    localStorage.setItem(TokenStore._key("refresh"), refresh);
   },
 
   clear: () => {
-    localStorage.removeItem(TokenStore._key('access'));
-    localStorage.removeItem(TokenStore._key('refresh'));
+    localStorage.removeItem(TokenStore._key("access"));
+    localStorage.removeItem(TokenStore._key("refresh"));
   },
 
-  hasToken: () => !!localStorage.getItem(TokenStore._key('access')),
+  hasToken: () => !!localStorage.getItem(TokenStore._key("access")),
 };
 
 function buildUrl(path: string) {
-  if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  return `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
 function getCookie(name: string) {
-  if (typeof document === 'undefined') return '';
-  return document.cookie.split('; ').find((c) => c.startsWith(`${name}=`))?.split('=')[1] || '';
+  if (typeof document === "undefined") return "";
+  return (
+    document.cookie
+      .split("; ")
+      .find((c) => c.startsWith(`${name}=`))
+      ?.split("=")[1] || ""
+  );
 }
 
 async function tryRefreshToken(): Promise<boolean> {
   const refresh = TokenStore.getRefresh();
   if (!refresh) return false;
   try {
-    const res = await fetch(buildUrl('/accounts/api/token/refresh/'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await fetch(buildUrl("/accounts/api/token/refresh/"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh }),
     });
     if (!res.ok) return false;
     const data = await res.json();
     if (data.access) {
-      TokenStore.set(data.access, refresh);
+      // ROTATE_REFRESH_TOKENS=True means the backend issues a new refresh token
+      // on every refresh call. Always store the new one, falling back to the
+      // old one only if the backend did not return a replacement.
+      TokenStore.set(data.access, data.refresh ?? refresh);
       return true;
     }
     return false;
@@ -91,22 +101,30 @@ async function tryRefreshToken(): Promise<boolean> {
   }
 }
 
-export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, headers = {} } = options;
+export async function apiRequest<T>(
+  path: string,
+  options: ApiRequestOptions = {},
+): Promise<T> {
+  const { method = "GET", body, headers = {} } = options;
   const isJsonBody = body !== undefined && !(body instanceof FormData);
   const accessToken = TokenStore.getAccess();
 
   const makeRequest = (token: string | null) =>
     fetch(buildUrl(path), {
       method,
-      credentials: 'include',
+      credentials: "include",
       headers: {
-        ...(isJsonBody ? { 'Content-Type': 'application/json' } : {}),
-        ...(method !== 'GET' ? { 'X-CSRFToken': getCookie('csrftoken') } : {}),
+        ...(isJsonBody ? { "Content-Type": "application/json" } : {}),
+        ...(method !== "GET" ? { "X-CSRFToken": getCookie("csrftoken") } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...headers,
       },
-      body: body === undefined ? undefined : isJsonBody ? JSON.stringify(body) : (body as BodyInit),
+      body:
+        body === undefined
+          ? undefined
+          : isJsonBody
+            ? JSON.stringify(body)
+            : (body as BodyInit),
     });
 
   let response = await makeRequest(accessToken);
@@ -121,13 +139,30 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     }
   }
 
-  const contentType = response.headers.get('content-type') || '';
-  const data = contentType.includes('application/json') ? await response.json() : await response.text();
+  // Robustly attempt to parse JSON body; fall back to text when parsing fails.
+  let data: any;
+  try {
+    data = await response.json();
+  } catch {
+    try {
+      data = await response.text();
+    } catch {
+      data = null;
+    }
+  }
 
   if (!response.ok) {
+    // Prefer backend-provided `error` or `message` fields when available.
     const message =
-      (typeof data === 'object' && data !== null && 'error' in data && typeof (data as { error?: unknown }).error === 'string' && (data as { error: string }).error) ||
-      (typeof data === 'object' && data !== null && 'message' in data && typeof (data as { message?: unknown }).message === 'string' && (data as { message: string }).message) ||
+      (data &&
+        typeof data === "object" &&
+        typeof data.error === "string" &&
+        data.error) ||
+      (data &&
+        typeof data === "object" &&
+        typeof data.message === "string" &&
+        data.message) ||
+      (typeof data === "string" && data) ||
       `Request failed with status ${response.status}`;
     throw new ApiError(message, response.status, data);
   }
@@ -136,7 +171,7 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
 }
 
 export function ensureCsrfCookie() {
-  return apiRequest<{ success: string }>('/accounts/api/csrf/');
+  return apiRequest<{ success: string }>("/accounts/api/csrf/");
 }
 
 export { API_BASE };

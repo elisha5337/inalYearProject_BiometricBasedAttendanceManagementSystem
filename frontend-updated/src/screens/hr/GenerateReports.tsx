@@ -13,7 +13,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { API_BASE, apiRequest } from '../../lib/api';
+import { API_BASE, apiRequest, TokenStore } from '../../lib/api';
 
 function buildUrl(path: string) {
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
@@ -25,7 +25,15 @@ function toISODate(d: Date) {
 }
 
 async function downloadFromUrl(url: string, fallbackFilename: string) {
-  const response = await fetch(url, { credentials: 'include' });
+  const accessToken = TokenStore.getAccess();
+  const headers: Record<string, string> = { credentials: 'include' as any };
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`;
+  }
+  const response = await fetch(url, { 
+    credentials: 'include',
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+  });
   if (!response.ok) {
     const message = await response.text();
     throw new Error(message || `Request failed with status ${response.status}`);
@@ -139,7 +147,11 @@ export default function GenerateReports() {
         const url = buildUrl(
           `${endpoint}?start_date=${encodeURIComponent(window.start)}&end_date=${encodeURIComponent(window.end)}&format=csv&department=${encodeURIComponent(department)}`
         );
-        const resp = await fetch(url, { credentials: 'include' });
+        const accessToken = TokenStore.getAccess();
+        const resp = await fetch(url, { 
+          credentials: 'include',
+          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+        });
         if (!resp.ok) throw new Error(await resp.text() || `Status ${resp.status}`);
         const csvText = await resp.text();
         const lines = csvText.trim().split('\n').map((l) => l.split(',').map((c) => c.replace(/^"|"$/g, '')));

@@ -21,6 +21,7 @@ export default function AdminDashboard({ user }: { user: User }) {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [overview, setOverview] = useState<DashboardOverview>(emptyOverview);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,8 +30,10 @@ export default function AdminDashboard({ user }: { user: User }) {
     async function loadDashboard() {
       try {
         setLoading(true); setError(null);
-        const data = await fetchDashboardOverview();
-        if (!cancelled) setOverview(data);
+        const overviewData = await fetchDashboardOverview();
+        if (!cancelled) {
+          setOverview(overviewData);
+        }
       } catch (e) {
         if (!cancelled) setError(e instanceof ApiError ? e.message : 'Unable to load system administration metrics right now.');
       } finally {
@@ -183,6 +186,7 @@ export default function AdminDashboard({ user }: { user: User }) {
           ))}
         </div>
       </div>
+
 
       {/* Audit Log */}
       <div className="professional-card">

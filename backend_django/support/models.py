@@ -1,4 +1,6 @@
+import uuid
 from django.db import models
+from accounts.models import User
 
 class FAQCategory(models.Model):
     name = models.CharField(max_length=100)
@@ -23,3 +25,28 @@ class FAQItem(models.Model):
 
     def __str__(self):
         return self.question
+
+class Complaint(models.Model):
+    class Recipient(models.TextChoices):
+        HR = 'HR', 'HR'
+        ADMIN = 'ADMIN', 'Admin'
+
+    class Status(models.TextChoices):
+        OPEN = 'OPEN', 'Open'
+        IN_REVIEW = 'IN_REVIEW', 'In Review'
+        RESOLVED = 'RESOLVED', 'Resolved'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, db_column='_id')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='userId')
+    recipient = models.CharField(max_length=10, choices=Recipient.choices)
+    subject = models.CharField(max_length=255)
+    message = models.TextField()
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Complaint by {self.user.username} to {self.recipient}: {self.subject}"

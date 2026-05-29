@@ -87,19 +87,28 @@ export async function fetchCurrentUser() {
   return mapBackendUser(response.user);
 }
 
-export function logoutUser() {
+export async function logoutUser() {
   TokenStore.clear(); // Clear this tab's token immediately
-  return apiRequest<{ success: boolean }>('/accounts/api/logout/', {
-    method: 'POST',
-  });
+  try {
+    await apiRequest<{ success: boolean }>('/accounts/api/logout/', {
+      method: 'POST',
+    });
+  } catch {
+    // Backend logout failure (e.g. network error) is non-fatal.
+    // The token is already cleared client-side so the user is effectively logged out.
+  }
 }
 
 export async function changePassword(newPassword: string) {
   await ensureCsrfCookie();
-  const response = await apiRequest<{ success: boolean; message: string }>('/accounts/api/change-password/', {
+  const response = await apiRequest<{ success: boolean; message: string; tokens?: { access: string; refresh: string } | null }>('/accounts/api/change-password/', {
     method: 'POST',
     body: { new_password: newPassword },
   });
+  // Backend issues fresh tokens after password change so the old token is no longer used.
+  if (response.tokens) {
+    TokenStore.set(response.tokens.access, response.tokens.refresh);
+  }
   return response.success;
 }
 
@@ -118,7 +127,6 @@ export async function registerUser(payload: {
     body: payload,
   });
 }
-
 export async function requestPasswordReset(email: string) {
   await ensureCsrfCookie();
   return apiRequest<{ success: boolean; message: string }>('/accounts/api/password-reset/request/', {
@@ -126,7 +134,6 @@ export async function requestPasswordReset(email: string) {
     body: { email },
   });
 }
-
 export async function confirmPasswordReset(uidb64: string, token: string, newPassword: string) {
   await ensureCsrfCookie();
   return apiRequest<{ success: boolean; message: string }>(`/accounts/api/password-reset/confirm/${uidb64}/${token}/`, {

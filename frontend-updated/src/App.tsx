@@ -27,6 +27,7 @@ import ManageAttendance from './screens/hr/ManageAttendance';
 import ManageLeave from './screens/hr/ManageLeave';
 import ManageShifts from './screens/hr/ManageShifts';
 import GenerateReports from './screens/hr/GenerateReports';
+import HRComplaints from './screens/hr/Complaints';
 
 // Admin Screens
 import AdminDashboard from './screens/admin/Dashboard';
@@ -38,6 +39,7 @@ import ManageDevices from './screens/admin/ManageDevices';
 import AdminNotifications from './screens/admin/Notifications';
 import ExternalIntegrations from './screens/admin/ExternalIntegrations';
 import LeaveManagement from './screens/admin/LeaveManagement';
+import AdminComplaints from './screens/admin/Complaints';
 
 // Common Screens
 import Notifications from './screens/Notifications';
@@ -86,7 +88,7 @@ export default function App() {
     };
   }, []);
 
-  if (loading) return <div className="flex items-center justify-center h-screen bg-white font-sans font-black text-slate-900 uppercase tracking-[0.3em] text-xs">Synchronizing Core...</div>;
+  if (loading) return <div className="flex items-center justify-center h-screen bg-white font-sans font-black text-slate-900 uppercase tracking-[0.3em] text-xs">Loading...</div>;
 
   const handleLogout = async () => {
     try {
@@ -149,11 +151,13 @@ function AppContent({ user, onLogin, onLogout }: { user: User | null, onLogin: (
                 <Route path="employees" element={<ManageEmployees />} />
                 <Route path="attendance" element={<ManageAttendance />} />
                 <Route path="leave" element={<ManageLeave />} />
+                <Route path="leave/submit" element={<SubmitLeave user={user} />} />
                 <Route path="shifts" element={<ManageShifts />} />
                 <Route path="reports" element={<GenerateReports />} />
                 <Route path="profile" element={<Profile user={user} />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="help" element={<HelpCenter />} />
+                <Route path="complaints" element={<HRComplaints />} />
               </Routes>
             </Layout>
           ) : <Navigate to="/login" />} />
@@ -171,8 +175,10 @@ function AppContent({ user, onLogin, onLogout }: { user: User | null, onLogin: (
                 <Route path="notifications" element={<AdminNotifications />} />
                 <Route path="integrations" element={<ExternalIntegrations />} />
                 <Route path="leave" element={<LeaveManagement />} />
+                <Route path="leave/submit" element={<SubmitLeave user={user} />} />
                 <Route path="profile" element={<Profile user={user} />} />
                 <Route path="help" element={<HelpCenter />} />
+                <Route path="complaints" element={<AdminComplaints />} />
               </Routes>
             </Layout>
           ) : <Navigate to="/login" />} />

@@ -1,4 +1,4 @@
-import { apiRequest } from './api';
+import { apiRequest } from "./api";
 
 export interface AttendanceMarkResponse {
   success: boolean;
@@ -18,16 +18,16 @@ export interface AttendanceMarkResponse {
 }
 
 export interface MarkAttendancePayload {
-  image?: string;
-  frames?: string[];
-  username?: string;
-  password?: string;
-  is_manual?: boolean;
+  image?: string; // single-frame fallback (face mode only)
+  frames?: string[]; // multi-frame face scan (preferred)
+  username?: string; // manual / demo mode
+  password?: string; // manual / demo mode
+  is_manual?: boolean; // true for manual and demo mode
 }
 
 export function markAttendance(payload: MarkAttendancePayload) {
-  return apiRequest<AttendanceMarkResponse>('/api/attendance/mark/', {
-    method: 'POST',
+  return apiRequest<AttendanceMarkResponse>("/api/attendance/mark/", {
+    method: "POST",
     body: payload,
   });
 }
@@ -68,30 +68,35 @@ type DailyAttendanceRow = {
   checkOut: string;
   total: string;
   totalHours: number;
-  status: 'on-time' | 'late' | 'early-leave';
+  status: "on-time" | "late" | "early-leave";
 };
 
 function formatDuration(totalSeconds: number) {
   const positiveSeconds = Math.max(0, Math.round(totalSeconds));
   const hours = Math.floor(positiveSeconds / 3600);
   const minutes = Math.floor((positiveSeconds % 3600) / 60);
-  return `${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m`;
+  return `${String(hours).padStart(2, "0")}h ${String(minutes).padStart(2, "0")}m`;
 }
 
 function formatClock(value?: string) {
-  if (!value) return '--:--';
-  return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (!value) return "--:--";
+  return new Date(value).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export function fetchMyAttendanceHistory() {
-  return apiRequest<AttendanceHistoryEnvelope>('/api/attendance/my-history/');
+  return apiRequest<AttendanceHistoryEnvelope>("/api/attendance/my-history/");
 }
 
 export function fetchDashboardStats() {
-  return apiRequest<DashboardStatsEnvelope>('/api/attendance/dashboard-stats/');
+  return apiRequest<DashboardStatsEnvelope>("/api/attendance/dashboard-stats/");
 }
 
-export function buildDailyAttendanceRows(records: AttendanceHistoryRecord[]): DailyAttendanceRow[] {
+export function buildDailyAttendanceRows(
+  records: AttendanceHistoryRecord[],
+): DailyAttendanceRow[] {
   const grouped = new Map<string, AttendanceHistoryRecord[]>();
 
   records.forEach((record) => {
@@ -103,29 +108,38 @@ export function buildDailyAttendanceRows(records: AttendanceHistoryRecord[]): Da
 
   return Array.from(grouped.entries())
     .map(([rawDate, dayRecords]) => {
-      const sorted = [...dayRecords].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+      const sorted = [...dayRecords].sort((a, b) =>
+        a.timestamp.localeCompare(b.timestamp),
+      );
       let firstCheckIn: string | undefined;
       let lastCheckOut: string | undefined;
       let totalSeconds = 0;
-      let derivedStatus: DailyAttendanceRow['status'] = 'on-time';
+      let derivedStatus: DailyAttendanceRow["status"] = "on-time";
 
       sorted.forEach((record) => {
-        if (record.type_code === 'CHECK_IN') {
+        if (record.type_code === "CHECK_IN") {
           if (!firstCheckIn) firstCheckIn = record.timestamp;
         }
-        if (record.type_code === 'CHECK_OUT') {
+        if (record.type_code === "CHECK_OUT") {
           lastCheckOut = record.timestamp;
         }
-        if (record.status_code === 'LATE') derivedStatus = 'late';
+        if (record.status_code === "LATE") derivedStatus = "late";
       });
 
       if (firstCheckIn && lastCheckOut) {
-        totalSeconds = (new Date(lastCheckOut).getTime() - new Date(firstCheckIn).getTime()) / 1000;
+        totalSeconds =
+          (new Date(lastCheckOut).getTime() -
+            new Date(firstCheckIn).getTime()) /
+          1000;
       }
 
       return {
         rawDate,
-        date: new Date(rawDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }),
+        date: new Date(rawDate).toLocaleDateString([], {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }),
         checkIn: formatClock(firstCheckIn),
         checkOut: formatClock(lastCheckOut),
         total: formatDuration(totalSeconds),
@@ -147,23 +161,38 @@ export function buildWeeklyActivity(records: AttendanceHistoryRecord[]) {
 
   // 2. Map existing records to these dates
   const dailyRows = buildDailyAttendanceRows(records);
-  
-  return days.map(dateStr => {
-    const row = dailyRows.find(r => r.rawDate === dateStr);
+
+  return days.map((dateStr) => {
+    const row = dailyRows.find((r) => r.rawDate === dateStr);
     return {
-      name: new Date(dateStr).toLocaleDateString([], { weekday: 'short' }),
-      hours: row ? Number(row.totalHours.toFixed(1)) : 0
+      name: new Date(dateStr).toLocaleDateString([], { weekday: "short" }),
+      hours: row ? Number(row.totalHours.toFixed(1)) : 0,
     };
   });
 }
 
-export function buildRecentAttendanceActivity(records: AttendanceHistoryRecord[]) {
-  const sorted = [...records].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+export function buildRecentAttendanceActivity(
+  records: AttendanceHistoryRecord[],
+) {
+  const sorted = [...records].sort((a, b) =>
+    b.timestamp.localeCompare(a.timestamp),
+  );
   return sorted.slice(0, 5).map((record) => ({
     id: record.id,
-    date: new Date(record.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' }),
-    time: new Date(record.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    date: new Date(record.timestamp).toLocaleDateString([], {
+      month: "short",
+      day: "numeric",
+    }),
+    time: new Date(record.timestamp).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
     type: record.type,
-    status: record.status_code === 'LATE' ? 'late' : record.status_code === 'EARLY_EXIT' ? 'early-leave' : 'on-time',
+    status:
+      record.status_code === "LATE"
+        ? "late"
+        : record.status_code === "EARLY_EXIT"
+          ? "early-leave"
+          : "on-time",
   }));
 }

@@ -19,7 +19,8 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  HelpCircle
+  HelpCircle,
+  MessageSquare
 } from 'lucide-react';
 import { User } from '../types';
 import { cn } from '../lib/utils';
@@ -45,17 +46,18 @@ export default function Sidebar({ user, onClose, isCollapsed, onToggleCollapse }
       { label: 'Submit Leave', icon: FileText, path: '/employee/leave/submit' },
       { label: 'Leave History', icon: History, path: '/employee/leave/history' },
       { label: 'My Profile', icon: UserCircle, path: '/employee/profile' },
-      { label: 'Help Center', icon: HelpCircle, path: '/employee/help' },
+      { label: 'Complaints', icon: HelpCircle, path: '/employee/help' },
     ],
     hr: [
       { label: 'Dashboard', icon: LayoutDashboard, path: '/hr/dashboard' },
       { label: 'Employees', icon: Users, path: '/hr/employees' },
       { label: 'Attendance', icon: CalendarCheck, path: '/hr/attendance' },
       { label: 'Leave Requests', icon: ClipboardList, path: '/hr/leave' },
+      { label: 'Submit Leave', icon: FileText, path: '/hr/leave/submit' },
       { label: 'Manage Shifts', icon: Clock, path: '/hr/shifts' },
       { label: 'Reports', icon: BarChart3, path: '/hr/reports' },
       { label: 'My Profile', icon: UserCircle, path: '/hr/profile' },
-      { label: 'Help Center', icon: HelpCircle, path: '/hr/help' },
+      { label: 'Complaint Inbox', icon: MessageSquare, path: '/hr/complaints' },
     ],
     admin: [
       { label: 'Dashboard', icon: LayoutDashboard, path: '/admin/dashboard' },
@@ -67,8 +69,9 @@ export default function Sidebar({ user, onClose, isCollapsed, onToggleCollapse }
       { label: 'Notifications', icon: Bell, path: '/admin/notifications' },
       { label: 'Integrations', icon: Link2, path: '/admin/integrations' },
       { label: 'Leave Oversight', icon: Calendar, path: '/admin/leave' },
+      { label: 'Submit Leave', icon: FileText, path: '/admin/leave/submit' },
       { label: 'My Profile', icon: UserCircle, path: '/admin/profile' },
-      { label: 'Help Center', icon: HelpCircle, path: '/admin/help' },
+      { label: 'Complaint Inbox', icon: MessageSquare, path: '/admin/complaints' },
     ],
     public: []
   };

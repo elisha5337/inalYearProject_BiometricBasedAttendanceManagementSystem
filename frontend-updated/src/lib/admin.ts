@@ -147,6 +147,30 @@ export interface AppNotificationRecord {
   timestamp: string | null;
 }
 
+export interface ComplaintRecord {
+  id: string;
+  user: string;
+  recipient: 'HR' | 'ADMIN';
+  subject: string;
+  message: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function fetchComplaints(options?: { recipient?: 'HR' | 'ADMIN'; all?: boolean }) {
+  const params = new URLSearchParams();
+  if (options?.recipient) {
+    params.set('recipient', options.recipient);
+  }
+  if (options?.all) {
+    params.set('all', 'true');
+  }
+
+  const url = `/api/support/api/complaints/${params.toString() ? `?${params.toString()}` : ''}`;
+  return apiRequest<{ success: boolean; complaints: ComplaintRecord[] }>(url);
+}
+
 export interface ProfileRecord {
   id: string;
   username: string;
@@ -347,12 +371,18 @@ function fromWorkflowSteps(name: string, raw: unknown): WorkflowRecord {
   };
 }
 
+function deriveAuditActor(description: string, defaultActor = 'System') {
+  const match = description.match(/by\s+['"]?([A-Za-z0-9_.-]+)['"]?/i);
+  return match ? match[1] : defaultActor;
+}
+
 export async function fetchAuditLogs() {
   const response = await apiRequest<{
     success: boolean;
     logs: Array<{
       id: string;
-      user: string;
+      user?: string;
+      actor?: string;
       action: string;
       description?: string;
       timestamp: string;
@@ -360,16 +390,22 @@ export async function fetchAuditLogs() {
     }>;
   }>('/api/reporting/audit-logs/');
 
-  return (response.logs ?? []).map((log) => ({
-    id: log.id,
-    user: log.user || 'System',
-    role: log.user === 'System' ? 'system' : 'admin',
-    action: log.action,
-    details: log.description || 'No additional details available.',
-    time: log.timestamp,
-    ip: log.ip_address || 'N/A',
-    severity: deriveAuditSeverity(log.action, log.description || ''),
-  }));
+  return (response.logs ?? []).map((log) => {
+    const description = log.description || '';
+    const fromDescription = deriveAuditActor(description, 'System');
+    const actor = log.actor || log.user || fromDescription || 'System';
+
+    return {
+      id: log.id,
+      user: actor,
+      role: actor === 'System' ? 'system' : 'admin',
+      action: log.action,
+      details: description || 'No additional details available.',
+      time: log.timestamp,
+      ip: log.ip_address || 'N/A',
+      severity: deriveAuditSeverity(log.action, description),
+    };
+  });
 }
 
 export async function fetchSystemHealth() {
@@ -877,7 +913,7 @@ export async function fetchAdminLeaveRequests() {
 
 export function processLeaveRequest(id: string, status: 'APPROVED' | 'REJECTED') {
   return apiRequest<{ success: boolean; message: string }>(`/api/leave/api/manage/${id}/`, {
-    method: 'PUT',
+    method: 'POST',
     body: { status },
   });
 }
@@ -1043,13 +1079,19 @@ export async function updateProfile(payload: ProfileUpdatePayload) {
   } satisfies ProfileRecord;
 }
 
-export function changePassword(newPassword: string) {
-  return apiRequest<{ success: boolean; message: string }>('/accounts/api/change-password/', {
+export async function changePassword(newPassword: string) {
+  const response = await apiRequest<{ success: boolean; message: string; tokens?: { access: string; refresh: string } | null }>('/accounts/api/change-password/', {
     method: 'POST',
     body: {
       new_password: newPassword,
     },
   });
+  // Store fresh tokens so the old pre-change token is no longer used
+  if (response.tokens) {
+    const { TokenStore } = await import('./api');
+    TokenStore.set(response.tokens.access, response.tokens.refresh);
+  }
+  return response.success;
 }
 
 export { formatRelativeTime };
@@ -1063,4 +1105,20 @@ export async function fetchFAQs(query: string = '') {
       items: string[];
     }[];
   }>(url);
+}
+
+export interface ComplaintPayload {
+  recipient: 'HR' | 'ADMIN';
+  subject: string;
+  message: string;
+}
+
+export async function submitComplaint(payload: ComplaintPayload) {
+  return apiRequest<{ success: boolean; message: string }>(
+    '/api/support/api/complaints/',
+    {
+      method: 'POST',
+      body: payload,
+    },
+  );
 }

@@ -8,7 +8,6 @@ class Device(models.Model):
         KIOSK = 'Kiosk', 'Kiosk'
         HANDHELD = 'Handheld', 'Handheld'
         DESKTOP = 'Desktop', 'Desktop'
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, db_column='_id')
     device_serial = models.CharField(max_length=255, unique=True)
     name = models.CharField(max_length=255)
@@ -29,6 +28,7 @@ class AttendanceRecord(models.Model):
         LATE = 'LATE', 'Late'
         EARLY_EXIT = 'EARLY_EXIT', 'Early-exit'
         OVERTIME = 'OVERTIME', 'Overtime'
+        ABSENT = 'ABSENT', 'Absent'
 
     class VerificationStatus(models.TextChoices):
         VERIFIED = 'VERIFIED', 'Verified'
@@ -59,7 +59,16 @@ class AttendanceRecord(models.Model):
         help_text="Method used: face, fingerprint, manual"
     )
 
+    def clean(self):
+        from django.utils import timezone
+        from django.core.exceptions import ValidationError
+        
+        # Prevent logging attendance in the future
+        if self.timestamp and self.timestamp > timezone.now():
+            raise ValidationError({'timestamp': "Attendance timestamp cannot be in the future."})
+
     def save(self, *args, **kwargs):
+        self.full_clean()
         # Capture the name snapshot automatically on first save
         if self.user and not self.employee_name_snapshot:
             self.employee_name_snapshot = self.user.get_full_name() or self.user.username

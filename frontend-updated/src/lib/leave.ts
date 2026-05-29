@@ -1,4 +1,4 @@
-﻿import { ApiError, apiRequest } from './api';
+import { ApiError, apiRequest } from './api';
 
 export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
@@ -34,6 +34,7 @@ export interface LeaveSummary {
   approved: number;
   rejected: number;
   balances: LeaveBalanceSummary;
+  total_quota: LeaveBalanceSummary;
   annual_left: number;
   sick_left: number;
 }
@@ -49,6 +50,7 @@ export interface SubmitLeaveRequestPayload {
   endDate: string;
   reason: string;
   attachment?: File | null;
+  userId?: string | null;
 }
 
 const leaveTypeLabelMap: Record<string, string> = {
@@ -116,6 +118,14 @@ export async function fetchMyLeaveRequests(): Promise<LeaveRequestsPayload> {
         compassionate: Number(payload.summary?.balances?.compassionate ?? 0),
         unpaid: Number(payload.summary?.balances?.unpaid ?? 0)
     },
+    total_quota: {
+        annual: Number(payload.summary?.balances?.total_quota?.annual ?? 20),
+        sick: Number(payload.summary?.balances?.total_quota?.sick ?? 12),
+        maternity: Number(payload.summary?.balances?.total_quota?.maternity ?? 0),
+        paternity: Number(payload.summary?.balances?.total_quota?.paternity ?? 0),
+        compassionate: Number(payload.summary?.balances?.total_quota?.compassionate ?? 0),
+        unpaid: Number(payload.summary?.balances?.total_quota?.unpaid ?? 0)
+    },
     annual_left: Number(payload.summary?.annual_left ?? 0),
     sick_left: Number(payload.summary?.sick_left ?? 0),
   };
@@ -135,6 +145,10 @@ export async function submitLeaveRequest(payload: SubmitLeaveRequestPayload) {
   formData.append('reason', payload.reason);
   if (payload.attachment) {
     formData.append('attachment', payload.attachment);
+  }
+  // Allow admins/HR to submit leave on behalf of another user by including `userId`.
+  if (payload.userId) {
+    formData.append('userId', String(payload.userId));
   }
 
   return apiRequest(submitLeavePaths[0], {

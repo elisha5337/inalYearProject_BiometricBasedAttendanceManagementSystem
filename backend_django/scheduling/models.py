@@ -14,6 +14,17 @@ class Shift(models.Model):
     grace_period = models.IntegerField(default=15) # In minutes
     work_days = models.CharField(max_length=100, default='Mon - Fri')
 
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.grace_period < 0:
+            raise ValidationError({'grace_period': "Grace period cannot be negative."})
+        if self.start_time and self.end_time and self.start_time == self.end_time:
+            raise ValidationError("End time cannot be exactly the same as start time.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.name} ({self.start_time} - {self.end_time})"
 

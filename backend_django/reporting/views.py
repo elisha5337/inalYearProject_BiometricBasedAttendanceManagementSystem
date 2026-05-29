@@ -181,16 +181,22 @@ def attendance_report_export(request):
                 'dept': detail.department.name if detail and detail.department else 'N/A',
                 'date': day_iso,
                 'in': None, 'out': None, 'late': False, 'early': False,
+                'absent': False,
                 'v': r.get_verification_status_display(),
                 'loc': getattr(r.device, 'location', 'Kiosk') if r.device else 'Kiosk'
             }
 
         if r.type == AttendanceRecord.RecordType.CHECK_IN:
-            daily[key]['in'] = r.timestamp
-            if r.status == AttendanceRecord.RecordStatus.LATE: daily[key]['late'] = True
+            if r.status == AttendanceRecord.RecordStatus.ABSENT:
+                daily[key]['absent'] = True
+            else:
+                daily[key]['in'] = r.timestamp
+                if r.status == AttendanceRecord.RecordStatus.LATE:
+                    daily[key]['late'] = True
         else:
             daily[key]['out'] = r.timestamp
-            if r.status == AttendanceRecord.RecordStatus.EARLY_EXIT: daily[key]['early'] = True
+            if r.status == AttendanceRecord.RecordStatus.EARLY_EXIT:
+                daily[key]['early'] = True
 
     for row in daily.values():
         hours = 0.0
@@ -199,10 +205,16 @@ def attendance_report_export(request):
         
         on_leave = (str(row['uid']), row['date']) in leave_days
         status = 'Present'
-        if on_leave: status = 'On Leave'
-        elif row['late']: status = 'Late'
-        elif row['early']: status = 'Early Leave'
-        elif not row['in']: status = 'Absent'
+        if on_leave:
+            status = 'On Leave'
+        elif row['absent']:
+            status = 'Absent'
+        elif row['late']:
+            status = 'Late'
+        elif row['early']:
+            status = 'Early Leave'
+        elif not row['in']:
+            status = 'Absent'
 
         writer.writerow([
             row['name'], row['dept'], row['date'],
@@ -537,9 +549,13 @@ def get_audit_logs(request):
     logs = logs[:100] # Limit to 100 results for performance
 
     data = [{
-        'id': str(log.id), 'user': log.user.username if log.user else 'System',
-        'action': log.action, 'description': log.description,
-        'timestamp': log.timestamp.isoformat(), 'ip_address': log.ip_address
+        'id': str(log.id),
+        'user': log.user.username if log.user else 'System',
+        'actor': log.user.username if log.user else 'System',
+        'action': log.action,
+        'description': log.description,
+        'timestamp': log.timestamp.isoformat(),
+        'ip_address': log.ip_address,
     } for log in logs]
     return JsonResponse({'success': True, 'logs': data})
 
@@ -601,7 +617,12 @@ def update_global_config(request):
     
     data = json.loads(request.body)
     if save_global_config(data):
-        log_audit_event('GLOBAL_CONFIG_UPDATED', 'Configuration changed via reporting dashboard.', user=user, request=request)
+        log_audit_event(
+            'GLOBAL_CONFIG_UPDATED',
+            f'Configuration changed via reporting dashboard by {user.username}.',
+            user=user,
+            request=request
+        )
         return JsonResponse({'success': True})
     return JsonResponse({'error': 'Failed to save'}, status=500)
 

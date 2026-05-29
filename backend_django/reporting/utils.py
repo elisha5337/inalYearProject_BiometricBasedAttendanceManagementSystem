@@ -18,6 +18,21 @@ def get_client_ip(request):
 
 def log_audit_event(action, description='', user=None, request=None):
     try:
+        if not getattr(user, 'is_authenticated', False) and request is not None:
+            request_user = getattr(request, 'user', None)
+            if getattr(request_user, 'is_authenticated', False):
+                user = request_user
+
+        actor_username = None
+        if getattr(user, 'is_authenticated', False):
+            actor_username = getattr(user, 'username', None)
+            if actor_username and actor_username not in (description or ''):
+                description = (
+                    f'{description.strip()} (performed by {actor_username}).'
+                    if description and description.strip() else
+                    f'Performed by {actor_username}.'
+                )
+
         AuditLog.objects.create(
             user=user if getattr(user, 'is_authenticated', False) else None,
             action=action,

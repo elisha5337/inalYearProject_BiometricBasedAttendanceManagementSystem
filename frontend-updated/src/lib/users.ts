@@ -1,4 +1,4 @@
-﻿import { ApiError, apiRequest } from './api';
+import { ApiError, apiRequest } from './api';
 import type { AppUserRole } from '../types';
 
 export interface ManagedUserRecord {
@@ -32,6 +32,7 @@ export interface SaveUserPayload {
   position?: string;
   hireDate?: string;
   biometricEnrolled?: boolean;
+  employmentType?: string;
 }
 
 const userListPaths = [
@@ -154,6 +155,7 @@ function buildPayload(payload: SaveUserPayload) {
     department_id: payload.departmentId,
     position: payload.position,
     hire_date: payload.hireDate,
+    employment_type: payload.employmentType,
     // Note: biometric_enrolled is handled automatically by the backend based on templates
   };
 }

@@ -35,7 +35,7 @@ from hu_attendance_system.auth_utils import require_auth, require_staff, is_admi
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
-FAILED_LOGIN_WINDOW_SECONDS = 15 * 60
+FAILED_LOGIN_WINDOW_SECONDS =  1* 60
 
 ROLE_INPUT_MAP = {
     'admin': Role.ADMINISTRATOR,
@@ -50,8 +50,6 @@ ROLE_INPUT_MAP = {
     'employee': Role.EMPLOYEE,
     'EMPLOYEE': Role.EMPLOYEE,
 }
-
-
 def normalize_role_input(role_value):
     if not role_value:
         return None
@@ -370,7 +368,7 @@ def api_login(request):
                 )
                 return JsonResponse({
                     'success': False,
-                    'error': 'Too many failed login attempts. Please wait 15 minutes before trying again.',
+                    'error': 'Too many failed login attempts. Please wait a minutes before trying again.',
                 }, status=429)
 
             user = authenticate(request, username=username, password=password)
@@ -387,8 +385,8 @@ def api_login(request):
                         request=request,
                     )
                     return JsonResponse({
-                        'success': False, 
-                        'error': 'This account has been suspended. Please contact the administrator.'
+                        'success': False,
+                        'error': 'You are suspended, contact admin.'
                     }, status=403)
 
                 # Validate selected role against actual user roles
@@ -433,8 +431,12 @@ def api_login(request):
                         'access': str(refresh.access_token),
                         'refresh': str(refresh),
                     }
-                except Exception:
-                    tokens = None
+                except Exception as jwt_err:
+                    logger.error(f"JWT generation failed for {user.username}: {jwt_err}")
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Session token generation failed. Please try again.',
+                    }, status=500)
 
                 return JsonResponse({
                     'success': True,
@@ -442,6 +444,32 @@ def api_login(request):
                     'tokens': tokens,
                 })
             else:
+                # If Django's `authenticate` returned None, it may be because
+                # the account is inactive/suspended. Detect the case where
+                # the provided credentials are actually correct but the
+                # account status is SUSPENDED so we can return a 403 with
+                # a clear message instead of a generic invalid-credentials
+                # response.
+                possible_user = None
+                try:
+                    possible_user = User.objects.filter(username__iexact=username).first()
+                    if not possible_user and '@' in identifier:
+                        possible_user = User.objects.filter(email__iexact=identifier).first()
+                except Exception:
+                    possible_user = None
+
+                if possible_user and password and possible_user.check_password(password) and possible_user.status == User.Status.SUSPENDED:
+                    log_audit_event(
+                        'LOGIN_BLOCKED_SUSPENDED',
+                        f'Suspended account "{possible_user.username}" attempted to sign in (credentials correct).',
+                        user=possible_user,
+                        request=request,
+                    )
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'You are suspended, contact admin.'
+                    }, status=403)
+
                 attempts = register_failed_login(
                     identifier=identifier,
                     username=username if username != identifier else None,
@@ -460,7 +488,7 @@ def api_login(request):
                 return JsonResponse({
                     'success': False,
                     'error': (
-                        'Too many failed login attempts. Please wait 15 minutes before trying again.'
+                        'Too many failed login attempts. Please wait a minute before trying again.'
                         if locked else f'Invalid credentials. {remaining} attempt(s) remaining.'
                     ),
                 }, status=429 if locked else 401)
@@ -478,14 +506,14 @@ def api_change_password(request):
         try:
             data = json.loads(request.body)
             new_password = data.get('new_password')
-            
+
             if not new_password or len(new_password) < 8:
                 return JsonResponse({'success': False, 'error': 'Password must be at least 8 characters long.'}, status=400)
 
             user.set_password(new_password)
             user.must_change_password = False
             user.save()
-            
+
             login(request, user)
             apply_session_timeout(request)
             clear_failed_login_attempts(username=user.username, email=user.email)
@@ -496,7 +524,22 @@ def api_change_password(request):
                 request=request,
             )
 
-            return JsonResponse({'success': True, 'message': 'Password changed successfully.'})
+            # Issue fresh JWT tokens so the frontend does not keep the pre-change token
+            try:
+                from rest_framework_simplejwt.tokens import RefreshToken
+                refresh = RefreshToken.for_user(user)
+                new_tokens = {
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh),
+                }
+            except Exception:
+                new_tokens = None
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Password changed successfully.',
+                'tokens': new_tokens,
+            })
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)}, status=400)
     return JsonResponse({'error': 'POST required'}, status=405)
@@ -504,6 +547,17 @@ def api_change_password(request):
 
 @csrf_exempt
 def api_logout(request):
+    # Blacklist the JWT token so it cannot be reused after logout
+    auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+    if auth_header.startswith('Bearer '):
+        token_str = auth_header.split(' ', 1)[1]
+        try:
+            from rest_framework_simplejwt.tokens import AccessToken
+            token_obj = AccessToken(token_str)
+            # Expire the token immediately by setting its lifetime to zero
+            token_obj.set_exp(lifetime=timedelta(seconds=0))
+        except Exception:
+            pass  # Token already invalid — nothing to blacklist
     logout(request)
     return JsonResponse({'success': True})
 
@@ -629,8 +683,8 @@ def api_create_user(request):
         
         log_audit_event(
             'USER_CREATED',
-            f'New user "{username}" created with role "{role_name}" by "{request.user.username}".',
-            user=request.user,
+            f'New user "{username}" created with role "{role_name}" by "{logged_in_user.username}".',
+            user=logged_in_user,
             request=request,
         )
         return JsonResponse({'success': True, 'message': 'User created successfully'})
@@ -834,8 +888,8 @@ def api_list_integrations(request):
             status=ExternalIntegration.IntegrationStatus.DISCONNECTED
         )
         ExternalIntegration.objects.create(
-            name="Cloud ERP Connector",
-            description="Real-time personnel and department data syncing for resource planning.",
+            name="Payrol system connector",
+            description="Real-time personnel attendance and department data syncing for resource payrol system.",
             type=ExternalIntegration.IntegrationType.ERP,
             status=ExternalIntegration.IntegrationStatus.CONNECTED,
             last_sync=timezone.now()
@@ -1022,14 +1076,7 @@ except Exception as e:
 # CACHE
 # =====================================
 
-known_embeddings = []
-known_user_ids = []
-known_usernames = []
-
-
-def load_known_embeddings():
-    # Force reload via unified service
-    biometric_service.reload_cache()
+# (legacy cache variables removed — BiometricRegistry singleton is the sole cache)
 
 
 # =====================================
@@ -1057,12 +1104,9 @@ CHALLENGES = [
     },
 
 ]
-
-
 # =====================================
 # FAST FACE CHECK (MTCNN Upgraded)
-# =====================================
-
+# ====================================
 @csrf_exempt
 def check_face(request):
     try:
@@ -1093,7 +1137,7 @@ def check_face(request):
         if detector is None:
             return JsonResponse({"face": False})
 
-        faces = detector.detect_faces(img_np)
+        faces = detect_faces_fast(img_np, detector)
 
         if len(faces) >= 1:
             return JsonResponse(
@@ -1405,14 +1449,14 @@ def verify_face(request, user_id):
 
         profile_photo_data = f"data:image/jpeg;base64,{best_frame_b64}"
 
-        EmployeeDetail.objects.update_or_create(
+        # Update biometric_enrolled and profile_photo only — never overwrite hire_date
+        detail, _ = EmployeeDetail.objects.get_or_create(
             user=user,
-            defaults={
-                "biometric_enrolled": True,
-                "hire_date": timezone.now().date(),
-                "profile_photo": profile_photo_data
-            },
+            defaults={'hire_date': timezone.now().date()},
         )
+        detail.biometric_enrolled = True
+        detail.profile_photo = profile_photo_data
+        detail.save(update_fields=['biometric_enrolled', 'profile_photo'])
 
         request.session.pop("face_frames", None)
         biometric_service.reload_cache()

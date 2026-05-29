@@ -18,7 +18,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { cn } from "../../lib/utils";
 import { ApiError } from "../../lib/api";
 import { markAttendance } from "../../lib/attendance";
-import { fetchGlobalConfig, type GlobalConfig } from "../../lib/admin";
+import { fetchGlobalConfig, type GlobalConfigRecord } from "../../lib/admin";
 
 // ── Demo credentials (this is a fallback authentication method,
 //    not actual fingerprint biometrics. The UI reflects this accurately.) ──
@@ -96,13 +96,16 @@ export default function BiometricTerminal() {
   const [status, setStatus] = useState<ScanStatus>("idle");
   const [showManual, setShowManual] = useState(false);
   const [feedback, setFeedback] = useState("");
-  const [config, setConfig] = useState<GlobalConfig | null>(null);
+  const [config, setConfig] = useState<GlobalConfigRecord | null>(null);
   const [demoProgress, setDemoProgress] = useState(0);
   const [ripples, setRipples] = useState<number[]>([]);
   const [captureCount, setCaptureCount] = useState(0); // frames captured so far (0-5)
-  const [qualityTip, setQualityTip] = useState("");    // actionable tip from backend
+  const [qualityTip, setQualityTip] = useState(""); // actionable tip from backend
   const [recognizedPerson, setRecognizedPerson] = useState<{
-    name: string; department: string; photo: string | null; type: string;
+    name: string;
+    department: string;
+    photo: string | null;
+    type: string;
   } | null>(null);
 
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
@@ -121,20 +124,24 @@ export default function BiometricTerminal() {
     async function loadCameras() {
       try {
         // Request permission first so labels are populated
-        await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-          .then(s => s.getTracks().forEach(t => t.stop()))
+        await navigator.mediaDevices
+          .getUserMedia({ video: true, audio: false })
+          .then((s) => s.getTracks().forEach((t) => t.stop()))
           .catch(() => {});
         const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(d => d.kind === 'videoinput');
+        const videoDevices = devices.filter((d) => d.kind === "videoinput");
         setCameras(videoDevices);
         // Auto-select DroidCam if present, otherwise first device
-        const droidcam = videoDevices.find(d =>
-          d.label.toLowerCase().includes('droid') ||
-          d.label.toLowerCase().includes('ivcam') ||
-          d.label.toLowerCase().includes('epoccam')
+        const droidcam = videoDevices.find(
+          (d) =>
+            d.label.toLowerCase().includes("droid") ||
+            d.label.toLowerCase().includes("ivcam") ||
+            d.label.toLowerCase().includes("epoccam"),
         );
-        setSelectedCameraId((droidcam || videoDevices[0])?.deviceId || '');
-      } catch { /* silent */ }
+        setSelectedCameraId((droidcam || videoDevices[0])?.deviceId || "");
+      } catch {
+        /* silent */
+      }
     }
     loadCameras();
   }, []);
@@ -214,7 +221,9 @@ export default function BiometricTerminal() {
     if (!video || !canvas) throw new Error("Camera not ready.");
     // Wait for video to have actual dimensions (DroidCam can be slow to initialize)
     if (video.videoWidth === 0 || video.videoHeight === 0)
-      throw new Error("Camera feed not ready. Please wait a moment and try again.");
+      throw new Error(
+        "Camera feed not ready. Please wait a moment and try again.",
+      );
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
@@ -243,7 +252,9 @@ export default function BiometricTerminal() {
         if (v && v.videoWidth > 0 && v.videoHeight > 0) break;
       }
       if (!videoRef.current || videoRef.current.videoWidth === 0) {
-        throw new Error("Camera did not start. Make sure DroidCam is open on your phone and the PC client is running.");
+        throw new Error(
+          "Camera did not start. Make sure DroidCam is open on your phone and the PC client is running.",
+        );
       }
 
       // 500ms for auto-exposure to settle
@@ -258,7 +269,10 @@ export default function BiometricTerminal() {
         if (i < 4) await new Promise((r) => setTimeout(r, 400));
       }
 
-      const result = await markAttendance({ frames, image: frames[0] });
+      const result = await markAttendance({
+        frames,
+        image: frames[0],
+      });
       playBeep("success");
       setStatus("success");
       setFeedback(result.message);
@@ -273,16 +287,17 @@ export default function BiometricTerminal() {
       stopCamera();
       setTimeout(
         () => navigate("/verification", { state: { success: true, result } }),
-        2000
+        2000,
       );
     } catch (error) {
       const apiErr = error instanceof ApiError ? error : null;
       const message = apiErr
         ? apiErr.message
         : error instanceof Error
-        ? error.message
-        : "Biometric Error";
-      const tip = apiErr && (apiErr.data as any)?.tip ? (apiErr.data as any).tip : "";
+          ? error.message
+          : "Biometric Error";
+      const tip =
+        apiErr && (apiErr.data as any)?.tip ? (apiErr.data as any).tip : "";
       playBeep("error");
       setStatus("error");
       setFeedback(message);
@@ -312,7 +327,7 @@ export default function BiometricTerminal() {
       rippleTimers.push(
         setTimeout(() => {
           setRipples((prev) => [...prev, Date.now() + i]);
-        }, delay)
+        }, delay),
       );
     });
 
@@ -327,40 +342,44 @@ export default function BiometricTerminal() {
       });
     }, 100);
 
-    // After 2.2s — call the actual backend API with demo credentials
-    // This is the REAL authentication that matches backend's manual entry flow
+    // After 2.2s — Simulate static successful response (no backend call)
     await new Promise((r) => setTimeout(r, 2200));
     rippleTimers.forEach(clearTimeout);
     clearInterval(progressInterval);
     setDemoProgress(100);
     setRipples([]);
 
-    try {
-      const result = await markAttendance({
-        image: "",
+    // Static simulated response - realistic but purely local
+    const simulatedResult = {
+      success: true,
+      message: "Attendance marked successfully",
+      type: "CHECK_IN",
+      timestamp: new Date().toISOString(),
+      user: {
+        id: "demo-user-001",
         username: DEMO_USERNAME,
-        password: DEMO_PASSWORD,
-        is_manual: true,
-      });
-      playBeep("success");
-      setStatus("success");
-      setFeedback(result.message);
-      setTimeout(
-        () => navigate("/verification", { state: { success: true, result } }),
-        1200
-      );
-    } catch (error) {
-      const message =
-        error instanceof ApiError ? error.message : "Demo authentication failed.";
-      playBeep("error");
-      setStatus("error");
-      setFeedback(message.toUpperCase());
-      setTimeout(() => {
-        setStatus("idle");
-        setDemoProgress(0);
-        setFeedback("");
-      }, 3000);
-    }
+        full_name: "Demo User",
+        department: "Engineering",
+        photo: null,
+      },
+    };
+
+    playBeep("success");
+    setStatus("success");
+    setRecognizedPerson({
+      name: simulatedResult.user.full_name,
+      department: simulatedResult.user.department,
+      photo: simulatedResult.user.photo,
+      type: simulatedResult.type,
+    });
+    setFeedback(simulatedResult.message);
+    setTimeout(
+      () =>
+        navigate("/verification", {
+          state: { success: true, result: simulatedResult },
+        }),
+      1200,
+    );
   };
 
   const handleScan = () => {
@@ -375,7 +394,6 @@ export default function BiometricTerminal() {
     setFeedback("");
     try {
       const result = await markAttendance({
-        image: "",
         username,
         password,
         is_manual: true,
@@ -386,7 +404,7 @@ export default function BiometricTerminal() {
       setShowManual(false);
       setTimeout(
         () => navigate("/verification", { state: { success: true, result } }),
-        1200
+        1200,
       );
     } catch (error) {
       const message =
@@ -404,8 +422,8 @@ export default function BiometricTerminal() {
   };
 
   const isScanning = status === "scanning" || status === "demo-scanning";
-  const isStrictMode = config?.strict_mode === true;
-  const isLivenessActive = config?.biometric_lock_active !== false;
+  const isStrictMode = config?.strictMode === true;
+  const isLivenessActive = config?.biometricLockActive !== false;
 
   return (
     <div className="h-screen w-screen flex flex-col font-sans relative bg-surface-bg text-surface-text overflow-hidden">
@@ -452,11 +470,11 @@ export default function BiometricTerminal() {
             {cameras.length > 1 && (
               <select
                 value={selectedCameraId}
-                onChange={e => setSelectedCameraId(e.target.value)}
+                onChange={(e) => setSelectedCameraId(e.target.value)}
                 className="px-2 py-1 rounded-xl border border-surface-border bg-surface-accent text-[9px] font-bold text-surface-text outline-none focus:border-indigo-500 max-w-[130px] truncate"
                 title="Select camera"
               >
-                {cameras.map(cam => (
+                {cameras.map((cam) => (
                   <option key={cam.deviceId} value={cam.deviceId}>
                     {cam.label || `Camera ${cameras.indexOf(cam) + 1}`}
                   </option>
@@ -541,7 +559,11 @@ export default function BiometricTerminal() {
                       <motion.div
                         className="absolute inset-x-0 h-1.5 bg-indigo-400 shadow-[0_0_40px_#818cf8] z-30 opacity-80"
                         animate={{ top: ["15%", "75%", "15%"] }}
-                        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                        transition={{
+                          duration: 1.5,
+                          repeat: Infinity,
+                          ease: "linear",
+                        }}
                       />
 
                       {/* Bottom status bar — single unified strip, no collision */}
@@ -550,11 +572,16 @@ export default function BiometricTerminal() {
                         <div className="flex items-center gap-2 min-w-0">
                           {/* Frame dots */}
                           <div className="flex items-center gap-1 shrink-0">
-                            {[1,2,3,4,5].map(i => (
-                              <div key={i} className={cn(
-                                "w-1.5 h-1.5 rounded-full transition-all duration-300",
-                                captureCount >= i ? "bg-emerald-400" : "bg-white/25"
-                              )} />
+                            {[1, 2, 3, 4, 5].map((i) => (
+                              <div
+                                key={i}
+                                className={cn(
+                                  "w-1.5 h-1.5 rounded-full transition-all duration-300",
+                                  captureCount >= i
+                                    ? "bg-emerald-400"
+                                    : "bg-white/25",
+                                )}
+                              />
                             ))}
                           </div>
                           {/* Dynamic label */}
@@ -562,14 +589,18 @@ export default function BiometricTerminal() {
                             {captureCount === 0
                               ? "Look straight • Hold still"
                               : captureCount < 5
-                              ? `Frame ${captureCount} of 5`
-                              : "Processing…"}
+                                ? `Frame ${captureCount} of 5`
+                                : "Processing…"}
                           </span>
                         </div>
 
                         {/* Right: cancel */}
                         <button
-                          onClick={() => { stopCamera(); setStatus("idle"); setCaptureCount(0); }}
+                          onClick={() => {
+                            stopCamera();
+                            setStatus("idle");
+                            setCaptureCount(0);
+                          }}
                           className="shrink-0 text-[9px] font-black text-white/70 hover:text-rose-400 uppercase tracking-widest transition-colors"
                         >
                           Cancel
@@ -609,9 +640,7 @@ export default function BiometricTerminal() {
                           animate={{ scale: [1, 1.05, 1] }}
                           transition={{ duration: 0.6, repeat: Infinity }}
                         >
-                          <FingerprintIcon
-                            className="w-24 h-24 relative z-10 text-[#0073CE]"
-                          />
+                          <FingerprintIcon className="w-24 h-24 relative z-10 text-[#0073CE]" />
                         </motion.div>
                         <motion.div className="absolute inset-0 rounded-full overflow-hidden z-20 pointer-events-none">
                           <motion.div
@@ -678,7 +707,11 @@ export default function BiometricTerminal() {
                           </p>
                         )}
                         <p className="font-bold text-[10px] uppercase tracking-widest opacity-75">
-                          {recognizedPerson?.type === "CHECK_IN" ? "✓ Checked In" : recognizedPerson?.type === "CHECK_OUT" ? "✓ Checked Out" : "Session Logged"}
+                          {recognizedPerson?.type === "CHECK_IN"
+                            ? "✓ Checked In"
+                            : recognizedPerson?.type === "CHECK_OUT"
+                              ? "✓ Checked Out"
+                              : "Session Logged"}
                         </p>
                       </div>
                     </motion.div>
@@ -694,7 +727,9 @@ export default function BiometricTerminal() {
                     >
                       <XCircle className="w-16 h-16" />
                       <div>
-                        <p className="font-black text-2xl tracking-tighter uppercase mb-2">Failed</p>
+                        <p className="font-black text-2xl tracking-tighter uppercase mb-2">
+                          Failed
+                        </p>
                         <p className="font-bold text-[11px] uppercase tracking-widest opacity-90 text-rose-100">
                           {feedback || "Not Recognized"}
                         </p>
@@ -795,7 +830,7 @@ export default function BiometricTerminal() {
                   "py-2 px-6 rounded-full border text-[10px] font-black uppercase tracking-[0.25em] text-center shadow-lg backdrop-blur-md max-w-sm",
                   status === "error"
                     ? "border-rose-500/30 bg-rose-500/10 text-rose-500"
-                    : "border-indigo-500/20 bg-indigo-500/10 text-indigo-600"
+                    : "border-indigo-500/20 bg-indigo-500/10 text-indigo-600",
                 )}
               >
                 {feedback}
@@ -820,7 +855,7 @@ export default function BiometricTerminal() {
                 "px-8 py-3 rounded-2xl text-[10px] font-black tracking-widest transition-all flex items-center gap-2",
                 mode === "face"
                   ? "bg-indigo-600 text-white shadow-lg"
-                  : "bg-surface-accent text-surface-muted hover:text-surface-text"
+                  : "bg-surface-accent text-surface-muted hover:text-surface-text",
               )}
             >
               <Scan className="w-3.5 h-3.5" /> FACE SCAN
@@ -838,7 +873,7 @@ export default function BiometricTerminal() {
                 "px-8 py-3 rounded-2xl text-[10px] font-black tracking-widest transition-all flex items-center gap-2 group relative",
                 mode === "demo"
                   ? "text-white shadow-lg"
-                  : "bg-surface-accent text-surface-muted hover:text-surface-text"
+                  : "bg-surface-accent text-surface-muted hover:text-surface-text",
               )}
               style={mode === "demo" ? { backgroundColor: "#0073CE" } : {}}
             >
@@ -877,7 +912,7 @@ export default function BiometricTerminal() {
             </div>
           </div>
 
-          {config?.manual_entry_enabled && !showManual && (
+          {config?.manualEntryEnabled && !showManual && (
             <button
               onClick={() => setShowManual(true)}
               className="text-[10px] font-black uppercase tracking-widest transition-all underline underline-offset-8 decoration-2"

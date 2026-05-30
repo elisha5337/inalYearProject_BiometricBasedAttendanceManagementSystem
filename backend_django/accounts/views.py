@@ -1506,7 +1506,8 @@ def api_forgot_password_request(request):
                 uid = urlsafe_base64_encode(force_bytes(user.pk))
 
                 # Frontend URL for password reset
-                reset_link = f"http://localhost:3000/reset-password/{uid}/{token}"
+                frontend_url = getattr(settings, 'FRONTEND_URL', 'https://localhost:3000').rstrip('/')
+                reset_link = f"{frontend_url}/reset-password/{uid}/{token}"
                 logger.info(f"Password reset link for {user.email}: {reset_link}")
 
                 # Send real email

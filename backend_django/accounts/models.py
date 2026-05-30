@@ -155,7 +155,7 @@ class ExternalIntegration(models.Model):
         ERROR        = 'ERROR',        'Error'
 
     class IntegrationType(models.TextChoices):
-        PAYROLL       = 'PAYROLL',       'Payroll System' f
+        PAYROLL       = 'PAYROLL',       'Payroll System'
         HR_SYSTEM     = 'HR_SYSTEM',     'HR System'
         COMMUNICATION = 'COMMUNICATION', 'Communication'
         SECURITY      = 'SECURITY',      'Security'

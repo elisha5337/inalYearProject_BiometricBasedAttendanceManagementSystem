@@ -1,18 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Lock, 
-  Shield, 
-  AlertCircle, 
-  CheckCircle, 
-  Loader2, 
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "motion/react";
+import {
+  Lock,
+  Shield,
+  AlertCircle,
+  CheckCircle,
+  Loader2,
   ArrowLeft,
-  KeyRound
-} from 'lucide-react';
-import { confirmPasswordReset } from '../../lib/auth';
-import { ApiError } from '../../lib/api';
-import logo from "../../assets/logo.jpg";
+  KeyRound,
+} from "lucide-react";
+import { confirmPasswordReset } from "../../lib/auth";
+import { ApiError } from "../../lib/api";
+// import logo from "../../assets/logo.jpg";
+const logo = ""; // Bypass missing asset build error on Render
 
 export default function ResetPassword() {
   const params = useParams();
@@ -20,10 +21,10 @@ export default function ResetPassword() {
   const token = params.token;
   const navigate = useNavigate();
 
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
@@ -32,33 +33,33 @@ export default function ResetPassword() {
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (newPassword.length < 8) {
-      setError('Password must meet 8-character minimum.');
+      setError("Password must meet 8-character minimum.");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError("Passwords do not match.");
       return;
     }
 
     if (!uid || !token) {
-      setError('Invalid link parameters.');
+      setError("Invalid link parameters.");
       return;
     }
 
     setIsLoading(true);
     try {
-      const cleanToken = token.replace(/\/$/, '');
+      const cleanToken = token.replace(/\/$/, "");
       await confirmPasswordReset(uid, cleanToken, newPassword);
       setSuccess(true);
       setTimeout(() => {
-        navigate('/login');
+        navigate("/login");
       }, 3000);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Update failed.');
+      setError(err instanceof ApiError ? err.message : "Update failed.");
     } finally {
       setIsLoading(false);
     }
@@ -108,24 +109,35 @@ export default function ResetPassword() {
         <div className="px-8 py-6 space-y-5">
           {!uid || !token ? (
             <div className="text-center space-y-4">
-               <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
-               <h3 className="text-lg font-bold text-gray-900">Invalid Link</h3>
-               <p className="text-sm text-gray-600">This password reset link is invalid or has expired.</p>
-               <button 
-                 onClick={() => navigate('/login')} 
-                 className="w-full py-2 text-white font-bold text-sm"
-                 style={{ backgroundColor: "#338EC3", borderRadius: 0 }}
-               >
-                 BACK TO LOGIN
-               </button>
+              <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
+              <h3 className="text-lg font-bold text-gray-900">Invalid Link</h3>
+              <p className="text-sm text-gray-600">
+                This password reset link is invalid or has expired.
+              </p>
+              <button
+                onClick={() => navigate("/login")}
+                className="w-full py-2 text-white font-bold text-sm"
+                style={{ backgroundColor: "#338EC3", borderRadius: 0 }}
+              >
+                BACK TO LOGIN
+              </button>
             </div>
           ) : success ? (
             <div className="text-center space-y-4 py-4">
               <CheckCircle className="w-12 h-12 text-green-500 mx-auto" />
-              <h3 className="text-lg font-bold text-gray-900">Password Reset Successful</h3>
-              <p className="text-sm text-gray-600">Your password has been securely updated. Redirecting to login...</p>
+              <h3 className="text-lg font-bold text-gray-900">
+                Password Reset Successful
+              </h3>
+              <p className="text-sm text-gray-600">
+                Your password has been securely updated. Redirecting to login...
+              </p>
               <div className="w-32 mx-auto bg-gray-200 h-1 mt-4">
-                <motion.div initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: 3 }} className="h-full bg-green-500" />
+                <motion.div
+                  initial={{ width: "0%" }}
+                  animate={{ width: "100%" }}
+                  transition={{ duration: 3 }}
+                  className="h-full bg-green-500"
+                />
               </div>
             </div>
           ) : (
@@ -203,7 +215,11 @@ export default function ResetPassword() {
                   className="w-full py-2 text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
                   style={{ backgroundColor: "#338EC3", borderRadius: 0 }}
                 >
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'SAVE PASSWORD'}
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                  ) : (
+                    "SAVE PASSWORD"
+                  )}
                 </button>
               </form>
 

@@ -8,12 +8,10 @@ import {
   CheckCircle,
   Loader2,
 } from "lucide-react";
-import logo from "../../assets/logo.jpg";
+// import logo from "../../assets/logo.jpg";
+const logo = ""; // Bypass missing asset build error on Render
 import { ApiError } from "../../lib/api";
 import { registerUser } from "../../lib/auth";
-import { apiRequest } from "../../lib/api";
-
-
 
 export default function Register() {
   const navigate = useNavigate();
@@ -30,10 +28,10 @@ export default function Register() {
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-
-
-  const set = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  const set =
+    (field: keyof typeof form) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +53,9 @@ export default function Register() {
     const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(form.password);
 
     if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
-      setError("Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.");
+      setError(
+        "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.",
+      );
       return;
     }
 
@@ -70,14 +70,28 @@ export default function Register() {
       });
       setSuccess(res.message || "Account created. You can now log in.");
       setForm({
-        first_name: "", last_name: "", username: "", email: "",
-        password: "", confirm_password: "",
+        first_name: "",
+        last_name: "",
+        username: "",
+        email: "",
+        password: "",
+        confirm_password: "",
       });
       setTimeout(() => {
-        navigate("/login", { state: { registrationSuccess: res.message || "Account created successfully. You can now log in." } });
+        navigate("/login", {
+          state: {
+            registrationSuccess:
+              res.message ||
+              "Account created successfully. You can now log in.",
+          },
+        });
       }, 1500);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Registration failed. Please try again.");
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : "Registration failed. Please try again.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -85,7 +99,10 @@ export default function Register() {
 
   // ── Shared input wrapper style matching login page ──
   const inputWrap = "flex" as const;
-  const inputStyle: React.CSSProperties = { backgroundColor: "#EBF2FA", borderRadius: 0 };
+  const inputStyle: React.CSSProperties = {
+    backgroundColor: "#EBF2FA",
+    borderRadius: 0,
+  };
   const iconWrap = "flex items-center justify-center w-10 bg-white border-r";
   const borderStyle: React.CSSProperties = { border: "1px solid #D1D5DB" };
   const iconColor = "w-4 h-4 text-gray-400";
@@ -98,13 +115,21 @@ export default function Register() {
       {/* ── Header Banner ── */}
       <div
         className="w-full max-w-lg flex items-center gap-4 px-4 py-3"
-        style={{ backgroundColor: "#0073CE", border: "1px solid #D1D5DB", borderRadius: 0 }}
+        style={{
+          backgroundColor: "#0073CE",
+          border: "1px solid #D1D5DB",
+          borderRadius: 0,
+        }}
       >
         <div
           className="w-12 h-12 rounded-full shrink-0 overflow-hidden bg-white"
           style={{ border: "2px solid rgba(255,255,255,0.5)" }}
         >
-          <img src={logo} alt="Hawassa University Logo" className="w-full h-full object-cover" />
+          <img
+            src={logo}
+            alt="Hawassa University Logo"
+            className="w-full h-full object-cover"
+          />
         </div>
         <p className="text-white text-sm font-semibold leading-snug">
           Hawassa University IOT-BBEAMS
@@ -160,30 +185,42 @@ export default function Register() {
             {/* First + Last name row */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-bold text-gray-800 mb-1">First Name</label>
+                <label className="block text-sm font-bold text-gray-800 mb-1">
+                  First Name
+                </label>
                 <div className={inputWrap} style={borderStyle}>
                   <span className={iconWrap} style={{ borderColor: "#D1D5DB" }}>
                     <UserIcon className={iconColor} />
                   </span>
                   <input
-                    type="text" required disabled={isLoading}
-                    value={form.first_name} onChange={set("first_name")}
+                    type="text"
+                    required
+                    disabled={isLoading}
+                    value={form.first_name}
+                    onChange={set("first_name")}
                     className="flex-1 px-3 py-2 text-sm outline-none disabled:opacity-60"
-                    style={inputStyle} placeholder="First name"
+                    style={inputStyle}
+                    placeholder="First name"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-bold text-gray-800 mb-1">Last Name</label>
+                <label className="block text-sm font-bold text-gray-800 mb-1">
+                  Last Name
+                </label>
                 <div className={inputWrap} style={borderStyle}>
                   <span className={iconWrap} style={{ borderColor: "#D1D5DB" }}>
                     <UserIcon className={iconColor} />
                   </span>
                   <input
-                    type="text" required disabled={isLoading}
-                    value={form.last_name} onChange={set("last_name")}
+                    type="text"
+                    required
+                    disabled={isLoading}
+                    value={form.last_name}
+                    onChange={set("last_name")}
                     className="flex-1 px-3 py-2 text-sm outline-none disabled:opacity-60"
-                    style={inputStyle} placeholder="Last name"
+                    style={inputStyle}
+                    placeholder="Last name"
                   />
                 </div>
               </div>
@@ -191,16 +228,22 @@ export default function Register() {
 
             {/* Username */}
             <div>
-              <label className="block text-sm font-bold text-gray-800 mb-1">Username</label>
+              <label className="block text-sm font-bold text-gray-800 mb-1">
+                Username
+              </label>
               <div className={inputWrap} style={borderStyle}>
                 <span className={iconWrap} style={{ borderColor: "#D1D5DB" }}>
                   <UserIcon className={iconColor} />
                 </span>
                 <input
-                  type="text" required disabled={isLoading}
-                  value={form.username} onChange={set("username")}
+                  type="text"
+                  required
+                  disabled={isLoading}
+                  value={form.username}
+                  onChange={set("username")}
                   className="flex-1 px-3 py-2 text-sm outline-none disabled:opacity-60"
-                  style={inputStyle} placeholder="Choose a username"
+                  style={inputStyle}
+                  placeholder="Choose a username"
                   autoComplete="username"
                 />
               </div>
@@ -208,35 +251,45 @@ export default function Register() {
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-bold text-gray-800 mb-1">Email Address</label>
+              <label className="block text-sm font-bold text-gray-800 mb-1">
+                Email Address
+              </label>
               <div className={inputWrap} style={borderStyle}>
                 <span className={iconWrap} style={{ borderColor: "#D1D5DB" }}>
                   <Mail className={iconColor} />
                 </span>
                 <input
-                  type="email" required disabled={isLoading}
-                  value={form.email} onChange={set("email")}
+                  type="email"
+                  required
+                  disabled={isLoading}
+                  value={form.email}
+                  onChange={set("email")}
                   className="flex-1 px-3 py-2 text-sm outline-none disabled:opacity-60"
-                  style={inputStyle} placeholder="your@hawassa.edu.et"
+                  style={inputStyle}
+                  placeholder="your@hawassa.edu.et"
                   autoComplete="email"
                 />
               </div>
             </div>
 
-
-
             {/* Password */}
             <div>
-              <label className="block text-sm font-bold text-gray-800 mb-1">Password</label>
+              <label className="block text-sm font-bold text-gray-800 mb-1">
+                Password
+              </label>
               <div className={inputWrap} style={borderStyle}>
                 <span className={iconWrap} style={{ borderColor: "#D1D5DB" }}>
                   <KeyRound className={iconColor} />
                 </span>
                 <input
-                  type="password" required disabled={isLoading}
-                  value={form.password} onChange={set("password")}
+                  type="password"
+                  required
+                  disabled={isLoading}
+                  value={form.password}
+                  onChange={set("password")}
                   className="flex-1 px-3 py-2 text-sm outline-none disabled:opacity-60"
-                  style={inputStyle} placeholder="Minimum 8 characters"
+                  style={inputStyle}
+                  placeholder="Minimum 8 characters"
                   autoComplete="new-password"
                 />
               </div>
@@ -244,16 +297,22 @@ export default function Register() {
 
             {/* Confirm Password */}
             <div>
-              <label className="block text-sm font-bold text-gray-800 mb-1">Confirm Password</label>
+              <label className="block text-sm font-bold text-gray-800 mb-1">
+                Confirm Password
+              </label>
               <div className={inputWrap} style={borderStyle}>
                 <span className={iconWrap} style={{ borderColor: "#D1D5DB" }}>
                   <KeyRound className={iconColor} />
                 </span>
                 <input
-                  type="password" required disabled={isLoading}
-                  value={form.confirm_password} onChange={set("confirm_password")}
+                  type="password"
+                  required
+                  disabled={isLoading}
+                  value={form.confirm_password}
+                  onChange={set("confirm_password")}
                   className="flex-1 px-3 py-2 text-sm outline-none disabled:opacity-60"
-                  style={inputStyle} placeholder="Retype password"
+                  style={inputStyle}
+                  placeholder="Retype password"
                   autoComplete="new-password"
                 />
               </div>
@@ -261,12 +320,16 @@ export default function Register() {
 
             {/* Submit */}
             <button
-              type="submit" disabled={isLoading}
+              type="submit"
+              disabled={isLoading}
               className="w-full py-2 text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
               style={{ backgroundColor: "#338EC3", borderRadius: 0 }}
             >
               {isLoading ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Creating Account...</>
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Creating
+                  Account...
+                </>
               ) : (
                 "Create Account"
               )}

@@ -12,9 +12,15 @@ import {
   ArrowLeft,
   X,
 } from "lucide-react";
-import logo from "../../assets/logo.jpg";
+// import logo from "../../assets/logo.jpg";
+const logo = ""; // Bypass missing asset build error on Render
 import { ApiError } from "../../lib/api";
-import { loginUser, changePassword, logoutUser, requestPasswordReset } from "../../lib/auth";
+import {
+  loginUser,
+  changePassword,
+  logoutUser,
+  requestPasswordReset,
+} from "../../lib/auth";
 import type { User } from "../../types";
 
 interface LoginProps {
@@ -43,7 +49,8 @@ export default function Login({ onLogin }: LoginProps) {
     "idle" | "loading" | "success"
   >("idle");
   const [forgotPasswordError, setForgotPasswordError] = useState("");
-  const [forgotPasswordSuccessMessage, setForgotPasswordSuccessMessage] = useState("");
+  const [forgotPasswordSuccessMessage, setForgotPasswordSuccessMessage] =
+    useState("");
 
   const [forcePasswordReset, setForcePasswordReset] = useState(false);
   const [resettingUser, setResettingUser] = useState<User | null>(null);
@@ -54,7 +61,9 @@ export default function Login({ onLogin }: LoginProps) {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const registrationSuccess = (location.state as { registrationSuccess?: string } | null)?.registrationSuccess ?? "";
+  const registrationSuccess =
+    (location.state as { registrationSuccess?: string } | null)
+      ?.registrationSuccess ?? "";
 
   useEffect(() => {
     const saved =
@@ -116,7 +125,11 @@ export default function Login({ onLogin }: LoginProps) {
       await requestPasswordReset(forgotPasswordEmail);
       setForgotPasswordStatus("success");
     } catch (err) {
-      setForgotPasswordError(err instanceof ApiError ? err.message : "Failed to request password reset.");
+      setForgotPasswordError(
+        err instanceof ApiError
+          ? err.message
+          : "Failed to request password reset.",
+      );
       setForgotPasswordStatus("idle");
     }
   };
@@ -270,7 +283,10 @@ export default function Login({ onLogin }: LoginProps) {
                   Enter your university email to receive reset instructions.
                 </p>
                 {forgotPasswordError && (
-                  <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 text-sm" style={{ border: "1px solid #FCA5A5" }}>
+                  <div
+                    className="flex items-center gap-2 p-3 bg-red-50 text-red-700 text-sm"
+                    style={{ border: "1px solid #FCA5A5" }}
+                  >
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     {forgotPasswordError}
                   </div>
@@ -450,7 +466,10 @@ export default function Login({ onLogin }: LoginProps) {
               <label className="block text-sm font-bold text-gray-800 mb-1">
                 User Name
               </label>
-              <div className="flex relative" style={{ border: "1px solid #D1D5DB" }}>
+              <div
+                className="flex relative"
+                style={{ border: "1px solid #D1D5DB" }}
+              >
                 <span
                   className="flex items-center justify-center w-10 bg-white border-r"
                   style={{ borderColor: "#D1D5DB" }}
@@ -516,7 +535,10 @@ export default function Login({ onLogin }: LoginProps) {
 
             {/* Remember me */}
             <div className="flex items-center justify-between py-1">
-              <label htmlFor="remember" className="flex items-center gap-3 cursor-pointer select-none group">
+              <label
+                htmlFor="remember"
+                className="flex items-center gap-3 cursor-pointer select-none group"
+              >
                 <div className="relative">
                   <input
                     type="checkbox"
@@ -529,13 +551,17 @@ export default function Login({ onLogin }: LoginProps) {
                     className="w-10 h-6 rounded-full transition-all duration-300 ease-in-out bg-slate-200 group-hover:bg-slate-300"
                     style={{
                       backgroundColor: rememberMe ? "#338EC3" : undefined,
-                      boxShadow: rememberMe ? "0 0 10px rgba(51, 142, 195, 0.4)" : "none"
+                      boxShadow: rememberMe
+                        ? "0 0 10px rgba(51, 142, 195, 0.4)"
+                        : "none",
                     }}
                   />
                   <div
                     className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 ease-in-out shadow-sm"
                     style={{
-                      transform: rememberMe ? "translateX(16px)" : "translateX(0)"
+                      transform: rememberMe
+                        ? "translateX(16px)"
+                        : "translateX(0)",
                     }}
                   />
                 </div>

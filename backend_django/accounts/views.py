@@ -683,8 +683,8 @@ def api_create_user(request):
         
         log_audit_event(
             'USER_CREATED',
-            f'New user "{username}" created with role "{role_name}" by "{logged_in_user.username}".',
-            user=logged_in_user,
+            f'New user "{username}" created with role "{role_name}" by "{user.username}".',
+            user=user,
             request=request,
         )
         return JsonResponse({'success': True, 'message': 'User created successfully'})

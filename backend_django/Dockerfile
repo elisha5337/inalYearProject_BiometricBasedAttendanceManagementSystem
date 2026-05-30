@@ -1,12 +1,11 @@
- FROM python:3.10-slim
+FROM python:3.10-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-# Install system dependencies
+# Install essential system dependencies for OpenCV Headless and Python
 RUN apt-get update && apt-get install -y \
-    libgl1 \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
@@ -15,20 +14,16 @@ RUN apt-get update && apt-get install -y \
     python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Force pip to use an older, more permissive version of cmake for building
-RUN pip install --no-cache-dir "cmake<=3.25.0"
-
-# 1. Set the working directory FIRST
+# Set the working directory
 WORKDIR /app
 
-# 2. Copy the requirements file into /app
+# Copy and install the optimized requirements
 COPY requirements.txt /app/
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# 3. Install the dependencies inside /app
-RUN pip install --no-cache-dir -r requirements.txt
-
-# 4. Copy the rest of your backend project files
+# Copy the rest of your backend project files
 COPY . /app/
 
-# 5. Start the server
+# Start the server
 CMD ["gunicorn", "--bind", "0.0.0.0:10000", "hu_attendance_system.wsgi:application"]
